@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS audit_logs (
+CREATE TABLE IF NOT EXISTS audit_logs (
   id TEXT PRIMARY KEY,
   actor_user_id TEXT,
   action TEXT NOT NULL,

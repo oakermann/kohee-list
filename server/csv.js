@@ -8,7 +8,7 @@ import {
   withGuard,
 } from "./shared.js";
 import { normalizeCafePayload } from "./cafes.js";
-import { writeAuditLog } from "./security.js";
+import { safeWriteAuditLog } from "./security.js";
 
 const REQUIRED_HEADERS = ["name", "address", "desc"];
 const OPTIONAL_HEADERS = [
@@ -278,7 +278,7 @@ export async function importCsv(req, env) {
     }
 
     const applied = await applyCsvRows(env, user, analysis.rows);
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "csv.import",
       targetType: "cafes",

@@ -1,4 +1,4 @@
-﻿ALTER TABLE sessions ADD COLUMN csrf_token_hash TEXT DEFAULT '';
+ALTER TABLE sessions ADD COLUMN csrf_token_hash TEXT DEFAULT '';
 ALTER TABLE sessions ADD COLUMN user_agent TEXT DEFAULT '';
 ALTER TABLE sessions ADD COLUMN ip_hash TEXT DEFAULT '';
 

@@ -1,4 +1,4 @@
-﻿import { corsPreflight, isCorsOriginAllowed, json } from "./server/shared.js";
+import { corsPreflight, isCorsOriginAllowed, json } from "./server/shared.js";
 import { ROUTES } from "./server/routes.js";
 
 export default {

@@ -1,4 +1,4 @@
-import {
+﻿import {
   HttpError,
   cleanText,
   json,
@@ -8,7 +8,7 @@ import {
   requireRole,
   withGuard,
 } from "./shared.js";
-import { consumeRateLimit, writeAuditLog } from "./security.js";
+import { consumeRateLimit, safeWriteAuditLog } from "./security.js";
 
 export function toErrorReportResponse(row) {
   return {
@@ -159,7 +159,7 @@ export async function replyErrorReport(req, env) {
       )
       .run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "error_report.reply",
       targetType: "error_report",
@@ -194,7 +194,7 @@ export async function resolveErrorReport(req, env) {
       .bind(user.user_id, nowIso(), id)
       .run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "error_report.resolve",
       targetType: "error_report",

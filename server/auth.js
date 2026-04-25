@@ -1,4 +1,4 @@
-﻿import {
+import {
   HttpError,
   clearCookieHeader,
   clearCsrfCookieHeader,

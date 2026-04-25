@@ -1,4 +1,4 @@
-﻿export const JSON_HEADERS = {
+export const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
 };
 export const SECURITY_HEADERS = {

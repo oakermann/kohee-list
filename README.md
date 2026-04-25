@@ -71,8 +71,16 @@ Root HTML/assets and `aaaa/` are mirrors kept for local testing and manual check
 npx.cmd wrangler d1 execute kohee-list --remote --file=./schema.sql
 ```
 
-For an existing database, apply migrations in order instead of replaying the
-whole schema:
+For an existing local database, apply migrations in order instead of replaying
+the whole schema:
+
+```powershell
+npx.cmd wrangler d1 execute kohee-list --local --file=./migrations/0002_rate_limits.sql
+npx.cmd wrangler d1 execute kohee-list --local --file=./migrations/0003_audit_logs.sql
+npx.cmd wrangler d1 execute kohee-list --local --file=./migrations/0004_session_security.sql
+```
+
+For the production D1 database, use `--remote`:
 
 ```powershell
 npx.cmd wrangler d1 execute kohee-list --remote --file=./migrations/0002_rate_limits.sql
@@ -93,10 +101,13 @@ There is no insecure default fallback in production code.
 4. Confirm environment variables in `wrangler.toml`
    - `SESSION_DAYS`
    - `FRONTEND_ORIGIN`
+   - `ALLOW_NULL_ORIGIN` only for explicit local/dev testing, normally unset
 
 `FRONTEND_ORIGIN` should contain the Pages origin that is allowed to send
 credentialed browser requests, for example `https://kohee.pages.dev`.
 Unknown origins do not receive credentialed CORS headers.
+Multiple frontend origins are comma-separated:
+`https://kohee.pages.dev,https://example.com`.
 
 ## Daily Commands
 
@@ -196,18 +207,32 @@ powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\bac
 
 - `/health`
 - `/data`
-- signup/login/me
+- signup/login/me/logout
+- CSRF cookie issuance and unsafe request header flow
+- login failure rate limiting
 - favorites add/remove/list
 - cafe submission + `/my-submits`
 - error report + `/my-error-reports`
 - admin-only flows in `full` mode
   - `/users`
+  - `/set-role`
   - `/reply-error-report`
   - `/resolve-error-report`
   - `/add`
+  - `/edit`
   - `/delete`
+  - `/notice`
+  - `/import-csv?dryRun=1`
+  - `/import-csv`
+  - `/update-submission`
+  - `/approve`
+  - `/reject`
+  - manager cannot set `oakerman_pick`
+  - admin can set `oakerman_pick`
 
 The script creates a temporary user and removes it during cleanup.
+It deliberately does not execute `/reset-csv` because that endpoint deletes all
+live cafe rows.
 
 ## CSV Backup Flow
 
@@ -217,8 +242,46 @@ The script creates a temporary user and removes it during cleanup.
 - `scripts/import-csv.ps1`
   - Sends a CSV file to `/import-csv`
   - Requires a manager/admin bearer token
+  - Supports `-DryRun` to validate without writing
 
 This keeps backup and restore aligned with the same CSV schema used by the admin console.
+
+## Security Runtime Notes
+
+- `kohee_session`
+  - HttpOnly
+  - Secure
+  - SameSite=None
+- `kohee_csrf`
+  - readable by frontend JavaScript
+  - Secure
+  - SameSite=None
+  - sent back on unsafe requests as `x-csrf-token`
+- Bearer-token-only maintenance requests bypass CSRF because they do not rely on
+  browser cookies.
+- Audit logs are written with `safeWriteAuditLog`; if audit logging fails, the
+  main user/admin action still succeeds and the Worker logs the failure.
+- `rate_limits` tracks login failures and short-window spam controls for signup,
+  submissions, and error reports.
+
+## Post-Deploy Checklist
+
+- 회원가입 가능
+- 로그인 가능
+- 로그인 후 `/me` 정상
+- 로그아웃 가능
+- 일반 유저 제보 가능
+- 일반 유저가 `/add` 접근 시 `403`
+- manager/admin이 카페 추가 가능
+- manager가 `oakerman_pick` 변경 못함
+- admin은 `oakerman_pick` 변경 가능
+- CSV dry-run 가능
+- CSV 실제 import 가능
+- 오류 제보 가능
+- 운영자 답변 가능
+- 즐겨찾기 추가/삭제 가능
+- CORS origin 틀리면 차단됨
+- 로그인 실패 5회 후 `RATE_LIMITED` 반환
 
 ## Safe Automation Flow
 

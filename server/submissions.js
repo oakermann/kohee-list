@@ -11,7 +11,7 @@ import {
   withGuard,
 } from "./shared.js";
 import { normalizeCafePayload } from "./cafes.js";
-import { consumeRateLimit, writeAuditLog } from "./security.js";
+import { consumeRateLimit, safeWriteAuditLog } from "./security.js";
 
 export function toSubmissionResponse(row) {
   return {
@@ -248,7 +248,7 @@ export async function approveSubmission(req, env) {
       .bind(reviewer.user_id, nowIso(), linkedCafeId || null, submissionId)
       .run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: reviewer.user_id,
       action: "submission.approve",
       targetType: "submission",
@@ -295,7 +295,7 @@ export async function rejectSubmission(req, env) {
       .bind(reviewer.user_id, nowIso(), rejectReason || null, submissionId)
       .run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: reviewer.user_id,
       action: "submission.reject",
       targetType: "submission",
@@ -350,7 +350,7 @@ export async function updateSubmission(req, env) {
       )
       .run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: reviewer.user_id,
       action: "submission.update",
       targetType: "submission",

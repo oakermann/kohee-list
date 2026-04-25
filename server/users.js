@@ -8,7 +8,7 @@ import {
   safeRole,
   withGuard,
 } from "./shared.js";
-import { writeAuditLog } from "./security.js";
+import { safeWriteAuditLog } from "./security.js";
 
 export async function setRole(req, env) {
   return withGuard(req, env, async () => {
@@ -37,7 +37,7 @@ export async function setRole(req, env) {
     await env.DB.prepare("UPDATE users SET role = ? WHERE id = ?")
       .bind(role, target.id)
       .run();
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "user.set_role",
       targetType: "user",

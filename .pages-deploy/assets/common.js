@@ -1,5 +1,6 @@
 export const API_BASE =
   window.__API_BASE__ || "https://kohee-list.gabefinder.workers.dev";
+
 export const CAT_MAP = {
   espresso: "에스프레소",
   drip: "드립",
@@ -53,7 +54,7 @@ export function setStorageValue(key, value) {
   } catch {}
 }
 
-export function getCookieValue(key) {
+export function getCookie(key) {
   const parts = document.cookie.split(";").map((value) => value.trim());
   for (const part of parts) {
     if (!part.includes("=")) continue;
@@ -63,11 +64,19 @@ export function getCookieValue(key) {
   return "";
 }
 
+export const getCookieValue = getCookie;
+
+export function isUnsafeMethod(method) {
+  return !["GET", "HEAD", "OPTIONS"].includes(
+    String(method || "GET").toUpperCase(),
+  );
+}
+
 export async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
-  const method = String(options.method || "GET").toUpperCase();
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
-    const csrfToken = getCookieValue("kohee_csrf");
+  const method = options.method || "GET";
+  if (isUnsafeMethod(method)) {
+    const csrfToken = getCookie("kohee_csrf");
     if (csrfToken && !headers.has("x-csrf-token")) {
       headers.set("x-csrf-token", csrfToken);
     }
@@ -80,10 +89,32 @@ export async function api(path, options = {}) {
   });
 }
 
+export function apiErrorMessage(data = {}) {
+  const messages = {
+    AUTH_REQUIRED: "로그인이 필요합니다. 다시 로그인해 주세요.",
+    FORBIDDEN: "접근 권한이 없습니다.",
+    INVALID_CREDENTIALS: "아이디 또는 비밀번호가 올바르지 않습니다.",
+    VALIDATION_ERROR: "입력값을 다시 확인해 주세요.",
+    NOT_FOUND: "요청한 항목을 찾을 수 없습니다.",
+    DUPLICATE: "이미 등록된 항목입니다.",
+    RATE_LIMITED: "시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    CSRF_REQUIRED: "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.",
+    CSRF_INVALID: "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.",
+    FORBIDDEN_ORIGIN: "허용되지 않은 접속 경로입니다.",
+  };
+
+  return messages[data.code] || data.error || "요청에 실패했습니다.";
+}
+
 export async function jsonApi(path, options = {}) {
   const res = await api(path, options);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || "요청에 실패했습니다.");
+  if (!res.ok || data.ok === false) {
+    const error = new Error(apiErrorMessage(data));
+    error.code = data.code || "";
+    error.status = res.status;
+    throw error;
+  }
   return data;
 }
 

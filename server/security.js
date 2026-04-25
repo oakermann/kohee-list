@@ -1,4 +1,4 @@
-﻿import {
+import {
   HttpError,
   cleanText,
   getClientIpHash,
@@ -122,6 +122,15 @@ export async function writeAuditLog(env, input) {
     )
     .run();
   return id;
+}
+
+export async function safeWriteAuditLog(env, input) {
+  try {
+    return await writeAuditLog(env, input);
+  } catch (error) {
+    console.error("audit log failed", error);
+    return null;
+  }
 }
 
 export async function hashForStorage(value, salt) {

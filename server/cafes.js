@@ -1,4 +1,4 @@
-﻿import {
+import {
   HttpError,
   cleanNumber,
   cleanText,
@@ -13,7 +13,7 @@
   text,
   withGuard,
 } from "./shared.js";
-import { writeAuditLog } from "./security.js";
+import { safeWriteAuditLog } from "./security.js";
 
 export function toCafeResponse(row) {
   return {
@@ -120,7 +120,7 @@ export async function addCafe(req, env) {
       )
       .run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "cafe.add",
       targetType: "cafe",
@@ -179,7 +179,7 @@ export async function editCafe(req, env) {
       )
       .run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "cafe.edit",
       targetType: "cafe",
@@ -215,7 +215,7 @@ export async function deleteCafe(req, env) {
       .bind(id)
       .run();
     await env.DB.prepare("DELETE FROM cafes WHERE id = ?").bind(id).run();
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "cafe.delete",
       targetType: "cafe",
@@ -244,7 +244,7 @@ export async function resetCsv(req, env) {
     ).run();
     await env.DB.prepare("DELETE FROM cafes").run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "csv.reset",
       targetType: "cafes",
@@ -271,7 +271,7 @@ export async function setNotice(req, env) {
       .bind(value, updatedAt, user.user_id)
       .run();
 
-    await writeAuditLog(env, {
+    await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "notice.update",
       targetType: "setting",
