@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>운영 콘솔 | KOHEE LIST</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+  <style>
+    :root { --bg:#f0f0f0; --ink:#1a1a1a; --line:#1a1a1a; --soft:#ebebe6; --point:#ff5a00; --thick:4px; --thin:2px; }
+    * { box-sizing:border-box; margin:0; padding:0; font-family:"Pretendard Variable", sans-serif !important; color:var(--ink) !important; -webkit-tap-highlight-color:transparent; }
+    html { width:100%; max-width:100%; overflow-x:hidden; }
+    body { background:var(--bg); min-height:100vh; width:100%; max-width:100%; overflow-x:hidden; padding:32px 0 56px; display:flex; justify-content:flex-start; align-items:center; flex-direction:column; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility; }
+    .wrap { width:92%; max-width:500px; display:grid; gap:12px; }
+    .panel { border:var(--thick) solid var(--line); background:#fff; padding:9px; }
+    h1 { font-size:clamp(1.6rem, 7vw, 2.25rem); font-weight:900; margin-bottom:4px; text-align:center; line-height:1.2; letter-spacing:-0.04rem; }
+    h2 { font-size:.84rem; font-weight:900; margin:0 -9px 8px; padding:0 9px 7px; border-bottom:var(--thin) solid var(--line); text-align:center; line-height:1.2; letter-spacing:-.02rem; }
+    .top { display:grid; gap:7px; background:var(--bg); text-align:center; }
+    .meta { font-size:.72rem; font-weight:900; opacity:.78; line-height:1.4; letter-spacing:-.01rem; word-break:keep-all; }
+    .btns { display:flex; justify-content:center; gap:5px; flex-wrap:wrap; }
+    button, .btn, input, textarea, select, option, small { font-family:inherit !important; }
+    button, .btn { border:var(--thin) solid var(--line); background:#fff; padding:7px 12px; font-weight:900; font-size:.72rem; cursor:pointer; text-decoration:none; color:var(--ink); text-align:center; min-height:32px; display:inline-flex; align-items:center; justify-content:center; line-height:1.14; letter-spacing:-.01rem; box-shadow:2px 2px 0 rgba(26,26,26,.08); }
+    button.primary { background:var(--line); color:#fff !important; }
+    button.warn { border-color:#b40000; color:#b40000 !important; }
+    input, textarea, select { width:100%; border:var(--thin) solid var(--line); padding:8px 9px; font-weight:800; font-size:.78rem; margin-bottom:5px; background:#fff; border-radius:0; line-height:1.32; letter-spacing:-.01rem; outline:none; box-shadow:2px 2px 0 rgba(26,26,26,.07); }
+    input::placeholder, textarea::placeholder { color:rgba(26,26,26,.45) !important; font-weight:800; }
+    input:focus, textarea:focus, select:focus { background:#fffdf8; box-shadow:2px 2px 0 rgba(255,90,0,.22); }
+    input:disabled { background:#e5e5df; opacity:1; cursor:not-allowed; }
+    textarea { min-height:60px; resize:vertical; line-height:1.36; }
+    select { appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg, transparent 50%, var(--line) 50%), linear-gradient(135deg, var(--line) 50%, transparent 50%); background-position:calc(100% - 15px) calc(50% - 3px), calc(100% - 10px) calc(50% - 3px); background-size:6px 6px, 6px 6px; background-repeat:no-repeat; padding-right:28px; }
+    input[type="file"] { padding:0; overflow:hidden; line-height:1.2; }
+    input[type="file"]::file-selector-button { border:none; border-right:var(--thin) solid var(--line); background:#fff; padding:8px 10px; margin-right:10px; font-family:inherit !important; font-weight:900; font-size:.72rem; letter-spacing:-.01rem; color:var(--ink) !important; cursor:pointer; box-shadow:none; }
+    .row2, .row3 { display:grid; grid-template-columns:1fr; gap:5px; }
+    .form-actions { margin-top:7px; }
+    .row5 { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:5px; margin:1px 0 5px; }
+    .chip { border:1px solid var(--line); padding:5px 3px; font-size:.6rem; font-weight:900; display:flex; flex-direction:column; align-items:center; gap:3px; justify-content:center; text-align:center; min-height:37px; line-height:1.08; background:#fff; letter-spacing:-.02rem; cursor:pointer; box-shadow:2px 2px 0 rgba(26,26,26,.07); }
+    .chip input { width:13px; height:13px; margin:0; padding:0; accent-color:var(--line); }
+    .chip:has(input:checked) { background:var(--line); color:#fff !important; box-shadow:2px 2px 0 rgba(255,90,0,.30); }
+    .list { display:grid; gap:6px; }
+    .item { border:var(--thin) solid var(--line); padding:7px; background:var(--bg); }
+    .item h3 { font-size:.84rem; font-weight:900; margin-bottom:4px; line-height:1.25; word-break:keep-all; }
+    .item .mini { font-size:.66rem; opacity:.82; line-height:1.36; margin:2px 0; word-break:keep-all; letter-spacing:-.01rem; }
+    .empty-state { background:#fff; text-align:center; font-size:.73rem; font-weight:900; line-height:1.45; letter-spacing:-.01rem; padding:12px 10px; }
+    .hidden { display:none !important; }
+    .mini-tabs { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:5px; margin-bottom:7px; }
+    .mini-tabs button { width:100%; padding:7px 8px; font-size:.7rem; min-height:32px; }
+    .mini-tabs button.active { background:var(--line); color:#fff !important; }
+    #sub-list, #error-list, #reviewed-list, #user-list { max-height:178px; overflow:auto; border-top:1px dashed rgba(26,26,26,.42); border-bottom:1px dashed rgba(26,26,26,.42); padding:5px 0; }
+    #cafe-list { max-height:150px !important; overflow:auto; border-top:1px dashed rgba(26,26,26,.45); border-bottom:1px dashed rgba(26,26,26,.45); padding:5px 0; margin-bottom:6px; }
+    #csv-msg { display:block; font-size:.68rem; font-weight:800; opacity:.76; line-height:1.4; word-break:keep-all; letter-spacing:-.01rem; }
+    .file-pick { display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:stretch; margin-bottom:6px; }
+    .file-input { display:none; }
+    .file-trigger { min-height:36px; padding:8px 12px; }
+    .file-name { border:var(--thin) solid var(--line); background:#fff; min-height:36px; padding:8px 10px; display:flex; align-items:center; font-size:.72rem; font-weight:900; line-height:1.3; letter-spacing:-.01rem; box-shadow:2px 2px 0 rgba(26,26,26,.07); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .csv-actions { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .csv-actions button { padding:7px 5px; font-size:.66rem; min-height:32px; }
+    .reply-block { margin-top:6px; padding-top:6px; border-top:1px dashed rgba(26,26,26,.35); display:grid; gap:5px; }
+    .reply-block textarea { min-height:56px; margin-bottom:0; background:#fff; }
+    .reply-meta { font-size:.66rem; font-weight:800; opacity:.78; line-height:1.4; word-break:keep-all; letter-spacing:-.01rem; }
+    .reply-actions { display:grid; gap:5px; }
+    @media (min-width:520px) {
+      .row2 { grid-template-columns:1fr 1fr; }
+      .row3 { grid-template-columns:1fr 1fr 1fr; }
+      .row5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
+      .reply-actions { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width:360px) {
+      body { padding-top:24px; }
+      .wrap { width:94%; }
+      .panel { padding:10px; }
+      h2 { margin-left:-10px; margin-right:-10px; padding-left:10px; padding-right:10px; }
+      .row5 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel top">
+      <div>
+        <h1>코히 리스트 운영 콘솔</h1>
+        <div id="hello" class="meta">권한 확인 중...</div>
+      </div>
+      <div class="btns">
+        <a class="btn" href="index.html">메인</a>
+        <a class="btn" href="mypage.html">마이페이지</a>
+        <button id="logout-btn" type="button">로그아웃</button>
+      </div>
+    </section>
+
+    <section id="notice-sec" class="panel hidden">
+      <h2>1) 공지 등록 (admin)</h2>
+      <textarea id="notice-input" placeholder="메인에 보여줄 공지를 입력"></textarea>
+      <button id="notice-save" class="primary" type="button">공지 저장</button>
+    </section>
+
+    <section class="panel">
+      <h2>2) 제보 검토 / 카페 관리</h2>
+      <div class="meta" style="margin-bottom:5px;text-align:center;">검토 대기 제보</div>
+      <div id="sub-list" class="list"></div>
+
+      <hr style="margin:8px 0;border:none;border-top:2px dashed #888;">
+      <div class="meta" style="margin-bottom:5px;text-align:center;">카페 관리 (검색/수정/신규/수정 후 승인)</div>
+      <input id="cafe-search" placeholder="카페명/주소 검색">
+      <div id="cafe-count" class="meta" style="margin:-2px 0 5px;">카페 데이터 확인 중...</div>
+      <div id="cafe-list" class="list"></div>
+      <div class="btns" style="margin-top:6px;">
+        <button id="new-cafe-btn" class="primary" type="button">신규 등록</button>
+      </div>
+      <div id="cafe-form-wrap" class="hidden">
+        <hr style="margin:6px 0;border:none;border-top:2px dashed #888;">
+        <div id="review-mode" class="item hidden" style="margin-bottom:6px;"></div>
+        <input id="cafe-id" placeholder="id (수정시 자동 채움)" disabled>
+        <input id="cafe-name" placeholder="카페명 *">
+        <input id="cafe-address" placeholder="주소 *">
+        <textarea id="cafe-desc" placeholder="설명 *"></textarea>
+        <div class="row2">
+          <input id="cafe-lat" placeholder="위도">
+          <input id="cafe-lng" placeholder="경도">
+        </div>
+        <input id="cafe-signature" placeholder="시그니처 (쉼표 구분)">
+        <input id="cafe-instagram" placeholder="인스타 링크">
+        <input id="cafe-bean" placeholder="원두 구매 링크">
+        <div class="row5">
+          <label class="chip"><input type="checkbox" name="cat" value="espresso">에스프레소</label>
+          <label class="chip"><input type="checkbox" name="cat" value="drip">드립</label>
+          <label class="chip"><input type="checkbox" name="cat" value="decaf">디카페인</label>
+          <label class="chip"><input type="checkbox" name="cat" value="instagram">인스타</label>
+          <label class="chip"><input type="checkbox" name="cat" value="dessert">디저트</label>
+        </div>
+        <div class="row2">
+          <label class="chip"><input type="checkbox" id="oakerman-pick">오커맨픽</label>
+          <label class="chip"><input type="checkbox" id="manager-pick">매니저픽</label>
+        </div>
+        <div class="row2 form-actions">
+          <button id="save-cafe-btn" class="primary" type="button">저장</button>
+          <button id="delete-btn" class="warn" type="button">닫기</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>3) CSV 운영 (보조)</h2>
+      <div class="file-pick">
+        <label for="csv-file" class="btn file-trigger">파일 선택</label>
+        <div id="csv-file-name" class="file-name">선택된 파일 없음</div>
+      </div>
+      <input id="csv-file" class="file-input" type="file" accept=".csv,text/csv">
+      <div class="row3 csv-actions">
+        <button id="csv-download" type="button">CSV 다운로드</button>
+        <button id="csv-upload" class="primary" type="button">CSV 업로드</button>
+        <button id="csv-reset" class="warn" type="button">CSV 초기화</button>
+      </div>
+      <div id="csv-msg" class="meta" style="margin-top:6px;"></div>
+    </section>
+
+    <section class="panel">
+      <h2>4) 오류 제보 내역</h2>
+      <div id="error-tabs" class="mini-tabs">
+        <button type="button" data-status="open" class="active">확인 대기</button>
+        <button type="button" data-status="resolved">처리 완료</button>
+      </div>
+      <div id="error-list" class="list"></div>
+    </section>
+
+    <section class="panel">
+      <h2>5) 승인/반려 내역</h2>
+      <div id="reviewed-note" class="meta" style="margin-bottom:5px;text-align:center;"></div>
+      <div id="reviewed-tabs" class="mini-tabs">
+        <button type="button" data-status="approved" class="active">승인됨</button>
+        <button type="button" data-status="rejected">반려됨</button>
+      </div>
+      <div id="reviewed-list" class="list"></div>
+    </section>
+
+    <section id="user-sec" class="panel hidden">
+      <h2>6) 회원 목록 (admin)</h2>
+      <input id="user-search" placeholder="아이디 검색">
+      <div id="user-count" class="meta" style="margin:-2px 0 5px;">회원 목록 확인 중...</div>
+      <div id="user-list" class="list"></div>
+    </section>
+
+    <section id="role-sec" class="panel hidden">
+      <h2>7) 권한 관리 (admin)</h2>
+      <div class="row2">
+        <input id="role-username" placeholder="username">
+        <select id="role-value">
+          <option value="user">user</option>
+          <option value="manager">manager</option>
+        </select>
+      </div>
+      <button id="role-set" class="primary" type="button">권한 반영</button>
+    </section>
+  </main>
+
+  <script type="module" src="./assets/admin.js"></script>
+</body>
+</html>
+

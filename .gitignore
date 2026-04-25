@@ -1,0 +1,9 @@
+.wrangler/
+.chrome-mobile-check/
+backups/
+wrangler.worker.backup.toml
+*.log
+*.tmp
+*.bak
+Thumbs.db
+.DS_Store
