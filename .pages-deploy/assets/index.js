@@ -10,6 +10,7 @@ import {
   openNaverMapForCafe,
   setStorageValue,
   shareCafe,
+  storeCsrfFromPayload,
 } from "./common.js";
 
 let data = [];
@@ -484,6 +485,7 @@ async function loadMe() {
     const res = await api("/me");
     if (!res.ok) throw new Error();
     const payload = await res.json();
+    storeCsrfFromPayload(payload);
     currentUser = payload.user || null;
   } catch {
     currentUser = null;
