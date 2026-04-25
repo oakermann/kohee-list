@@ -109,6 +109,12 @@ Run syntax checks:
 powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1
 ```
 
+Run safe maintenance automation locally:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\auto-maintenance.ps1
+```
+
 Export live cafe data to CSV backup:
 
 ```powershell
@@ -150,6 +156,16 @@ The script creates a temporary user and removes it during cleanup.
   - Requires a manager/admin bearer token
 
 This keeps backup and restore aligned with the same CSV schema used by the admin console.
+
+## Safe Automation Flow
+
+- `scripts/auto-maintenance.ps1`
+  - Runs syntax validation
+  - Checks live Worker `/health`
+  - Checks live `/data`
+  - Exports a timestamped CSV backup
+
+This is the recommended low-risk automation entrypoint because it does not deploy code and does not modify production data.
 
 ## CI
 

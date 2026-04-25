@@ -1,6 +1,7 @@
 .wrangler/
 .chrome-mobile-check/
 backups/
+reports/
 wrangler.worker.backup.toml
 *.log
 *.tmp
