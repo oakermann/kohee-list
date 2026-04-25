@@ -158,6 +158,7 @@ export async function login(req, env) {
       {
         ok: true,
         user: { id: user.id, username: user.username, role: user.role },
+        csrfToken,
       },
       200,
       req,
@@ -194,24 +195,22 @@ export async function me(req, env) {
     const user = await getSessionUser(req, env);
     if (!user) return json({ ok: true, user: null }, 200, req, env);
 
-    const body = {
-      ok: true,
-      user: { id: user.user_id, username: user.username, role: user.role },
-    };
+    const csrfToken = secureRandomToken();
+    const csrfTokenHash = await hashCsrfToken(csrfToken, env);
+    await env.DB.prepare("UPDATE sessions SET csrf_token_hash = ? WHERE id = ?")
+      .bind(csrfTokenHash, user.session_id)
+      .run();
 
-    if (!user.csrf_token_hash) {
-      const csrfToken = secureRandomToken();
-      const csrfTokenHash = await hashCsrfToken(csrfToken, env);
-      await env.DB.prepare(
-        "UPDATE sessions SET csrf_token_hash = ? WHERE id = ?",
-      )
-        .bind(csrfTokenHash, user.session_id)
-        .run();
-      return json(body, 200, req, env, {
-        "set-cookie": csrfCookieHeader(csrfToken),
-      });
-    }
-
-    return json(body, 200, req, env);
+    return json(
+      {
+        ok: true,
+        user: { id: user.user_id, username: user.username, role: user.role },
+        csrfToken,
+      },
+      200,
+      req,
+      env,
+      { "set-cookie": csrfCookieHeader(csrfToken) },
+    );
   });
 }
