@@ -1,0 +1,97 @@
+name: Deploy Manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_backup:
+        description: "Create a CSV backup before deploy"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  deployments: write
+  issues: write
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run safe release pipeline
+        shell: powershell
+        run: |
+          $args = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", ".\scripts\release-safe.ps1"
+          )
+          if ("${{ inputs.create_backup }}" -ne "true") {
+            $args += "-SkipBackup"
+          }
+          & powershell @args
+
+      - name: Upload release report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-report-${{ github.run_number }}
+          path: |
+            reports/release-safe-*.json
+            backups/cafes-*.csv
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Create or update failure issue
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Automation failure: Deploy Manual";
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const body = [
+              "Manual deploy workflow failed.",
+              "",
+              `- Workflow: ${context.workflow}`,
+              `- Run: ${runUrl}`,
+              `- Commit: ${context.sha}`,
+              `- Actor: ${context.actor}`
+            ].join("\n");
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open"
+            });
+
+            const existing = issues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body
+              });
+            }

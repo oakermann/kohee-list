@@ -201,6 +201,9 @@ This is the recommended "strong but still safe" automation level for KOHEE LIST.
 
 - GitHub Actions workflow:
   - `.github/workflows/validate.yml`
+- Additional automation workflows:
+  - `.github/workflows/deploy-manual.yml`
+  - `.github/workflows/maintenance-scheduled.yml`
 - It runs syntax validation for:
   - Worker entrypoint
   - `server/*.js`
@@ -214,6 +217,23 @@ To activate CI for real:
 2. Create a GitHub repository
 3. Push this workspace to GitHub
 4. GitHub Actions will start running `Validate` on push and pull request
+
+Required GitHub repository secrets for Cloudflare workflows:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+What they do:
+
+- `Deploy Manual`
+  - Runs the safe release pipeline from GitHub Actions
+  - Optionally creates a CSV backup first
+  - Uploads report artifacts
+  - Opens or updates a GitHub issue if deployment fails
+- `Maintenance Scheduled`
+  - Runs the safe maintenance flow on a schedule
+  - Uploads backup artifacts
+  - Opens or updates a GitHub issue if maintenance fails
 
 ## Frontend Notes
 
