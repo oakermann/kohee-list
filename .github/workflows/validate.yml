@@ -21,3 +21,6 @@ jobs:
       - name: Run syntax checks
         shell: powershell
         run: powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1
+
+      - name: Run unit tests
+        run: npm run test:unit

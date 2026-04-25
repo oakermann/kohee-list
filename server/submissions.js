@@ -11,6 +11,7 @@ import {
   withGuard,
 } from "./shared.js";
 import { normalizeCafePayload } from "./cafes.js";
+import { consumeRateLimit, writeAuditLog } from "./security.js";
 
 export function toSubmissionResponse(row) {
   return {
@@ -40,6 +41,7 @@ export function toSubmissionResponse(row) {
 export async function submitCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
+    await consumeRateLimit(env, `submit:${user.user_id}`, 10, 10);
     const body = await readJson(req);
 
     const name = cleanText(body.name, 120);
@@ -246,6 +248,19 @@ export async function approveSubmission(req, env) {
       .bind(reviewer.user_id, nowIso(), linkedCafeId || null, submissionId)
       .run();
 
+    await writeAuditLog(env, {
+      actorUserId: reviewer.user_id,
+      action: "submission.approve",
+      targetType: "submission",
+      targetId: submissionId,
+      before: sub,
+      after: {
+        status: "approved",
+        linked_cafe_id: linkedCafeId || null,
+        duplicate: !!isDuplicate,
+      },
+    });
+
     return json(
       { ok: true, linked_cafe_id: linkedCafeId || null },
       200,
@@ -265,9 +280,7 @@ export async function rejectSubmission(req, env) {
     const rejectReason = cleanText(body.reject_reason, 500);
     if (!submissionId) throw new HttpError(400, "submissionId required");
 
-    const sub = await env.DB.prepare(
-      "SELECT status FROM submissions WHERE id = ?",
-    )
+    const sub = await env.DB.prepare("SELECT * FROM submissions WHERE id = ?")
       .bind(submissionId)
       .first();
     if (!sub) throw new HttpError(404, "Submission not found");
@@ -281,6 +294,15 @@ export async function rejectSubmission(req, env) {
     )
       .bind(reviewer.user_id, nowIso(), rejectReason || null, submissionId)
       .run();
+
+    await writeAuditLog(env, {
+      actorUserId: reviewer.user_id,
+      action: "submission.reject",
+      targetType: "submission",
+      targetId: submissionId,
+      before: sub,
+      after: { status: "rejected", reject_reason: rejectReason || null },
+    });
 
     return json({ ok: true }, 200, req, env);
   });
@@ -296,7 +318,7 @@ export async function updateSubmission(req, env) {
     if (!submissionId) throw new HttpError(400, "id required");
 
     const existing = await env.DB.prepare(
-      "SELECT status, oakerman_pick, manager_pick FROM submissions WHERE id = ?",
+      "SELECT * FROM submissions WHERE id = ?",
     )
       .bind(submissionId)
       .first();
@@ -327,6 +349,15 @@ export async function updateSubmission(req, env) {
         submissionId,
       )
       .run();
+
+    await writeAuditLog(env, {
+      actorUserId: reviewer.user_id,
+      action: "submission.update",
+      targetType: "submission",
+      targetId: submissionId,
+      before: existing,
+      after: payload,
+    });
 
     return json({ ok: true }, 200, req, env);
   });

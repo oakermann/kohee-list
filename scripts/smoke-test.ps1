@@ -8,6 +8,23 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Get-CsrfToken {
+  param(
+    [Microsoft.PowerShell.Commands.WebRequestSession]$Session
+  )
+
+  if (-not $Session) {
+    return ""
+  }
+
+  $cookies = $Session.Cookies.GetCookies([Uri]$BaseUrl)
+  $csrf = $cookies | Where-Object { $_.Name -eq "kohee_csrf" } | Select-Object -First 1
+  if ($csrf) {
+    return $csrf.Value
+  }
+  return ""
+}
+
 function Invoke-Api {
   param(
     [string]$Method,
@@ -20,6 +37,12 @@ function Invoke-Api {
   $headers = @{}
   if ($Token) {
     $headers["authorization"] = "Bearer $Token"
+  }
+  if ($Session -and @("POST", "PUT", "PATCH", "DELETE") -contains $Method.ToUpper()) {
+    $csrf = Get-CsrfToken $Session
+    if ($csrf) {
+      $headers["x-csrf-token"] = $csrf
+    }
   }
 
   if ($null -ne $Body) {

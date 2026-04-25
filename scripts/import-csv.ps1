@@ -5,7 +5,8 @@ param(
   [string]$Token = "",
   [string]$TokenFile = "",
   [string]$Username = "",
-  [string]$Password = ""
+  [string]$Password = "",
+  [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,9 +23,13 @@ $resolvedCsv = (Resolve-Path -LiteralPath $CsvPath).Path
 $content = Get-Content -LiteralPath $resolvedCsv -Raw
 
 Write-Host "[import-csv] uploading $resolvedCsv"
+$importPath = "/import-csv"
+if ($DryRun) {
+  $importPath = "/import-csv?dryRun=1"
+}
 
 if ($Token) {
-  $result = Invoke-RestMethod -Uri ($BaseUrl + "/import-csv") -Method POST -Headers @{
+  $result = Invoke-RestMethod -Uri ($BaseUrl + $importPath) -Method POST -Headers @{
     authorization = "Bearer $Token"
     "content-type" = "text/csv; charset=utf-8"
   } -Body $content
@@ -39,8 +44,16 @@ if ($Token) {
     "content-type" = "application/json"
   } -Body $loginBody | Out-Null
 
-  $result = Invoke-RestMethod -Uri ($BaseUrl + "/import-csv") -Method POST -WebSession $session -Headers @{
+  $csrfCookie = $session.Cookies.GetCookies([Uri]$BaseUrl) |
+    Where-Object { $_.Name -eq "kohee_csrf" } |
+    Select-Object -First 1
+  if (-not $csrfCookie) {
+    throw "Login succeeded, but CSRF cookie was not returned."
+  }
+
+  $result = Invoke-RestMethod -Uri ($BaseUrl + $importPath) -Method POST -WebSession $session -Headers @{
     "content-type" = "text/csv; charset=utf-8"
+    "x-csrf-token" = $csrfCookie.Value
   } -Body $content
 } else {
   throw "Missing auth credentials. Pass -Username/-Password or legacy -Token/-TokenFile/KOHEE_AUTH_TOKEN."

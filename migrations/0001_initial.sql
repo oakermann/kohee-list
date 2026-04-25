@@ -12,9 +12,6 @@ CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   token_hash TEXT NOT NULL UNIQUE,
-  csrf_token_hash TEXT DEFAULT '',
-  user_agent TEXT DEFAULT '',
-  ip_hash TEXT DEFAULT '',
   expires_at TEXT NOT NULL,
   created_at TEXT NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -22,32 +19,6 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
-CREATE INDEX IF NOT EXISTS idx_sessions_ip_hash ON sessions(ip_hash);
-
-CREATE TABLE IF NOT EXISTS rate_limits (
-  key TEXT PRIMARY KEY,
-  count INTEGER NOT NULL DEFAULT 0,
-  reset_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_rate_limits_reset_at ON rate_limits(reset_at);
-
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id TEXT PRIMARY KEY,
-  actor_user_id TEXT,
-  action TEXT NOT NULL,
-  target_type TEXT NOT NULL,
-  target_id TEXT,
-  before_json TEXT,
-  after_json TEXT,
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON audit_logs(target_type, target_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS cafes (
   id TEXT PRIMARY KEY,

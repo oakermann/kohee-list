@@ -8,6 +8,7 @@ import {
   requireRole,
   withGuard,
 } from "./shared.js";
+import { consumeRateLimit, writeAuditLog } from "./security.js";
 
 export function toErrorReportResponse(row) {
   return {
@@ -32,6 +33,7 @@ export function toErrorReportResponse(row) {
 export async function submitErrorReport(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
+    await consumeRateLimit(env, `error:${user.user_id}`, 10, 10);
     const body = await readJson(req);
 
     const title = cleanText(body.title, 120);
@@ -127,7 +129,10 @@ export async function replyErrorReport(req, env) {
     if (!message) throw new HttpError(400, "message required");
 
     const exists = await env.DB.prepare(
-      "SELECT id FROM error_reports WHERE id = ?",
+      `SELECT e.*, reply.message AS reply_message
+       FROM error_reports e
+       LEFT JOIN error_report_replies reply ON reply.report_id = e.id
+       WHERE e.id = ?`,
     )
       .bind(id)
       .first();
@@ -154,6 +159,15 @@ export async function replyErrorReport(req, env) {
       )
       .run();
 
+    await writeAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "error_report.reply",
+      targetType: "error_report",
+      targetId: id,
+      before: exists,
+      after: { message, replied_by: user.user_id, replied_at: timestamp },
+    });
+
     return json({ ok: true }, 200, req, env);
   });
 }
@@ -168,7 +182,7 @@ export async function resolveErrorReport(req, env) {
     if (!id) throw new HttpError(400, "id required");
 
     const exists = await env.DB.prepare(
-      "SELECT id FROM error_reports WHERE id = ?",
+      "SELECT * FROM error_reports WHERE id = ?",
     )
       .bind(id)
       .first();
@@ -179,6 +193,15 @@ export async function resolveErrorReport(req, env) {
     )
       .bind(user.user_id, nowIso(), id)
       .run();
+
+    await writeAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "error_report.resolve",
+      targetType: "error_report",
+      targetId: id,
+      before: exists,
+      after: { status: "resolved", resolved_by: user.user_id },
+    });
 
     return json({ ok: true }, 200, req, env);
   });

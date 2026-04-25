@@ -49,8 +49,11 @@ Root HTML/assets and `aaaa/` are mirrors kept for local testing and manual check
 - Passwords are hashed in the Worker
 - Sessions are server-side and stored in D1
 - Session cookie is `HttpOnly`, `Secure`, `SameSite=None`
+- A separate `kohee_csrf` cookie is issued for unsafe authenticated requests
 - Login returns the authenticated user payload and sets the session cookie
 - Frontend auth is cookie-first and no longer stores the session token in `localStorage`
+- Login failures are rate-limited by IP + username
+- Signup and user submissions are rate-limited to reduce spam
 - Roles:
   - `user`
   - `manager`
@@ -62,10 +65,19 @@ Root HTML/assets and `aaaa/` are mirrors kept for local testing and manual check
 ## Required Cloudflare Setup
 
 1. Create D1 and put the binding info into `wrangler.toml`
-2. Run schema:
+2. Run schema for a new database:
 
 ```powershell
 npx.cmd wrangler d1 execute kohee-list --remote --file=./schema.sql
+```
+
+For an existing database, apply migrations in order instead of replaying the
+whole schema:
+
+```powershell
+npx.cmd wrangler d1 execute kohee-list --remote --file=./migrations/0002_rate_limits.sql
+npx.cmd wrangler d1 execute kohee-list --remote --file=./migrations/0003_audit_logs.sql
+npx.cmd wrangler d1 execute kohee-list --remote --file=./migrations/0004_session_security.sql
 ```
 
 3. Set Worker secrets:
@@ -81,6 +93,10 @@ There is no insecure default fallback in production code.
 4. Confirm environment variables in `wrangler.toml`
    - `SESSION_DAYS`
    - `FRONTEND_ORIGIN`
+
+`FRONTEND_ORIGIN` should contain the Pages origin that is allowed to send
+credentialed browser requests, for example `https://kohee.pages.dev`.
+Unknown origins do not receive credentialed CORS headers.
 
 ## Daily Commands
 
@@ -138,6 +154,12 @@ Run syntax checks:
 powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1
 ```
 
+Run unit tests:
+
+```powershell
+npm run test:unit
+```
+
 Run safe maintenance automation locally:
 
 ```powershell
@@ -154,6 +176,12 @@ Import CSV through the live admin API:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Username <ADMIN_OR_MANAGER_USERNAME> -Password <PASSWORD>
+```
+
+Preview CSV import without changing D1:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Username <ADMIN_OR_MANAGER_USERNAME> -Password <PASSWORD> -DryRun
 ```
 
 Legacy bearer-token mode is still supported for maintenance scripts:
@@ -270,6 +298,7 @@ What they do:
   - synced mirrors: root HTML/assets, `aaaa/`
 - Database:
   - base schema: `schema.sql`
+  - migration history: `migrations/*.sql`
 
 If you change frontend files for production deploy, update `.pages-deploy/` first and then run:
 

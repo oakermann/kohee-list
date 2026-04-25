@@ -53,11 +53,30 @@ export function setStorageValue(key, value) {
   } catch {}
 }
 
+export function getCookieValue(key) {
+  const parts = document.cookie.split(";").map((value) => value.trim());
+  for (const part of parts) {
+    if (!part.includes("=")) continue;
+    const [cookieKey, ...rest] = part.split("=");
+    if (cookieKey === key) return decodeURIComponent(rest.join("="));
+  }
+  return "";
+}
+
 export async function api(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const method = String(options.method || "GET").toUpperCase();
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    const csrfToken = getCookieValue("kohee_csrf");
+    if (csrfToken && !headers.has("x-csrf-token")) {
+      headers.set("x-csrf-token", csrfToken);
+    }
+  }
+
   return fetch(API_BASE + path, {
     ...options,
     credentials: "include",
-    headers: options.headers || {},
+    headers,
   });
 }
 

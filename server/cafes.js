@@ -1,4 +1,4 @@
-import {
+﻿import {
   HttpError,
   cleanNumber,
   cleanText,
@@ -13,6 +13,7 @@ import {
   text,
   withGuard,
 } from "./shared.js";
+import { writeAuditLog } from "./security.js";
 
 export function toCafeResponse(row) {
   return {
@@ -94,6 +95,7 @@ export async function addCafe(req, env) {
       throw new HttpError(400, "name/address/desc required");
 
     const id = crypto.randomUUID();
+    const updatedAt = nowIso();
     await env.DB.prepare(
       `INSERT INTO cafes(
         id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
@@ -114,9 +116,22 @@ export async function addCafe(req, env) {
         payload.oakerman_pick,
         payload.manager_pick,
         user.user_id,
-        nowIso(),
+        updatedAt,
       )
       .run();
+
+    await writeAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "cafe.add",
+      targetType: "cafe",
+      targetId: id,
+      after: {
+        id,
+        ...payload,
+        created_by: user.user_id,
+        updated_at: updatedAt,
+      },
+    });
 
     return json({ ok: true, id }, 201, req, env);
   });
@@ -131,9 +146,7 @@ export async function editCafe(req, env) {
     const id = cleanText(body.id, 80);
     if (!id) throw new HttpError(400, "id required");
 
-    const exists = await env.DB.prepare(
-      "SELECT id, oakerman_pick, manager_pick FROM cafes WHERE id = ?",
-    )
+    const exists = await env.DB.prepare("SELECT * FROM cafes WHERE id = ?")
       .bind(id)
       .first();
     if (!exists) throw new HttpError(404, "Cafe not found");
@@ -142,6 +155,7 @@ export async function editCafe(req, env) {
     if (!payload.name || !payload.address || !payload.desc)
       throw new HttpError(400, "name/address/desc required");
 
+    const updatedAt = nowIso();
     await env.DB.prepare(
       `UPDATE cafes SET
         name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
@@ -160,10 +174,19 @@ export async function editCafe(req, env) {
         payload.category,
         payload.oakerman_pick,
         payload.manager_pick,
-        nowIso(),
+        updatedAt,
         id,
       )
       .run();
+
+    await writeAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "cafe.edit",
+      targetType: "cafe",
+      targetId: id,
+      before: exists,
+      after: { id, ...payload, updated_at: updatedAt },
+    });
 
     return json({ ok: true }, 200, req, env);
   });
@@ -178,7 +201,7 @@ export async function deleteCafe(req, env) {
     const id = cleanText(body.id, 80);
     if (!id) throw new HttpError(400, "id required");
 
-    const exists = await env.DB.prepare("SELECT id FROM cafes WHERE id = ?")
+    const exists = await env.DB.prepare("SELECT * FROM cafes WHERE id = ?")
       .bind(id)
       .first();
     if (!exists) throw new HttpError(404, "Cafe not found");
@@ -192,6 +215,13 @@ export async function deleteCafe(req, env) {
       .bind(id)
       .run();
     await env.DB.prepare("DELETE FROM cafes WHERE id = ?").bind(id).run();
+    await writeAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "cafe.delete",
+      targetType: "cafe",
+      targetId: id,
+      before: exists,
+    });
     return json({ ok: true }, 200, req, env);
   });
 }
@@ -214,6 +244,13 @@ export async function resetCsv(req, env) {
     ).run();
     await env.DB.prepare("DELETE FROM cafes").run();
 
+    await writeAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "csv.reset",
+      targetType: "cafes",
+      after: { deleted },
+    });
+
     return json({ ok: true, deleted }, 200, req, env);
   });
 }
@@ -223,12 +260,25 @@ export async function setNotice(req, env) {
     const user = await requireAuth(req, env);
     requireRole(user, ["admin"]);
 
+    const before = await env.DB.prepare(
+      "SELECT value, updated_at, updated_by FROM settings WHERE key = 'notice'",
+    ).first();
     const value = cleanText(await req.text(), 500);
+    const updatedAt = nowIso();
     await env.DB.prepare(
       "UPDATE settings SET value = ?, updated_at = ?, updated_by = ? WHERE key = 'notice'",
     )
-      .bind(value, nowIso(), user.user_id)
+      .bind(value, updatedAt, user.user_id)
       .run();
+
+    await writeAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "notice.update",
+      targetType: "setting",
+      targetId: "notice",
+      before,
+      after: { value, updated_at: updatedAt, updated_by: user.user_id },
+    });
 
     return json({ ok: true }, 200, req, env);
   });

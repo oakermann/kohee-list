@@ -638,6 +638,35 @@ async function uploadCsv() {
   }
 }
 
+async function dryRunCsv() {
+  try {
+    const file = $("csv-file").files[0];
+    if (!file) {
+      alert("CSV 파일을 선택해 주세요.");
+      return;
+    }
+    $("csv-msg").textContent = "CSV 검증 중...";
+
+    const text = await file.text();
+    const res = await api("/import-csv?dryRun=1", {
+      method: "POST",
+      headers: { "content-type": "text/plain; charset=utf-8" },
+      body: text,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload.ok)
+      throw new Error(payload.error || "CSV 검증에 실패했습니다.");
+
+    const message =
+      `CSV 검증 완료: 신규 ${payload.wouldAdd || 0} / 수정 ${payload.wouldUpdate || 0}` +
+      ` / 중복 ${payload.wouldDuplicate || 0} / 실패 ${payload.failed || 0}`;
+    $("csv-msg").textContent = message;
+  } catch (error) {
+    $("csv-msg").textContent = `CSV 검증 실패: ${error.message}`;
+    alert(error.message);
+  }
+}
+
 async function resetCsv() {
   if (state.me.role !== "admin") {
     alert("CSV 초기화는 admin만 가능합니다.");
@@ -790,6 +819,7 @@ async function init() {
   );
   $("csv-download").addEventListener("click", downloadCsv);
   $("csv-file").addEventListener("change", updateCsvFileName);
+  $("csv-dry-run").addEventListener("click", dryRunCsv);
   $("csv-upload").addEventListener("click", uploadCsv);
   $("csv-reset").addEventListener("click", () =>
     resetCsv().catch((error) => alert(error.message)),
