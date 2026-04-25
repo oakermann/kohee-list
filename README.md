@@ -218,10 +218,9 @@ To activate CI for real:
 3. Push this workspace to GitHub
 4. GitHub Actions will start running `Validate` on push and pull request
 
-Required GitHub repository secrets for Cloudflare workflows:
+Required GitHub repository secret for Cloudflare deploy workflow:
 
 - `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
 
 What they do:
 
@@ -234,6 +233,8 @@ What they do:
   - Runs the safe maintenance flow on a schedule
   - Uploads backup artifacts
   - Opens or updates a GitHub issue if maintenance fails
+
+`CLOUDFLARE_ACCOUNT_ID` is already embedded in this project's Wrangler config.
 
 ## Frontend Notes
 

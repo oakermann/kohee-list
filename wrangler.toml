@@ -1,6 +1,7 @@
 ﻿name = "kohee-list"
 main = "worker.js"
 compatibility_date = "2026-04-22"
+account_id = "af7aa3c563288f9665d219a6f8dd23dc"
 
 [[d1_databases]]
 binding = "DB"
@@ -10,16 +11,3 @@ database_id = "747da0d8-cd7b-4164-8cc2-82a4c23f1826"
 [vars]
 SESSION_DAYS = "14"
 FRONTEND_ORIGIN = "https://kohee.pages.dev"
-
-
-
-
-
-
-
-
-
-
-
-
-
