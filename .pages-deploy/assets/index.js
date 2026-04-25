@@ -30,7 +30,9 @@ let lastPositionAccuracyM = null;
 
 function safeText(value) {
   const text = String(value || "").trim();
-  return text.toLowerCase() === "undefined" || text.toLowerCase() === "null" ? "" : text;
+  return text.toLowerCase() === "undefined" || text.toLowerCase() === "null"
+    ? ""
+    : text;
 }
 
 function cafeCategories(cafe) {
@@ -46,7 +48,9 @@ function cafeTags(cafe) {
 }
 
 function tagHtml(cafe) {
-  return cafeTags(cafe).map((tag) => `<span class="tag-small">${esc(tag)}</span>`).join("");
+  return cafeTags(cafe)
+    .map((tag) => `<span class="tag-small">${esc(tag)}</span>`)
+    .join("");
 }
 
 function signatureHtml(values) {
@@ -103,7 +107,9 @@ async function loadFavorites() {
     const res = await api("/favorites");
     if (!res.ok) throw new Error();
     const payload = await res.json();
-    favoriteIds = new Set((payload.items || []).map((item) => String(item.cafe?.id || "")));
+    favoriteIds = new Set(
+      (payload.items || []).map((item) => String(item.cafe?.id || "")),
+    );
   } catch {
     favoriteIds = new Set();
   }
@@ -127,7 +133,8 @@ async function toggleFavorite(cafeId) {
     body: JSON.stringify({ cafe_id: cafeId, action }),
   });
   const payload = await res.json().catch(() => ({}));
-  if (!res.ok || !payload.ok) throw new Error(payload.error || "찜 처리에 실패했습니다.");
+  if (!res.ok || !payload.ok)
+    throw new Error(payload.error || "찜 처리에 실패했습니다.");
 
   if (payload.favored) favoriteIds.add(String(cafeId));
   else favoriteIds.delete(String(cafeId));
@@ -137,9 +144,12 @@ async function toggleFavorite(cafeId) {
 }
 
 function formatDistance(distanceKm) {
-  if (!Number.isFinite(distanceKm) || distanceKm >= GEO_DISTANCE_LIMIT_KM) return "";
+  if (!Number.isFinite(distanceKm) || distanceKm >= GEO_DISTANCE_LIMIT_KM)
+    return "";
   const label = `${distanceKm.toFixed(1)}km`;
-  return lastPositionAccuracyM && lastPositionAccuracyM > GEO_APPROX_THRESHOLD_M ? `약 ${label}` : label;
+  return lastPositionAccuracyM && lastPositionAccuracyM > GEO_APPROX_THRESHOLD_M
+    ? `약 ${label}`
+    : label;
 }
 
 function cafeCardHtml(cafe) {
@@ -147,9 +157,11 @@ function cafeCardHtml(cafe) {
     <div class="cafe-card" data-cafe-id="${esc(cafe.id)}">
       <div class="meta-row">
         <div class="tag-group">${tagHtml(cafe)}</div>
-        ${cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM
-          ? `<span class="distance-badge">${formatDistance(cafe.dis)}</span>`
-          : ""}
+        ${
+          cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM
+            ? `<span class="distance-badge">${formatDistance(cafe.dis)}</span>`
+            : ""
+        }
       </div>
       <h4>${esc(cafe.name)}</h4>
       <p class="cafe-desc">
@@ -179,7 +191,8 @@ async function loadData() {
       : [];
     render();
   } catch {
-    $("list").innerHTML = `<div class="center-msg">데이터를 불러오지 못했습니다.<br>잠시 후 다시 시도해 주세요.</div>`;
+    $("list").innerHTML =
+      `<div class="center-msg">데이터를 불러오지 못했습니다.<br>잠시 후 다시 시도해 주세요.</div>`;
   }
 }
 
@@ -188,17 +201,22 @@ function render() {
 
   if (nearbyMode) {
     let nearbyCafes = data
-      .filter((cafe) => Number.isFinite(cafe.dis) && cafe.dis < GEO_DISTANCE_LIMIT_KM)
+      .filter(
+        (cafe) => Number.isFinite(cafe.dis) && cafe.dis < GEO_DISTANCE_LIMIT_KM,
+      )
       .sort((a, b) => a.dis - b.dis);
 
     if (selectedCategory) {
-      nearbyCafes = nearbyCafes.filter((cafe) => cafeCategories(cafe).includes(selectedCategory));
+      nearbyCafes = nearbyCafes.filter((cafe) =>
+        cafeCategories(cafe).includes(selectedCategory),
+      );
     }
 
     nearbyCafes = nearbyCafes.slice(0, 20);
 
     if (!nearbyCafes.length) {
-      $("list").innerHTML = `<div class="center-msg">근처에 해당 카페가 없습니다.<br>GPS를 다시 확인해 주세요.</div>`;
+      $("list").innerHTML =
+        `<div class="center-msg">근처에 해당 카페가 없습니다.<br>GPS를 다시 확인해 주세요.</div>`;
       return;
     }
 
@@ -208,19 +226,23 @@ function render() {
 
   const hasFilter = query.length > 0 || selectedCategory !== null;
   if (!hasFilter) {
-    $("list").innerHTML = `<div class="center-msg">카테고리를 선택하거나<br>카페명 또는 주소를 검색해 보세요.</div>`;
+    $("list").innerHTML =
+      `<div class="center-msg">카테고리를 선택하거나<br>카페명 또는 주소를 검색해 보세요.</div>`;
     return;
   }
 
   const filtered = data
-    .filter((cafe) => (
-      safeText(cafe.name).toLowerCase().includes(query)
-      || safeText(cafe.address).toLowerCase().includes(query)
-    ) && (!selectedCategory || cafeCategories(cafe).includes(selectedCategory)))
+    .filter(
+      (cafe) =>
+        (safeText(cafe.name).toLowerCase().includes(query) ||
+          safeText(cafe.address).toLowerCase().includes(query)) &&
+        (!selectedCategory || cafeCategories(cafe).includes(selectedCategory)),
+    )
     .slice(0, 50);
 
   if (!filtered.length) {
-    $("list").innerHTML = `<div class="center-msg">조건에 맞는 결과가 없습니다.</div>`;
+    $("list").innerHTML =
+      `<div class="center-msg">조건에 맞는 결과가 없습니다.</div>`;
     return;
   }
 
@@ -233,7 +255,8 @@ function toggleFilter(categoryKey) {
   selectedCategory = selectedCategory === categoryKey ? null : categoryKey;
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.classList.remove("active");
-    if (selectedCategory && tab.id === `tab-${selectedCategory}`) tab.classList.add("active");
+    if (selectedCategory && tab.id === `tab-${selectedCategory}`)
+      tab.classList.add("active");
   });
   render();
 }
@@ -242,36 +265,49 @@ function handleSearchInput() {
   nearbyMode = false;
   if ($("search").value.trim().length > 0) {
     selectedCategory = null;
-    document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+    document
+      .querySelectorAll(".tab")
+      .forEach((tab) => tab.classList.remove("active"));
   }
   render();
 }
 
 function getDist(lat1, lon1, lat2, lon2) {
   const earthRadiusKm = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
-    * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function isValidCafeCoord(cafe) {
   const lat = Number(cafe.lat);
   const lng = Number(cafe.lng);
-  return Number.isFinite(lat)
-    && Number.isFinite(lng)
-    && lat >= -90 && lat <= 90
-    && lng >= -180 && lng <= 180
-    && !(lat === 0 && lng === 0);
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180 &&
+    !(lat === 0 && lng === 0)
+  );
 }
 
 function isValidUserCoord(lat, lng) {
-  return Number.isFinite(lat)
-    && Number.isFinite(lng)
-    && lat >= -90 && lat <= 90
-    && lng >= -180 && lng <= 180;
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
 }
 
 function setDistanceNote(accuracy) {
@@ -284,9 +320,10 @@ function setDistanceNote(accuracy) {
     return;
   }
 
-  note.textContent = accuracy > GEO_APPROX_THRESHOLD_M
-    ? "브라우저 위치 정확도가 낮아 거리가 대략적으로 보일 수 있습니다."
-    : "현재 위치 기준 거리 표시 중";
+  note.textContent =
+    accuracy > GEO_APPROX_THRESHOLD_M
+      ? "브라우저 위치 정확도가 낮아 거리가 대략적으로 보일 수 있습니다."
+      : "현재 위치 기준 거리 표시 중";
   note.style.display = "block";
 }
 
@@ -371,7 +408,9 @@ async function handleNearbyClick() {
     clearDistances();
     nearbyMode = false;
     render();
-    alert("위치 정보를 가져오지 못했습니다.\nGPS 또는 브라우저 권한을 확인해 주세요.");
+    alert(
+      "위치 정보를 가져오지 못했습니다.\nGPS 또는 브라우저 권한을 확인해 주세요.",
+    );
     console.error(error);
   } finally {
     setNearbyLoading(false);
@@ -408,7 +447,8 @@ function openModal(cafeId) {
 
   if (cafe.beanShop) {
     $("btn-bean").classList.remove("is-hidden");
-    $("btn-bean").onclick = () => window.open(cafe.beanShop, "_blank", "noopener");
+    $("btn-bean").onclick = () =>
+      window.open(cafe.beanShop, "_blank", "noopener");
   } else {
     $("btn-bean").classList.add("is-hidden");
     $("btn-bean").onclick = null;
@@ -416,7 +456,8 @@ function openModal(cafeId) {
 
   if (cafe.instagram) {
     $("btn-insta").classList.remove("is-hidden");
-    $("btn-insta").onclick = () => window.open(cafe.instagram, "_blank", "noopener");
+    $("btn-insta").onclick = () =>
+      window.open(cafe.instagram, "_blank", "noopener");
   } else {
     $("btn-insta").classList.add("is-hidden");
     $("btn-insta").onclick = null;
@@ -491,9 +532,12 @@ window.toggleFilter = toggleFilter;
 window.handleSearchInput = handleSearchInput;
 window.logout = logout;
 
-$("tabs").innerHTML = Object.entries(CAT_MAP).map(([key, label]) => (
-  `<button class="tab" id="tab-${key}" onclick="toggleFilter('${key}')">${label}</button>`
-)).join("");
+$("tabs").innerHTML = Object.entries(CAT_MAP)
+  .map(
+    ([key, label]) =>
+      `<button class="tab" id="tab-${key}" onclick="toggleFilter('${key}')">${label}</button>`,
+  )
+  .join("");
 
 $("nearby-btn").addEventListener("click", handleNearbyClick);
 $("list").addEventListener("click", (event) => {

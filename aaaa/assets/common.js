@@ -1,8 +1,8 @@
-export const API_BASE = window.__API_BASE__ || "https://kohee-list.gabefinder.workers.dev";
-export const AUTH_TOKEN_KEY = "kohee_auth_token";
+export const API_BASE =
+  window.__API_BASE__ || "https://kohee-list.gabefinder.workers.dev";
 export const CAT_MAP = {
   espresso: "에스프레소",
-  drip: "드립커피",
+  drip: "드립",
   decaf: "디카페인",
   instagram: "인스타",
   dessert: "디저트",
@@ -24,35 +24,25 @@ export function cleanParts(values) {
   return arr
     .flatMap((value) => String(value || "").split(/[|,]/))
     .map((value) => value.trim())
-    .filter((value) => value && value.toLowerCase() !== "undefined" && value.toLowerCase() !== "null");
-}
-
-export function getAuthToken() {
-  try {
-    return localStorage.getItem(AUTH_TOKEN_KEY) || "";
-  } catch (error) {
-    return "";
-  }
-}
-
-export function setAuthToken(token) {
-  try {
-    if (token) {
-      localStorage.setItem(AUTH_TOKEN_KEY, token);
-    } else {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-    }
-  } catch (error) {}
+    .filter(
+      (value) =>
+        value &&
+        value.toLowerCase() !== "undefined" &&
+        value.toLowerCase() !== "null",
+    );
 }
 
 export function clearAuthToken() {
-  setAuthToken("");
+  try {
+    // Remove legacy bearer-token storage from older builds.
+    localStorage.removeItem("kohee_auth_token");
+  } catch {}
 }
 
 export function getStorageValue(key) {
   try {
     return localStorage.getItem(key) || "";
-  } catch (error) {
+  } catch {
     return "";
   }
 }
@@ -60,42 +50,45 @@ export function getStorageValue(key) {
 export function setStorageValue(key, value) {
   try {
     localStorage.setItem(key, value);
-  } catch (error) {}
-}
-
-export function authHeaders(extra = {}) {
-  const token = getAuthToken();
-  return token ? { ...extra, authorization: `Bearer ${token}` } : extra;
+  } catch {}
 }
 
 export async function api(path, options = {}) {
-  const headers = authHeaders(options.headers || {});
-  return fetch(API_BASE + path, { ...options, credentials: "include", headers });
+  return fetch(API_BASE + path, {
+    ...options,
+    credentials: "include",
+    headers: options.headers || {},
+  });
 }
 
 export async function jsonApi(path, options = {}) {
   const res = await api(path, options);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || "요청 실패");
+  if (!res.ok) throw new Error(data.error || "요청에 실패했습니다.");
   return data;
 }
 
 export function roleLabel(role) {
-  return ({ user: "일반 유저", manager: "매니저", admin: "관리자" })[role] || role;
+  return (
+    { user: "일반 유저", manager: "매니저", admin: "관리자" }[role] || role
+  );
 }
 
 export function statusLabel(status) {
-  return ({ pending: "검토중", approved: "승인", rejected: "반려" })[status] || status;
+  return (
+    { pending: "검토중", approved: "승인", rejected: "반려" }[status] || status
+  );
 }
 
 export function errorStatusLabel(status) {
-  return ({ open: "확인 대기", resolved: "처리 완료" })[status] || status;
+  return { open: "확인 대기", resolved: "처리 완료" }[status] || status;
 }
 
 export function formatDate(value, includeTime = false) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
+
   if (includeTime) {
     return date.toLocaleString("ko-KR", {
       year: "numeric",
@@ -105,6 +98,7 @@ export function formatDate(value, includeTime = false) {
       minute: "2-digit",
     });
   }
+
   return date.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "2-digit",
@@ -136,7 +130,9 @@ export function getCity(address) {
 
 export function buildNaverMapUrls(keyword) {
   const encodedQuery = encodeURIComponent(keyword);
-  const appName = encodeURIComponent((location.href || "").split("#")[0] || "https://kohee.pages.dev");
+  const appName = encodeURIComponent(
+    (location.href || "").split("#")[0] || "https://kohee.pages.dev",
+  );
   return {
     webUrl: `https://map.naver.com/p/search/${encodedQuery}`,
     appUrl: `nmap://search?query=${encodedQuery}&appname=${appName}`,
@@ -171,7 +167,9 @@ export function openMobileNaverMap(primaryUrl, fallbackUrl) {
 
   window.addEventListener("pagehide", handleHide, { once: true });
   window.addEventListener("blur", handleHide, { once: true });
-  document.addEventListener("visibilitychange", handleVisibility, { once: true });
+  document.addEventListener("visibilitychange", handleVisibility, {
+    once: true,
+  });
 
   timer = setTimeout(() => {
     if (settled || document.hidden) {
@@ -207,7 +205,9 @@ export function openNaverMapForCafe(cafe) {
 
 export function modalDescHtml(desc, signature) {
   const signatureParts = cleanParts(signature);
-  const descHtml = desc ? `<div class="modal-copy-text">${esc(desc)}</div>` : "";
+  const descHtml = desc
+    ? `<div class="modal-copy-text">${esc(desc)}</div>`
+    : "";
   const signatureHtml = signatureParts.length
     ? `
       <div class="modal-signature">
@@ -225,7 +225,11 @@ export function modalDescHtml(desc, signature) {
 export async function shareCafe(cafe, fallbackUrl = location.href) {
   const text = `[코히 리스트] ${cafe.name}\n주소: ${cafe.address}`;
   if (navigator.share) {
-    await navigator.share({ title: "공유", text, url: fallbackUrl });
+    await navigator.share({
+      title: "코히 리스트 공유",
+      text,
+      url: fallbackUrl,
+    });
     return "shared";
   }
 

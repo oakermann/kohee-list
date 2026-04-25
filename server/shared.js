@@ -1,4 +1,6 @@
-﻿export const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
+﻿export const JSON_HEADERS = {
+  "content-type": "application/json; charset=utf-8",
+};
 export const SESSION_COOKIE = "kohee_session";
 export const ROLES = ["user", "manager", "admin"];
 
@@ -51,7 +53,10 @@ export function corsHeaders(req, env) {
         try {
           const reqUrl = new URL(origin);
           const ruleUrl = new URL(rule);
-          return reqUrl.protocol === ruleUrl.protocol && reqUrl.hostname.endsWith(`.${ruleUrl.hostname}`);
+          return (
+            reqUrl.protocol === ruleUrl.protocol &&
+            reqUrl.hostname.endsWith(`.${ruleUrl.hostname}`)
+          );
         } catch (error) {
           return false;
         }
@@ -80,7 +85,8 @@ export function corsPreflight(req, env) {
 
 export async function readJson(req) {
   const contentType = req.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) throw new Error("Invalid content-type");
+  if (!contentType.includes("application/json"))
+    throw new Error("Invalid content-type");
   return req.json();
 }
 
@@ -98,7 +104,9 @@ export function cleanNumber(value, fallback = 0) {
 }
 
 export function cleanText(value, max = 1000) {
-  return String(value || "").trim().slice(0, max);
+  return String(value || "")
+    .trim()
+    .slice(0, max);
 }
 
 export function cleanUrl(value) {
@@ -108,7 +116,9 @@ export function cleanUrl(value) {
     const u = new URL(v);
     if (u.protocol !== "https:" && u.protocol !== "http:") return "";
     for (const [key, paramValue] of [...u.searchParams.entries()]) {
-      const normalized = String(paramValue || "").trim().toLowerCase();
+      const normalized = String(paramValue || "")
+        .trim()
+        .toLowerCase();
       if (!normalized || normalized === "undefined" || normalized === "null") {
         u.searchParams.delete(key);
         continue;
@@ -125,10 +135,14 @@ export function cleanUrl(value) {
 }
 
 export function parseJsonArray(value) {
-  const normalize = (items) => items
-    .flatMap((v) => String(v || "").split(/[|,]/))
-    .map((v) => v.trim())
-    .filter((v) => v && v.toLowerCase() !== "undefined" && v.toLowerCase() !== "null");
+  const normalize = (items) =>
+    items
+      .flatMap((v) => String(v || "").split(/[|,]/))
+      .map((v) => v.trim())
+      .filter(
+        (v) =>
+          v && v.toLowerCase() !== "undefined" && v.toLowerCase() !== "null",
+      );
 
   if (Array.isArray(value)) return normalize(value);
   if (typeof value === "string") {
@@ -146,7 +160,9 @@ export function parseJsonArray(value) {
 export async function sha256Hex(input) {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export function bytesToBase64(bytes) {
@@ -166,7 +182,13 @@ export async function hashPassword(password) {
   const saltBytes = crypto.getRandomValues(new Uint8Array(16));
   const salt = bytesToBase64(saltBytes);
   const iterations = 100000;
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
   const bits = await crypto.subtle.deriveBits(
     { name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations },
     key,
@@ -183,7 +205,13 @@ export async function verifyPassword(password, encoded) {
   if (!iterations || !salt || !hash) return false;
 
   const saltBytes = base64ToBytes(salt);
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
   const bits = await crypto.subtle.deriveBits(
     { name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations },
     key,
@@ -204,8 +232,17 @@ export function safeEqual(a, b) {
   return diff === 0;
 }
 
+// SESSION_SECRET is required for every environment that handles auth/session flows.
+export function getRequiredSessionSecret(env) {
+  const secret = String(env.SESSION_SECRET || "").trim();
+  if (!secret) {
+    throw new HttpError(500, "SESSION_SECRET is not configured");
+  }
+  return secret;
+}
+
 export async function hashSessionToken(token, env) {
-  const secret = env.SESSION_SECRET || "dev-secret-change-me";
+  const secret = getRequiredSessionSecret(env);
   return sha256Hex(`${token}:${secret}`);
 }
 
@@ -247,11 +284,15 @@ export async function getSessionUser(req, env) {
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ?`,
-  ).bind(tokenHash).first();
+  )
+    .bind(tokenHash)
+    .first();
 
   if (!row) return null;
   if (new Date(row.expires_at).getTime() <= Date.now()) {
-    await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(row.session_id).run();
+    await env.DB.prepare("DELETE FROM sessions WHERE id = ?")
+      .bind(row.session_id)
+      .run();
     return null;
   }
   return row;
@@ -281,6 +322,11 @@ export async function withGuard(req, env, fn) {
     if (err instanceof HttpError) {
       return json({ ok: false, error: err.message }, err.status, req, env);
     }
-    return json({ ok: false, error: err.message || "Server error" }, 500, req, env);
+    return json(
+      { ok: false, error: err.message || "Server error" },
+      500,
+      req,
+      env,
+    );
   }
 }

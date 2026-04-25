@@ -16,9 +16,9 @@ export function parseCsvLine(line) {
 
   for (let i = 0; i < line.length; i += 1) {
     const ch = line[i];
-    if (ch === "\"") {
-      if (quote && line[i + 1] === "\"") {
-        current += "\"";
+    if (ch === '"') {
+      if (quote && line[i + 1] === '"') {
+        current += '"';
         i += 1;
       } else {
         quote = !quote;
@@ -66,56 +66,113 @@ export async function importCsv(req, env) {
           desc: cols[idx.desc] || "",
           lat: Number(cols[idx.lat] || 0),
           lng: Number(cols[idx.lng] || 0),
-          signature: (cols[idx.signature] || "").split(",").map((v) => v.trim()).filter(Boolean),
+          signature: (cols[idx.signature] || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean),
           beanShop: cols[idx.beanShop] || "",
           instagram: cols[idx.instagram] || "",
-          category: (cols[idx.category] || "").split(",").map((v) => v.trim()).filter(Boolean),
-          oakerman_pick: cols[idx.oakerman_pick] === "1" || cols[idx.oakerman_pick] === "true",
-          manager_pick: cols[idx.manager_pick] === "1" || cols[idx.manager_pick] === "true",
+          category: (cols[idx.category] || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean),
+          oakerman_pick:
+            cols[idx.oakerman_pick] === "1" ||
+            cols[idx.oakerman_pick] === "true",
+          manager_pick:
+            cols[idx.manager_pick] === "1" || cols[idx.manager_pick] === "true",
         };
 
         const payload = normalizeCafePayload(body, user.role);
-        if (!payload.name || !payload.address || !payload.desc) throw new Error("name/address/desc required");
+        if (!payload.name || !payload.address || !payload.desc)
+          throw new Error("name/address/desc required");
 
         const givenId = cleanText(body.id, 80);
         if (givenId) {
-          const exists = await env.DB.prepare("SELECT id FROM cafes WHERE id = ?").bind(givenId).first();
+          const exists = await env.DB.prepare(
+            "SELECT id, oakerman_pick, manager_pick FROM cafes WHERE id = ?",
+          )
+            .bind(givenId)
+            .first();
           if (exists) {
+            const nextPayload = normalizeCafePayload(body, user.role, exists);
             await env.DB.prepare(
               `UPDATE cafes SET
                 name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
                 oakerman_pick = ?, manager_pick = ?, updated_at = ?
                WHERE id = ?`,
-            ).bind(
-              payload.name,
-              payload.address,
-              payload.desc,
-              payload.lat,
-              payload.lng,
-              payload.signature,
-              payload.beanShop,
-              payload.instagram,
-              payload.category,
-              payload.oakerman_pick,
-              payload.manager_pick,
-              nowIso(),
-              givenId,
-            ).run();
+            )
+              .bind(
+                nextPayload.name,
+                nextPayload.address,
+                nextPayload.desc,
+                nextPayload.lat,
+                nextPayload.lng,
+                nextPayload.signature,
+                nextPayload.beanShop,
+                nextPayload.instagram,
+                nextPayload.category,
+                nextPayload.oakerman_pick,
+                nextPayload.manager_pick,
+                nowIso(),
+                givenId,
+              )
+              .run();
             updated += 1;
             continue;
           }
         }
 
         const duplicate = await env.DB.prepare(
-          "SELECT id, name FROM cafes WHERE lower(trim(name)) = lower(trim(?)) AND lower(trim(address)) = lower(trim(?)) LIMIT 1",
-        ).bind(body.name, body.address).first();
+          `SELECT id, name, oakerman_pick, manager_pick
+           FROM cafes
+           WHERE lower(trim(name)) = lower(trim(?)) AND lower(trim(address)) = lower(trim(?))
+           LIMIT 1`,
+        )
+          .bind(body.name, body.address)
+          .first();
         if (duplicate) {
+          const nextPayload = normalizeCafePayload(body, user.role, duplicate);
           await env.DB.prepare(
             `UPDATE cafes SET
               name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
               oakerman_pick = ?, manager_pick = ?, updated_at = ?
              WHERE id = ?`,
-          ).bind(
+          )
+            .bind(
+              nextPayload.name,
+              nextPayload.address,
+              nextPayload.desc,
+              nextPayload.lat,
+              nextPayload.lng,
+              nextPayload.signature,
+              nextPayload.beanShop,
+              nextPayload.instagram,
+              nextPayload.category,
+              nextPayload.oakerman_pick,
+              nextPayload.manager_pick,
+              nowIso(),
+              duplicate.id,
+            )
+            .run();
+          updated += 1;
+          duplicated += 1;
+          duplicateRows.push({
+            row: i + 1,
+            id: duplicate.id,
+            name: duplicate.name || payload.name,
+          });
+          continue;
+        }
+
+        await env.DB.prepare(
+          `INSERT INTO cafes(
+            id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
+            oakerman_pick, manager_pick, created_by, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+          .bind(
+            givenId || crypto.randomUUID(),
             payload.name,
             payload.address,
             payload.desc,
@@ -127,36 +184,10 @@ export async function importCsv(req, env) {
             payload.category,
             payload.oakerman_pick,
             payload.manager_pick,
+            user.user_id,
             nowIso(),
-            duplicate.id,
-          ).run();
-          updated += 1;
-          duplicated += 1;
-          duplicateRows.push({ row: i + 1, id: duplicate.id, name: duplicate.name || payload.name });
-          continue;
-        }
-
-        await env.DB.prepare(
-          `INSERT INTO cafes(
-            id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-            oakerman_pick, manager_pick, created_by, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).bind(
-          givenId || crypto.randomUUID(),
-          payload.name,
-          payload.address,
-          payload.desc,
-          payload.lat,
-          payload.lng,
-          payload.signature,
-          payload.beanShop,
-          payload.instagram,
-          payload.category,
-          payload.oakerman_pick,
-          payload.manager_pick,
-          user.user_id,
-          nowIso(),
-        ).run();
+          )
+          .run();
         added += 1;
       } catch (err) {
         failed += 1;
@@ -165,7 +196,16 @@ export async function importCsv(req, env) {
     }
 
     return json(
-      { ok: true, total: lines.length - 1, added, updated, duplicated, duplicateRows, failed, failedRows },
+      {
+        ok: true,
+        total: lines.length - 1,
+        added,
+        updated,
+        duplicated,
+        duplicateRows,
+        failed,
+        failedRows,
+      },
       200,
       req,
       env,

@@ -13,6 +13,7 @@ function Invoke-Api {
     [string]$Method,
     [string]$Path,
     $Body = $null,
+    [Microsoft.PowerShell.Commands.WebRequestSession]$Session = $null,
     [string]$Token = ""
   )
 
@@ -24,15 +25,21 @@ function Invoke-Api {
   if ($null -ne $Body) {
     $headers["content-type"] = "application/json"
     $json = $Body | ConvertTo-Json -Compress -Depth 10
+    if ($Session) {
+      return Invoke-RestMethod -Uri ($BaseUrl + $Path) -Method $Method -Headers $headers -Body $json -WebSession $Session
+    }
     return Invoke-RestMethod -Uri ($BaseUrl + $Path) -Method $Method -Headers $headers -Body $json
   }
 
+  if ($Session) {
+    return Invoke-RestMethod -Uri ($BaseUrl + $Path) -Method $Method -Headers $headers -WebSession $Session
+  }
   return Invoke-RestMethod -Uri ($BaseUrl + $Path) -Method $Method -Headers $headers
 }
 
 $username = "sm" + [Guid]::NewGuid().ToString("N").Substring(0, 8)
 $password = "Password123!"
-$token = ""
+$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $favoriteCafeId = ""
 $createdCafeId = ""
 $submissionId = ""
@@ -61,9 +68,8 @@ try {
   $login = Invoke-Api "POST" "/login" @{
     username = $username
     password = $password
-  }
-  $token = $login.token
-  $me = Invoke-Api "GET" "/me" $null $token
+  } $session
+  $me = Invoke-Api "GET" "/me" $null $session
   if ($me.user.username -ne $username) {
     throw "me mismatch"
   }
@@ -72,8 +78,8 @@ try {
   $null = Invoke-Api "POST" "/favorite" @{
     cafe_id = $favoriteCafeId
     action = "add"
-  } $token
-  $favorites = Invoke-Api "GET" "/favorites" $null $token
+  } $session
+  $favorites = Invoke-Api "GET" "/favorites" $null $session
   if (-not @($favorites.items | Where-Object { $_.cafe.id -eq $favoriteCafeId }).Count) {
     throw "favorites mismatch"
   }
@@ -85,9 +91,9 @@ try {
     desc = "Smoke submission"
     reason = "smoke"
     category = @("espresso")
-  } $token
+  } $session
   $submissionId = $submitRes.submission_id
-  $mySubmits = Invoke-Api "GET" "/my-submits" $null $token
+  $mySubmits = Invoke-Api "GET" "/my-submits" $null $session
   if (-not @($mySubmits.items | Where-Object { $_.id -eq $submissionId }).Count) {
     throw "my-submits mismatch"
   }
@@ -97,9 +103,9 @@ try {
     title = "Smoke error"
     page = "index"
     content = "Smoke content"
-  } $token
+  } $session
   $errorReportId = $errorRes.id
-  $myErrors = Invoke-Api "GET" "/my-error-reports" $null $token
+  $myErrors = Invoke-Api "GET" "/my-error-reports" $null $session
   if (-not @($myErrors.items | Where-Object { $_.id -eq $errorReportId }).Count) {
     throw "my-error-reports mismatch"
   }
@@ -109,7 +115,7 @@ try {
     npx.cmd wrangler d1 execute $DatabaseName --remote --command "UPDATE users SET role = 'admin' WHERE username = '$username';" | Out-Null
 
     Write-Host "[smoke] admin routes"
-    $users = Invoke-Api "GET" "/users?q=" $null $token
+    $users = Invoke-Api "GET" "/users?q=" $null $session
     if (-not $users.ok) {
       throw "users route failed"
     }
@@ -117,21 +123,21 @@ try {
     $null = Invoke-Api "POST" "/reply-error-report" @{
       id = $errorReportId
       message = "reply smoke ok"
-    } $token
+    } $session
     $null = Invoke-Api "POST" "/resolve-error-report" @{
       id = $errorReportId
-    } $token
+    } $session
 
     $addCafeRes = Invoke-Api "POST" "/add" @{
       name = "Smoke Admin Cafe"
       address = "2 Admin Street"
       desc = "Smoke admin cafe"
       category = @("drip")
-    } $token
+    } $session
     $createdCafeId = $addCafeRes.id
     $null = Invoke-Api "POST" "/delete" @{
       id = $createdCafeId
-    } $token
+    } $session
     $createdCafeId = ""
   }
 
@@ -139,7 +145,7 @@ try {
   $null = Invoke-Api "POST" "/favorite" @{
     cafe_id = $favoriteCafeId
     action = "remove"
-  } $token
+  } $session
 
   [pscustomobject]@{
     username = $username
@@ -150,8 +156,8 @@ try {
   } | ConvertTo-Json -Compress
 } finally {
   try {
-    if ($createdCafeId -and $token) {
-      Invoke-Api "POST" "/delete" @{ id = $createdCafeId } $token | Out-Null
+    if ($createdCafeId -and $session) {
+      Invoke-Api "POST" "/delete" @{ id = $createdCafeId } $session | Out-Null
     }
   } catch {}
 

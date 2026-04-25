@@ -1,4 +1,4 @@
-import { $, jsonApi, setAuthToken } from "./common.js";
+import { $, jsonApi } from "./common.js";
 
 function showTab(mode) {
   const isLoginMode = mode === "login";
@@ -9,13 +9,11 @@ function showTab(mode) {
 }
 
 async function call(path, payload) {
-  const data = await jsonApi(path, {
+  return jsonApi(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (data?.token) setAuthToken(data.token);
-  return data;
 }
 
 async function doLogin() {
@@ -28,7 +26,28 @@ async function doLogin() {
 async function doSignup() {
   const username = $("signup-id").value.trim().toLowerCase();
   const password = $("signup-pw").value;
-  await call("/signup", { username, password });
+
+  try {
+    await call("/signup", { username, password });
+  } catch (error) {
+    if (
+      !/First admin code|Invalid first admin code/i.test(error.message || "")
+    ) {
+      throw error;
+    }
+
+    const adminCode =
+      prompt(
+        "최초 관리자 코드가 필요합니다. 관리자 코드를 입력해 주세요.",
+        "",
+      ) || "";
+    if (!adminCode.trim()) {
+      throw new Error("최초 관리자 코드가 필요합니다.");
+    }
+
+    await call("/signup", { username, password, admin_code: adminCode.trim() });
+  }
+
   await call("/login", { username, password });
   location.href = "index.html";
 }

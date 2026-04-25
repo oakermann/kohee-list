@@ -36,11 +36,16 @@ function cafeTags(cafe) {
 }
 
 function tagHtml(cafe) {
-  return cafeTags(cafe).map((tag) => `<span class="tag-small">${esc(tag)}</span>`).join("");
+  return cafeTags(cafe)
+    .map((tag) => `<span class="tag-small">${esc(tag)}</span>`)
+    .join("");
 }
 
 function favoriteCafe(cafeId) {
-  return favoriteItems.find((item) => String(item.cafe?.id) === String(cafeId))?.cafe || null;
+  return (
+    favoriteItems.find((item) => String(item.cafe?.id) === String(cafeId))
+      ?.cafe || null
+  );
 }
 
 function getFavoriteSyncStamp() {
@@ -70,7 +75,9 @@ async function toggleFavorite(cafeId) {
   });
 
   if (data.favored === false) {
-    favoriteItems = favoriteItems.filter((item) => String(item.cafe?.id) !== String(cafeId));
+    favoriteItems = favoriteItems.filter(
+      (item) => String(item.cafe?.id) !== String(cafeId),
+    );
     renderFavorites(favoriteItems);
     updateFavoriteButton(cafeId);
     touchFavoriteSync();
@@ -108,7 +115,8 @@ function openModal(cafeId) {
 
   if (cafe.instagram) {
     $("btn-insta").classList.remove("is-hidden");
-    $("btn-insta").onclick = () => window.open(cafe.instagram, "_blank", "noopener");
+    $("btn-insta").onclick = () =>
+      window.open(cafe.instagram, "_blank", "noopener");
   } else {
     $("btn-insta").classList.add("is-hidden");
     $("btn-insta").onclick = null;
@@ -116,7 +124,8 @@ function openModal(cafeId) {
 
   if (cafe.beanShop) {
     $("btn-bean").classList.remove("is-hidden");
-    $("btn-bean").onclick = () => window.open(cafe.beanShop, "_blank", "noopener");
+    $("btn-bean").onclick = () =>
+      window.open(cafe.beanShop, "_blank", "noopener");
   } else {
     $("btn-bean").classList.add("is-hidden");
     $("btn-bean").onclick = null;
@@ -126,11 +135,12 @@ function openModal(cafeId) {
 }
 
 function renderMenu(user) {
-  const roleButton = user.role === "admin"
-    ? `<a class="mini-btn primary" href="admin.html">관리자 페이지</a>`
-    : user.role === "manager"
-      ? `<a class="mini-btn primary" href="admin.html">매니저 페이지</a>`
-      : "";
+  const roleButton =
+    user.role === "admin"
+      ? `<a class="mini-btn primary" href="admin.html">관리자 페이지</a>`
+      : user.role === "manager"
+        ? `<a class="mini-btn primary" href="admin.html">매니저 페이지</a>`
+        : "";
 
   $("menu").innerHTML = `
     <a class="mini-btn" href="index.html">메인</a>
@@ -147,11 +157,15 @@ function renderMenu(user) {
 
 function renderFavorites(items) {
   $("fav-list").innerHTML = items.length
-    ? items.map((item) => `
+    ? items
+        .map(
+          (item) => `
       <article class="card fav-card" data-cafe-id="${esc(item.cafe.id)}">
         <div class="card-name">${esc(item.cafe.name)}</div>
       </article>
-    `).join("")
+    `,
+        )
+        .join("")
     : `<div class="empty">찜한 카페가 없습니다.</div>`;
 
   [...document.querySelectorAll(".fav-card")].forEach((card) => {
@@ -182,7 +196,9 @@ async function syncFavoritesIfNeeded() {
 
 function renderSubmissions(items) {
   $("sub-list").innerHTML = items.length
-    ? items.map((item) => `
+    ? items
+        .map(
+          (item) => `
       <article class="card">
         <div class="card-top">
           <div class="card-name">${esc(item.name)}</div>
@@ -195,13 +211,17 @@ function renderSubmissions(items) {
           ${item.reject_reason ? `<br>반려 사유: ${esc(item.reject_reason)}` : ""}
         </div>
       </article>
-    `).join("")
+    `,
+        )
+        .join("")
     : `<div class="empty">아직 제보 내역이 없습니다.</div>`;
 }
 
 function renderErrorReports(items) {
   $("error-list").innerHTML = items.length
-    ? items.map((item) => `
+    ? items
+        .map(
+          (item) => `
       <article class="card">
         <div class="card-top">
           <div class="card-name">${esc(item.title)}</div>
@@ -215,12 +235,16 @@ function renderErrorReports(items) {
         <div class="answer-box">
           <div class="answer-label">운영진 답변</div>
           <div class="answer-text">${item.reply_message ? esc(item.reply_message) : "아직 답변이 등록되지 않았습니다."}</div>
-          ${(item.replied_by_username || item.replied_at)
-            ? `<div class="answer-meta">${item.replied_by_username ? `답변자: ${esc(item.replied_by_username)}` : ""}${item.replied_by_username && item.replied_at ? " / " : ""}${item.replied_at ? `답변일: ${esc(formatDate(item.replied_at))}` : ""}</div>`
-            : ""}
+          ${
+            item.replied_by_username || item.replied_at
+              ? `<div class="answer-meta">${item.replied_by_username ? `답변자: ${esc(item.replied_by_username)}` : ""}${item.replied_by_username && item.replied_at ? " / " : ""}${item.replied_at ? `답변일: ${esc(formatDate(item.replied_at))}` : ""}</div>`
+              : ""
+          }
         </div>
       </article>
-    `).join("")
+    `,
+        )
+        .join("")
     : `<div class="empty">아직 오류 제보 내역이 없습니다.</div>`;
 }
 
@@ -232,7 +256,8 @@ async function loadPage() {
   }
 
   currentUser = meData.user;
-  $("me").innerHTML = `${esc(currentUser.username)} <span class="role-badge">${roleLabel(currentUser.role)}</span>`;
+  $("me").innerHTML =
+    `${esc(currentUser.username)} <span class="role-badge">${roleLabel(currentUser.role)}</span>`;
   renderMenu(currentUser);
 
   const [submissions, errorReports] = await Promise.all([
@@ -247,9 +272,12 @@ async function loadPage() {
 
 loadPage().catch((error) => {
   $("me").textContent = error.message;
-  $("fav-list").innerHTML = `<div class="empty">찜 목록을 불러오지 못했습니다.</div>`;
-  $("sub-list").innerHTML = `<div class="empty">제보 내역을 불러오지 못했습니다.</div>`;
-  $("error-list").innerHTML = `<div class="empty">오류 제보 내역을 불러오지 못했습니다.</div>`;
+  $("fav-list").innerHTML =
+    `<div class="empty">찜 목록을 불러오지 못했습니다.</div>`;
+  $("sub-list").innerHTML =
+    `<div class="empty">제보 내역을 불러오지 못했습니다.</div>`;
+  $("error-list").innerHTML =
+    `<div class="empty">오류 제보 내역을 불러오지 못했습니다.</div>`;
 });
 
 window.addEventListener("storage", (event) => {

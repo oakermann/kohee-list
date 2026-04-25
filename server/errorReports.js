@@ -43,7 +43,9 @@ export async function submitErrorReport(req, env) {
     await env.DB.prepare(
       `INSERT INTO error_reports(id, user_id, title, page, content, status, created_at)
        VALUES (?, ?, ?, ?, ?, 'open', ?)`,
-    ).bind(id, user.user_id, title, page, content, nowIso()).run();
+    )
+      .bind(id, user.user_id, title, page, content, nowIso())
+      .run();
 
     return json({ ok: true, id }, 201, req, env);
   });
@@ -66,9 +68,16 @@ export async function myErrorReports(req, env) {
        LEFT JOIN users replier ON replier.id = reply.replied_by
        WHERE e.user_id = ?
        ORDER BY COALESCE(reply.updated_at, e.created_at) DESC, e.created_at DESC`,
-    ).bind(user.user_id).all();
+    )
+      .bind(user.user_id)
+      .all();
 
-    return json({ ok: true, items: (rows.results || []).map(toErrorReportResponse) }, 200, req, env);
+    return json(
+      { ok: true, items: (rows.results || []).map(toErrorReportResponse) },
+      200,
+      req,
+      env,
+    );
   });
 }
 
@@ -93,9 +102,16 @@ export async function getErrorReports(req, env) {
        LEFT JOIN users replier ON replier.id = reply.replied_by
        WHERE e.status = ?
        ORDER BY COALESCE(reply.updated_at, e.created_at) DESC, e.created_at DESC`,
-    ).bind(filter).all();
+    )
+      .bind(filter)
+      .all();
 
-    return json({ ok: true, items: (rows.results || []).map(toErrorReportResponse) }, 200, req, env);
+    return json(
+      { ok: true, items: (rows.results || []).map(toErrorReportResponse) },
+      200,
+      req,
+      env,
+    );
   });
 }
 
@@ -110,7 +126,11 @@ export async function replyErrorReport(req, env) {
     if (!id) throw new HttpError(400, "id required");
     if (!message) throw new HttpError(400, "message required");
 
-    const exists = await env.DB.prepare("SELECT id FROM error_reports WHERE id = ?").bind(id).first();
+    const exists = await env.DB.prepare(
+      "SELECT id FROM error_reports WHERE id = ?",
+    )
+      .bind(id)
+      .first();
     if (!exists) throw new HttpError(404, "Error report not found");
 
     const timestamp = nowIso();
@@ -122,15 +142,17 @@ export async function replyErrorReport(req, env) {
          replied_by = excluded.replied_by,
          replied_at = excluded.replied_at,
          updated_at = excluded.updated_at`,
-    ).bind(
-      crypto.randomUUID(),
-      id,
-      message,
-      user.user_id,
-      timestamp,
-      timestamp,
-      timestamp,
-    ).run();
+    )
+      .bind(
+        crypto.randomUUID(),
+        id,
+        message,
+        user.user_id,
+        timestamp,
+        timestamp,
+        timestamp,
+      )
+      .run();
 
     return json({ ok: true }, 200, req, env);
   });
@@ -145,12 +167,18 @@ export async function resolveErrorReport(req, env) {
     const id = cleanText(body.id, 80);
     if (!id) throw new HttpError(400, "id required");
 
-    const exists = await env.DB.prepare("SELECT id FROM error_reports WHERE id = ?").bind(id).first();
+    const exists = await env.DB.prepare(
+      "SELECT id FROM error_reports WHERE id = ?",
+    )
+      .bind(id)
+      .first();
     if (!exists) throw new HttpError(404, "Error report not found");
 
     await env.DB.prepare(
       "UPDATE error_reports SET status = 'resolved', resolved_by = ?, resolved_at = ? WHERE id = ?",
-    ).bind(user.user_id, nowIso(), id).run();
+    )
+      .bind(user.user_id, nowIso(), id)
+      .run();
 
     return json({ ok: true }, 200, req, env);
   });

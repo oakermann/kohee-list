@@ -1,7 +1,9 @@
 import { $, jsonApi } from "./common.js";
 
 function categories() {
-  return [...document.querySelectorAll('input[name="cat"]:checked')].map((input) => input.value);
+  return [...document.querySelectorAll('input[name="cat"]:checked')].map(
+    (input) => input.value,
+  );
 }
 
 async function loadCurrentUser() {
@@ -32,7 +34,8 @@ async function submitCafe() {
     body: JSON.stringify(payload),
   });
 
-  $("msg").textContent = "카페 제보가 저장되었습니다. 운영진 검토 후 반영됩니다.";
+  $("msg").textContent =
+    "카페 제보가 저장되었습니다. 운영진 검토 후 반영됩니다.";
   ["name", "address", "desc", "reason"].forEach((id) => {
     $(id).value = "";
   });
@@ -54,7 +57,8 @@ async function submitErrorReport() {
     body: JSON.stringify(payload),
   });
 
-  $("error-msg").textContent = "오류 제보가 저장되었습니다. 운영진 답변은 마이페이지에서 확인할 수 있습니다.";
+  $("error-msg").textContent =
+    "오류 제보가 저장되었습니다. 운영진 답변은 마이페이지에서 확인할 수 있습니다.";
   ["error-title", "error-page", "error-content"].forEach((id) => {
     $(id).value = "";
   });

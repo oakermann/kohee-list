@@ -8,7 +8,7 @@ into a cleaner, contract-preserving structure.
 ## Structure
 
 - `worker.js`
-  - Thin Worker entrypoint
+  - Cloudflare Workers entrypoint used by production
 - `server/`
   - Backend handlers split by domain
   - `shared.js`: common helpers, auth/session utilities, JSON/CORS helpers
@@ -21,28 +21,36 @@ into a cleaner, contract-preserving structure.
   - `csv.js`: CSV import logic
   - `routes.js`: route table
 - `.pages-deploy/`
-  - Pages deployment source
+  - Cloudflare Pages deployment source of truth
 - `.pages-deploy/assets/`
   - Frontend shared modules
   - `common.js`: API/auth/share/map/date/common UI helpers
   - `index.js`, `login.js`, `submit.js`, `mypage.js`, `admin.js`
 - `assets/`
-  - Synced local copy of frontend assets for direct file testing
+  - Synced local mirror of `.pages-deploy/assets/` for direct file testing
+- Root HTML files (`index.html`, `login.html`, `submit.html`, `mypage.html`, `admin.html`)
+  - Synced local mirrors of `.pages-deploy/*.html`
 - `aaaa/`
-  - Extra local synced copy used during UI checks
+  - Extra local synced mirror used during manual UI checks
 - `scripts/`
   - Validation, deployment, smoke-test, and CSV backup scripts
 - `schema.sql`
-  - D1 schema
+  - Base D1 schema
 - `sync-pages.ps1`
   - Sync `.pages-deploy` HTML/assets into local mirrors
+
+There is currently no separate `public/` directory in this repository.
+For Pages deploys, treat `.pages-deploy/` as the authoritative frontend source.
+Root HTML/assets and `aaaa/` are mirrors kept for local testing and manual checks.
 
 ## Current Auth Model
 
 - Signup/login uses site-local username/password
 - Passwords are hashed in the Worker
 - Sessions are server-side and stored in D1
-- Session cookie is `HttpOnly`, `Secure`, `SameSite=Lax`
+- Session cookie is `HttpOnly`, `Secure`, `SameSite=None`
+- Login returns the authenticated user payload and sets the session cookie
+- Frontend auth is cookie-first and no longer stores the session token in `localStorage`
 - Roles:
   - `user`
   - `manager`
@@ -66,6 +74,9 @@ npx.cmd wrangler d1 execute kohee-list --remote --file=./schema.sql
 npx.cmd wrangler secret put SESSION_SECRET
 npx.cmd wrangler secret put FIRST_ADMIN_CODE
 ```
+
+`SESSION_SECRET` is mandatory in every environment that uses auth/session flows.
+There is no insecure default fallback in production code.
 
 4. Confirm environment variables in `wrangler.toml`
    - `SESSION_DAYS`
@@ -140,6 +151,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\export-csv.ps1
 ```
 
 Import CSV through the live admin API:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Username <ADMIN_OR_MANAGER_USERNAME> -Password <PASSWORD>
+```
+
+Legacy bearer-token mode is still supported for maintenance scripts:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Token <ADMIN_OR_MANAGER_TOKEN>
@@ -234,7 +251,7 @@ What they do:
   - Uploads backup artifacts
   - Opens or updates a GitHub issue if maintenance fails
 
-`CLOUDFLARE_ACCOUNT_ID` is already embedded in this project's Wrangler config.
+`CLOUDFLARE_ACCOUNT_ID` is embedded in `wrangler.toml` for Worker deploys and passed as a workflow environment value for Pages deploys.
 
 ## Frontend Notes
 
@@ -242,6 +259,23 @@ What they do:
 - Root HTML/assets and `aaaa/` are synced mirrors for local checks
 - Shared frontend logic lives in `.pages-deploy/assets/common.js`
 - Page-specific logic is split by screen instead of keeping giant inline scripts
+
+## Deploy Source Of Truth
+
+- Worker runtime:
+  - entrypoint: `worker.js`
+  - route table: `server/routes.js`
+- Pages frontend:
+  - source of truth: `.pages-deploy/`
+  - synced mirrors: root HTML/assets, `aaaa/`
+- Database:
+  - base schema: `schema.sql`
+
+If you change frontend files for production deploy, update `.pages-deploy/` first and then run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\sync-pages.ps1
+```
 
 ## Operational Notes
 

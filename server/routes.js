@@ -1,6 +1,14 @@
 import { health } from "./shared.js";
 import { login, logout, me, signup } from "./auth.js";
-import { addCafe, deleteCafe, editCafe, getData, getNotice, resetCsv, setNotice } from "./cafes.js";
+import {
+  addCafe,
+  deleteCafe,
+  editCafe,
+  getData,
+  getNotice,
+  resetCsv,
+  setNotice,
+} from "./cafes.js";
 import {
   approveSubmission,
   getSubmissions,
@@ -45,19 +53,28 @@ export const USER_ROUTES = [
 export const MANAGER_ROUTES = [
   ["GET", "/submissions", getSubmissions],
   ["GET", "/error-reports", getErrorReports],
-  ["GET", "/users", getUsers],
   ["POST", "/reply-error-report", replyErrorReport],
   ["POST", "/resolve-error-report", resolveErrorReport],
   ["POST", "/approve", approveSubmission],
   ["POST", "/reject", rejectSubmission],
   ["POST", "/update-submission", updateSubmission],
-  ["POST", "/set-role", setRole],
   ["POST", "/add", addCafe],
   ["POST", "/edit", editCafe],
   ["POST", "/delete", deleteCafe],
-  ["POST", "/notice", setNotice],
   ["POST", "/import-csv", importCsv],
+];
+
+export const ADMIN_ROUTES = [
+  ["GET", "/users", getUsers],
+  ["POST", "/set-role", setRole],
+  ["POST", "/notice", setNotice],
   ["POST", "/reset-csv", resetCsv],
 ];
 
-export const ROUTES = [...AUTH_ROUTES, ...PUBLIC_ROUTES, ...USER_ROUTES, ...MANAGER_ROUTES];
+export const ROUTES = [
+  ...AUTH_ROUTES,
+  ...PUBLIC_ROUTES,
+  ...USER_ROUTES,
+  ...MANAGER_ROUTES,
+  ...ADMIN_ROUTES,
+];

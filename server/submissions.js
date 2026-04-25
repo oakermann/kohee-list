@@ -45,7 +45,8 @@ export async function submitCafe(req, env) {
     const name = cleanText(body.name, 120);
     const address = cleanText(body.address, 200);
     const desc = cleanText(body.desc, 2000);
-    if (!name || !address || !desc) throw new HttpError(400, "name, address, desc required");
+    if (!name || !address || !desc)
+      throw new HttpError(400, "name, address, desc required");
 
     const item = {
       id: crypto.randomUUID(),
@@ -65,19 +66,21 @@ export async function submitCafe(req, env) {
       `INSERT INTO submissions(
         id, user_id, name, address, desc, reason, signature, beanShop, instagram, status, category, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-    ).bind(
-      item.id,
-      item.user_id,
-      item.name,
-      item.address,
-      item.desc,
-      item.reason,
-      item.signature,
-      item.beanShop,
-      item.instagram,
-      item.category,
-      item.created_at,
-    ).run();
+    )
+      .bind(
+        item.id,
+        item.user_id,
+        item.name,
+        item.address,
+        item.desc,
+        item.reason,
+        item.signature,
+        item.beanShop,
+        item.instagram,
+        item.category,
+        item.created_at,
+      )
+      .run();
 
     return json({ ok: true, submission_id: item.id }, 201, req, env);
   });
@@ -92,9 +95,16 @@ export async function mySubmissions(req, env) {
        LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
        WHERE s.user_id = ?
        ORDER BY s.created_at DESC`,
-    ).bind(user.user_id).all();
+    )
+      .bind(user.user_id)
+      .all();
 
-    return json({ ok: true, items: (rows.results || []).map(toSubmissionResponse) }, 200, req, env);
+    return json(
+      { ok: true, items: (rows.results || []).map(toSubmissionResponse) },
+      200,
+      req,
+      env,
+    );
   });
 }
 
@@ -104,7 +114,9 @@ export async function getSubmissions(req, env) {
     requireRole(user, ["manager", "admin"]);
 
     const status = new URL(req.url).searchParams.get("status") || "pending";
-    const filter = ["pending", "approved", "rejected"].includes(status) ? status : "pending";
+    const filter = ["pending", "approved", "rejected"].includes(status)
+      ? status
+      : "pending";
 
     if (user.role === "manager" && filter !== "pending") {
       const rows = await env.DB.prepare(
@@ -114,9 +126,16 @@ export async function getSubmissions(req, env) {
          LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
          WHERE s.status = ? AND s.reviewed_by = ?
          ORDER BY COALESCE(s.reviewed_at, s.created_at) DESC`,
-      ).bind(filter, user.user_id).all();
+      )
+        .bind(filter, user.user_id)
+        .all();
 
-      return json({ ok: true, items: (rows.results || []).map(toSubmissionResponse) }, 200, req, env);
+      return json(
+        { ok: true, items: (rows.results || []).map(toSubmissionResponse) },
+        200,
+        req,
+        env,
+      );
     }
 
     const rows = await env.DB.prepare(
@@ -126,9 +145,16 @@ export async function getSubmissions(req, env) {
        LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
        WHERE s.status = ?
        ORDER BY COALESCE(s.reviewed_at, s.created_at) DESC`,
-    ).bind(filter).all();
+    )
+      .bind(filter)
+      .all();
 
-    return json({ ok: true, items: (rows.results || []).map(toSubmissionResponse) }, 200, req, env);
+    return json(
+      { ok: true, items: (rows.results || []).map(toSubmissionResponse) },
+      200,
+      req,
+      env,
+    );
   });
 }
 
@@ -141,16 +167,27 @@ export async function approveSubmission(req, env) {
     const submissionId = cleanText(body.submissionId, 80);
     if (!submissionId) throw new HttpError(400, "submissionId required");
 
-    const sub = await env.DB.prepare("SELECT * FROM submissions WHERE id = ?").bind(submissionId).first();
+    const sub = await env.DB.prepare("SELECT * FROM submissions WHERE id = ?")
+      .bind(submissionId)
+      .first();
     if (!sub) throw new HttpError(404, "Submission not found");
-    if (sub.status !== "pending") throw new HttpError(409, "Submission already reviewed");
+    if (sub.status !== "pending")
+      throw new HttpError(409, "Submission already reviewed");
 
     let linkedCafeId = cleanText(body.linkedCafeId, 80);
     const isDuplicate = body.duplicate ? 1 : 0;
 
     if (isDuplicate) {
-      if (!linkedCafeId) throw new HttpError(400, "linkedCafeId required for duplicate approval");
-      const existingCafe = await env.DB.prepare("SELECT id FROM cafes WHERE id = ?").bind(linkedCafeId).first();
+      if (!linkedCafeId)
+        throw new HttpError(
+          400,
+          "linkedCafeId required for duplicate approval",
+        );
+      const existingCafe = await env.DB.prepare(
+        "SELECT id FROM cafes WHERE id = ?",
+      )
+        .bind(linkedCafeId)
+        .first();
       if (!existingCafe) throw new HttpError(404, "Linked cafe not found");
     } else {
       const merged = normalizeCafePayload(
@@ -168,6 +205,7 @@ export async function approveSubmission(req, env) {
           manager_pick: body.manager_pick,
         },
         reviewer.role,
+        sub,
       );
 
       if (!merged.name || !merged.address || !merged.desc) {
@@ -180,31 +218,40 @@ export async function approveSubmission(req, env) {
           id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
           oakerman_pick, manager_pick, created_by, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(
-        linkedCafeId,
-        merged.name,
-        merged.address,
-        merged.desc,
-        merged.lat,
-        merged.lng,
-        merged.signature,
-        merged.beanShop,
-        merged.instagram,
-        merged.category,
-        merged.oakerman_pick,
-        merged.manager_pick,
-        reviewer.user_id,
-        nowIso(),
-      ).run();
+      )
+        .bind(
+          linkedCafeId,
+          merged.name,
+          merged.address,
+          merged.desc,
+          merged.lat,
+          merged.lng,
+          merged.signature,
+          merged.beanShop,
+          merged.instagram,
+          merged.category,
+          merged.oakerman_pick,
+          merged.manager_pick,
+          reviewer.user_id,
+          nowIso(),
+        )
+        .run();
     }
 
     await env.DB.prepare(
       `UPDATE submissions
        SET status = 'approved', reviewed_by = ?, reviewed_at = ?, linked_cafe_id = ?, reject_reason = NULL
        WHERE id = ?`,
-    ).bind(reviewer.user_id, nowIso(), linkedCafeId || null, submissionId).run();
+    )
+      .bind(reviewer.user_id, nowIso(), linkedCafeId || null, submissionId)
+      .run();
 
-    return json({ ok: true, linked_cafe_id: linkedCafeId || null }, 200, req, env);
+    return json(
+      { ok: true, linked_cafe_id: linkedCafeId || null },
+      200,
+      req,
+      env,
+    );
   });
 }
 
@@ -218,15 +265,22 @@ export async function rejectSubmission(req, env) {
     const rejectReason = cleanText(body.reject_reason, 500);
     if (!submissionId) throw new HttpError(400, "submissionId required");
 
-    const sub = await env.DB.prepare("SELECT status FROM submissions WHERE id = ?").bind(submissionId).first();
+    const sub = await env.DB.prepare(
+      "SELECT status FROM submissions WHERE id = ?",
+    )
+      .bind(submissionId)
+      .first();
     if (!sub) throw new HttpError(404, "Submission not found");
-    if (sub.status !== "pending") throw new HttpError(409, "Submission already reviewed");
+    if (sub.status !== "pending")
+      throw new HttpError(409, "Submission already reviewed");
 
     await env.DB.prepare(
       `UPDATE submissions
        SET status = 'rejected', reviewed_by = ?, reviewed_at = ?, reject_reason = ?
        WHERE id = ?`,
-    ).bind(reviewer.user_id, nowIso(), rejectReason || null, submissionId).run();
+    )
+      .bind(reviewer.user_id, nowIso(), rejectReason || null, submissionId)
+      .run();
 
     return json({ ok: true }, 200, req, env);
   });
@@ -241,30 +295,38 @@ export async function updateSubmission(req, env) {
     const submissionId = cleanText(body.id, 80);
     if (!submissionId) throw new HttpError(400, "id required");
 
-    const existing = await env.DB.prepare("SELECT status FROM submissions WHERE id = ?").bind(submissionId).first();
+    const existing = await env.DB.prepare(
+      "SELECT status, oakerman_pick, manager_pick FROM submissions WHERE id = ?",
+    )
+      .bind(submissionId)
+      .first();
     if (!existing) throw new HttpError(404, "Submission not found");
-    if (existing.status !== "pending") throw new HttpError(409, "Only pending can be updated");
+    if (existing.status !== "pending")
+      throw new HttpError(409, "Only pending can be updated");
 
-    const payload = normalizeCafePayload(body, reviewer.role);
-    if (!payload.name || !payload.address || !payload.desc) throw new HttpError(400, "name/address/desc required");
+    const payload = normalizeCafePayload(body, reviewer.role, existing);
+    if (!payload.name || !payload.address || !payload.desc)
+      throw new HttpError(400, "name/address/desc required");
 
     await env.DB.prepare(
       `UPDATE submissions SET
         name = ?, address = ?, desc = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
         oakerman_pick = ?, manager_pick = ?
        WHERE id = ?`,
-    ).bind(
-      payload.name,
-      payload.address,
-      payload.desc,
-      payload.signature,
-      payload.beanShop,
-      payload.instagram,
-      payload.category,
-      payload.oakerman_pick,
-      payload.manager_pick,
-      submissionId,
-    ).run();
+    )
+      .bind(
+        payload.name,
+        payload.address,
+        payload.desc,
+        payload.signature,
+        payload.beanShop,
+        payload.instagram,
+        payload.category,
+        payload.oakerman_pick,
+        payload.manager_pick,
+        submissionId,
+      )
+      .run();
 
     return json({ ok: true }, 200, req, env);
   });

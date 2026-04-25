@@ -1,0 +1,12 @@
+{
+  "name": "kohee-list",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write \"*.{html,json,md,toml}\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --ignore-unknown",
+    "format:check": "prettier --check \"*.{html,json,md,toml}\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --ignore-unknown"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
+  }
+}

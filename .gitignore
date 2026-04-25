@@ -1,7 +1,9 @@
 .wrangler/
 .chrome-mobile-check/
+node_modules/
 backups/
 reports/
+kohee-index-fixed.zip
 wrangler.worker.backup.toml
 *.log
 *.tmp

@@ -1,5 +1,5 @@
-export const API_BASE = window.__API_BASE__ || "https://kohee-list.gabefinder.workers.dev";
-export const AUTH_TOKEN_KEY = "kohee_auth_token";
+export const API_BASE =
+  window.__API_BASE__ || "https://kohee-list.gabefinder.workers.dev";
 export const CAT_MAP = {
   espresso: "에스프레소",
   drip: "드립",
@@ -24,26 +24,19 @@ export function cleanParts(values) {
   return arr
     .flatMap((value) => String(value || "").split(/[|,]/))
     .map((value) => value.trim())
-    .filter((value) => value && value.toLowerCase() !== "undefined" && value.toLowerCase() !== "null");
-}
-
-export function getAuthToken() {
-  try {
-    return localStorage.getItem(AUTH_TOKEN_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-
-export function setAuthToken(token) {
-  try {
-    if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
-    else localStorage.removeItem(AUTH_TOKEN_KEY);
-  } catch {}
+    .filter(
+      (value) =>
+        value &&
+        value.toLowerCase() !== "undefined" &&
+        value.toLowerCase() !== "null",
+    );
 }
 
 export function clearAuthToken() {
-  setAuthToken("");
+  try {
+    // Remove legacy bearer-token storage from older builds.
+    localStorage.removeItem("kohee_auth_token");
+  } catch {}
 }
 
 export function getStorageValue(key) {
@@ -60,14 +53,12 @@ export function setStorageValue(key, value) {
   } catch {}
 }
 
-export function authHeaders(extra = {}) {
-  const token = getAuthToken();
-  return token ? { ...extra, authorization: `Bearer ${token}` } : extra;
-}
-
 export async function api(path, options = {}) {
-  const headers = authHeaders(options.headers || {});
-  return fetch(API_BASE + path, { ...options, credentials: "include", headers });
+  return fetch(API_BASE + path, {
+    ...options,
+    credentials: "include",
+    headers: options.headers || {},
+  });
 }
 
 export async function jsonApi(path, options = {}) {
@@ -78,15 +69,19 @@ export async function jsonApi(path, options = {}) {
 }
 
 export function roleLabel(role) {
-  return ({ user: "일반 유저", manager: "매니저", admin: "관리자" })[role] || role;
+  return (
+    { user: "일반 유저", manager: "매니저", admin: "관리자" }[role] || role
+  );
 }
 
 export function statusLabel(status) {
-  return ({ pending: "검토중", approved: "승인", rejected: "반려" })[status] || status;
+  return (
+    { pending: "검토중", approved: "승인", rejected: "반려" }[status] || status
+  );
 }
 
 export function errorStatusLabel(status) {
-  return ({ open: "확인 대기", resolved: "처리 완료" })[status] || status;
+  return { open: "확인 대기", resolved: "처리 완료" }[status] || status;
 }
 
 export function formatDate(value, includeTime = false) {
@@ -135,7 +130,9 @@ export function getCity(address) {
 
 export function buildNaverMapUrls(keyword) {
   const encodedQuery = encodeURIComponent(keyword);
-  const appName = encodeURIComponent((location.href || "").split("#")[0] || "https://kohee.pages.dev");
+  const appName = encodeURIComponent(
+    (location.href || "").split("#")[0] || "https://kohee.pages.dev",
+  );
   return {
     webUrl: `https://map.naver.com/p/search/${encodedQuery}`,
     appUrl: `nmap://search?query=${encodedQuery}&appname=${appName}`,
@@ -170,7 +167,9 @@ export function openMobileNaverMap(primaryUrl, fallbackUrl) {
 
   window.addEventListener("pagehide", handleHide, { once: true });
   window.addEventListener("blur", handleHide, { once: true });
-  document.addEventListener("visibilitychange", handleVisibility, { once: true });
+  document.addEventListener("visibilitychange", handleVisibility, {
+    once: true,
+  });
 
   timer = setTimeout(() => {
     if (settled || document.hidden) {
@@ -206,7 +205,9 @@ export function openNaverMapForCafe(cafe) {
 
 export function modalDescHtml(desc, signature) {
   const signatureParts = cleanParts(signature);
-  const descHtml = desc ? `<div class="modal-copy-text">${esc(desc)}</div>` : "";
+  const descHtml = desc
+    ? `<div class="modal-copy-text">${esc(desc)}</div>`
+    : "";
   const signatureHtml = signatureParts.length
     ? `
       <div class="modal-signature">
@@ -224,7 +225,11 @@ export function modalDescHtml(desc, signature) {
 export async function shareCafe(cafe, fallbackUrl = location.href) {
   const text = `[코히 리스트] ${cafe.name}\n주소: ${cafe.address}`;
   if (navigator.share) {
-    await navigator.share({ title: "코히 리스트 공유", text, url: fallbackUrl });
+    await navigator.share({
+      title: "코히 리스트 공유",
+      text,
+      url: fallbackUrl,
+    });
     return "shared";
   }
 

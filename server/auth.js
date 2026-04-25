@@ -27,25 +27,35 @@ export async function signup(req, env) {
       throw new HttpError(400, "Password must be 8-72 chars");
     }
 
-    const exists = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(username).first();
+    const exists = await env.DB.prepare(
+      "SELECT id FROM users WHERE username = ?",
+    )
+      .bind(username)
+      .first();
     if (exists) throw new HttpError(409, "Username already exists");
 
-    const countRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM users").first();
+    const countRow = await env.DB.prepare(
+      "SELECT COUNT(*) AS c FROM users",
+    ).first();
     const isFirstUser = Number(countRow?.c || 0) === 0;
     const role = isFirstUser ? "admin" : "user";
 
     if (isFirstUser) {
       const expectedCode = env.FIRST_ADMIN_CODE || "";
       const adminCode = String(body.admin_code || "");
-      if (!expectedCode) throw new HttpError(403, "First admin code is not configured");
-      if (adminCode !== expectedCode) throw new HttpError(403, "Invalid first admin code");
+      if (!expectedCode)
+        throw new HttpError(403, "First admin code is not configured");
+      if (adminCode !== expectedCode)
+        throw new HttpError(403, "Invalid first admin code");
     }
 
     const id = crypto.randomUUID();
     const passwordHash = await hashPassword(password);
     await env.DB.prepare(
       "INSERT INTO users(id, username, password_hash, role, created_at) VALUES(?, ?, ?, ?, ?)",
-    ).bind(id, username, passwordHash, role, nowIso()).run();
+    )
+      .bind(id, username, passwordHash, role, nowIso())
+      .run();
 
     return json({ ok: true, username, role }, 201, req, env);
   });
@@ -57,13 +67,19 @@ export async function login(req, env) {
     const username = cleanText(body.username, 40).toLowerCase();
     const password = String(body.password || "");
 
-    const user = await env.DB.prepare("SELECT id, username, password_hash, role FROM users WHERE username = ?").bind(username).first();
+    const user = await env.DB.prepare(
+      "SELECT id, username, password_hash, role FROM users WHERE username = ?",
+    )
+      .bind(username)
+      .first();
     if (!user) throw new HttpError(401, "Invalid credentials");
 
     const valid = await verifyPassword(password, user.password_hash);
     if (!valid) throw new HttpError(401, "Invalid credentials");
 
-    const rawToken = crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "");
+    const rawToken =
+      crypto.randomUUID().replaceAll("-", "") +
+      crypto.randomUUID().replaceAll("-", "");
     const tokenHash = await hashSessionToken(rawToken, env);
 
     const days = Math.max(1, Number(env.SESSION_DAYS || "14"));
@@ -72,10 +88,15 @@ export async function login(req, env) {
 
     await env.DB.prepare(
       "INSERT INTO sessions(id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)",
-    ).bind(crypto.randomUUID(), user.id, tokenHash, expiresAt, nowIso()).run();
+    )
+      .bind(crypto.randomUUID(), user.id, tokenHash, expiresAt, nowIso())
+      .run();
 
     return json(
-      { ok: true, token: rawToken, user: { id: user.id, username: user.username, role: user.role } },
+      {
+        ok: true,
+        user: { id: user.id, username: user.username, role: user.role },
+      },
       200,
       req,
       env,
@@ -89,9 +110,13 @@ export async function logout(req, env) {
     const token = getAuthToken(req);
     if (token) {
       const tokenHash = await hashSessionToken(token, env);
-      await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
+      await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?")
+        .bind(tokenHash)
+        .run();
     }
-    return json({ ok: true }, 200, req, env, { "set-cookie": clearCookieHeader() });
+    return json({ ok: true }, 200, req, env, {
+      "set-cookie": clearCookieHeader(),
+    });
   });
 }
 
@@ -99,6 +124,14 @@ export async function me(req, env) {
   return withGuard(req, env, async () => {
     const user = await getSessionUser(req, env);
     if (!user) return json({ ok: true, user: null }, 200, req, env);
-    return json({ ok: true, user: { id: user.user_id, username: user.username, role: user.role } }, 200, req, env);
+    return json(
+      {
+        ok: true,
+        user: { id: user.user_id, username: user.username, role: user.role },
+      },
+      200,
+      req,
+      env,
+    );
   });
 }

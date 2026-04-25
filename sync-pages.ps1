@@ -24,7 +24,9 @@ function Copy-PagesBundle {
   if (Test-Path -LiteralPath $srcAssets) {
     $targetAssets = Join-Path $TargetDir "assets"
     New-Item -ItemType Directory -Force -Path $targetAssets | Out-Null
-    Copy-Item -LiteralPath (Join-Path $srcAssets "*") -Destination $targetAssets -Recurse -Force
+    Get-ChildItem -LiteralPath $srcAssets -File | ForEach-Object {
+      Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $targetAssets $_.Name) -Force
+    }
   }
 }
 

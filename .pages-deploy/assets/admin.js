@@ -26,15 +26,24 @@ const state = {
 };
 
 function categories() {
-  return [...document.querySelectorAll('input[name="cat"]:checked')].map((input) => input.value);
+  return [...document.querySelectorAll('input[name="cat"]:checked')].map(
+    (input) => input.value,
+  );
 }
 
 function signatures(value) {
-  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function cafeKey(cafe) {
-  return `${String(cafe.name || "").trim().toLowerCase()}||${String(cafe.address || "").trim().toLowerCase()}`;
+  return `${String(cafe.name || "")
+    .trim()
+    .toLowerCase()}||${String(cafe.address || "")
+    .trim()
+    .toLowerCase()}`;
 }
 
 function isDuplicateCafe(cafe) {
@@ -70,7 +79,14 @@ function fillCafeForm(cafe) {
 function openCafeForm(scroll = true) {
   $("cafe-form-wrap").classList.remove("hidden");
   if (scroll) {
-    setTimeout(() => $("cafe-form-wrap").scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+    setTimeout(
+      () =>
+        $("cafe-form-wrap").scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        }),
+      0,
+    );
   }
 }
 
@@ -171,27 +187,37 @@ async function loadCafes() {
     state.cafes = [];
     state.cafeKeyCounts = {};
     $("cafe-count").textContent = "카페 데이터를 불러오지 못했습니다.";
-    $("cafe-list").innerHTML = emptyState(`카페 데이터 로드 실패: ${error.message}`);
+    $("cafe-list").innerHTML = emptyState(
+      `카페 데이터 로드 실패: ${error.message}`,
+    );
   }
 }
 
 function renderCafeList() {
   const query = $("cafe-search").value.trim().toLowerCase();
   if (!state.cafes.length) {
-    $("cafe-list").innerHTML = emptyState("등록된 카페 데이터가 없습니다. 기존 데이터는 CSV 업로드로 먼저 넣어 주세요.");
+    $("cafe-list").innerHTML = emptyState(
+      "등록된 카페 데이터가 없습니다. 기존 데이터는 CSV 업로드로 먼저 넣어 주세요.",
+    );
     return;
   }
   if (!query) {
-    $("cafe-list").innerHTML = emptyState("카페명을 검색하면 기존 카페 카드가 표시됩니다.");
+    $("cafe-list").innerHTML = emptyState(
+      "카페명을 검색하면 기존 카페 카드가 표시됩니다.",
+    );
     return;
   }
 
   const rows = state.cafes
-    .filter((cafe) => `${cafe.name} ${cafe.address}`.toLowerCase().includes(query))
+    .filter((cafe) =>
+      `${cafe.name} ${cafe.address}`.toLowerCase().includes(query),
+    )
     .slice(0, 120);
 
   $("cafe-list").innerHTML = rows.length
-    ? rows.map((cafe) => `
+    ? rows
+        .map(
+          (cafe) => `
       <div class="item">
         <h3>${esc(cafe.name)}</h3>
         <div class="mini">ID: ${esc(cafe.id)}${isDuplicateCafe(cafe) ? " (중복)" : ""}</div>
@@ -200,7 +226,9 @@ function renderCafeList() {
           <button type="button" class="pick-cafe" data-id="${esc(cafe.id)}">선택</button>
         </div>
       </div>
-    `).join("")
+    `,
+        )
+        .join("")
     : emptyState("검색 결과가 없습니다.");
 
   [...document.querySelectorAll(".pick-cafe")].forEach((btn) => {
@@ -228,7 +256,9 @@ function renderSubmissions() {
     return;
   }
 
-  $("sub-list").innerHTML = state.submissions.map((submission) => `
+  $("sub-list").innerHTML = state.submissions
+    .map(
+      (submission) => `
     <div class="item">
       <h3>${esc(submission.name)} <small style="font-size:.72rem;">(${esc(submission.username)})</small></h3>
       <div class="mini">${esc(submission.address)}</div>
@@ -242,12 +272,22 @@ function renderSubmissions() {
         <button type="button" class="s-dup" data-id="${esc(submission.id)}">중복 처리</button>
       </div>
     </div>
-  `).join("");
+  `,
+    )
+    .join("");
 
-  [...document.querySelectorAll(".s-approve")].forEach((btn) => btn.addEventListener("click", () => approve(btn.dataset.id, false)));
-  [...document.querySelectorAll(".s-edit-approve")].forEach((btn) => btn.addEventListener("click", () => approve(btn.dataset.id, true)));
-  [...document.querySelectorAll(".s-reject")].forEach((btn) => btn.addEventListener("click", () => reject(btn.dataset.id)));
-  [...document.querySelectorAll(".s-dup")].forEach((btn) => btn.addEventListener("click", () => markDuplicate(btn.dataset.id)));
+  [...document.querySelectorAll(".s-approve")].forEach((btn) =>
+    btn.addEventListener("click", () => approve(btn.dataset.id, false)),
+  );
+  [...document.querySelectorAll(".s-edit-approve")].forEach((btn) =>
+    btn.addEventListener("click", () => approve(btn.dataset.id, true)),
+  );
+  [...document.querySelectorAll(".s-reject")].forEach((btn) =>
+    btn.addEventListener("click", () => reject(btn.dataset.id)),
+  );
+  [...document.querySelectorAll(".s-dup")].forEach((btn) =>
+    btn.addEventListener("click", () => markDuplicate(btn.dataset.id)),
+  );
 }
 
 async function loadReviewedSubmissions() {
@@ -258,11 +298,15 @@ async function loadReviewedSubmissions() {
 
 function renderReviewedSubmissions() {
   if (!state.reviewedSubmissions.length) {
-    $("reviewed-list").innerHTML = emptyState("해당 상태의 처리 내역이 없습니다.");
+    $("reviewed-list").innerHTML = emptyState(
+      "해당 상태의 처리 내역이 없습니다.",
+    );
     return;
   }
 
-  $("reviewed-list").innerHTML = state.reviewedSubmissions.map((submission) => `
+  $("reviewed-list").innerHTML = state.reviewedSubmissions
+    .map(
+      (submission) => `
     <div class="item">
       <h3>${esc(submission.name)} <small style="font-size:.72rem;">(${esc(submission.username)})</small></h3>
       <div class="mini">${esc(submission.address)}</div>
@@ -270,7 +314,9 @@ function renderReviewedSubmissions() {
       ${submission.linked_cafe_id ? `<div class="mini">연결 cafe id: ${esc(submission.linked_cafe_id)}</div>` : ""}
       ${submission.reject_reason ? `<div class="mini">반려 사유: ${esc(submission.reject_reason)}</div>` : ""}
     </div>
-  `).join("");
+  `,
+    )
+    .join("");
 }
 
 async function loadErrorReports() {
@@ -280,7 +326,11 @@ async function loadErrorReports() {
 }
 
 function getReplyInput(id) {
-  return [...document.querySelectorAll(".error-reply-input")].find((input) => input.dataset.id === String(id)) || null;
+  return (
+    [...document.querySelectorAll(".error-reply-input")].find(
+      (input) => input.dataset.id === String(id),
+    ) || null
+  );
 }
 
 function renderErrorReports() {
@@ -289,7 +339,9 @@ function renderErrorReports() {
     return;
   }
 
-  $("error-list").innerHTML = state.errorReports.map((report) => `
+  $("error-list").innerHTML = state.errorReports
+    .map(
+      (report) => `
     <div class="item">
       <h3>${esc(report.title)} <small style="font-size:.72rem;">(${esc(report.username)})</small></h3>
       <div class="mini">관련: ${esc(report.page || "-")}</div>
@@ -297,9 +349,11 @@ function renderErrorReports() {
       <div class="mini">상태: ${errorStatusLabel(report.status)}${report.resolved_by_username ? ` / 처리: ${esc(report.resolved_by_username)}` : ""}${report.resolved_at ? ` / ${esc(formatDateTime(report.resolved_at))}` : ""}</div>
       <div class="reply-block">
         <div class="reply-meta">
-          ${report.reply_message
-            ? `운영진 답변 등록됨${report.replied_by_username ? ` / ${esc(report.replied_by_username)}` : ""}${report.replied_at ? ` / ${esc(formatDateTime(report.replied_at))}` : ""}`
-            : "운영진 답변이 아직 없습니다."}
+          ${
+            report.reply_message
+              ? `운영진 답변 등록됨${report.replied_by_username ? ` / ${esc(report.replied_by_username)}` : ""}${report.replied_at ? ` / ${esc(formatDateTime(report.replied_at))}` : ""}`
+              : "운영진 답변이 아직 없습니다."
+          }
         </div>
         <textarea class="error-reply-input" data-id="${esc(report.id)}" placeholder="이 오류 제보에 대한 답변을 입력해 주세요.">${esc(report.reply_message || "")}</textarea>
         <div class="reply-actions">
@@ -308,7 +362,9 @@ function renderErrorReports() {
         </div>
       </div>
     </div>
-  `).join("");
+  `,
+    )
+    .join("");
 
   [...document.querySelectorAll(".e-reply")].forEach((btn) => {
     btn.addEventListener("click", () => saveErrorReply(btn.dataset.id));
@@ -360,7 +416,11 @@ async function approve(id, withEdit) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ submissionId: id }),
   });
-  await Promise.all([loadSubmissions(), loadCafes(), loadReviewedSubmissions()]);
+  await Promise.all([
+    loadSubmissions(),
+    loadCafes(),
+    loadReviewedSubmissions(),
+  ]);
 }
 
 async function approveEditedSubmission() {
@@ -374,7 +434,11 @@ async function approveEditedSubmission() {
   });
   alert("수정 후 승인 완료");
   closeCafeForm(true);
-  await Promise.all([loadSubmissions(), loadCafes(), loadReviewedSubmissions()]);
+  await Promise.all([
+    loadSubmissions(),
+    loadCafes(),
+    loadReviewedSubmissions(),
+  ]);
 }
 
 async function reject(id) {
@@ -388,7 +452,8 @@ async function reject(id) {
 }
 
 async function markDuplicate(id) {
-  const linkedCafeId = prompt("중복 처리할 기존 cafe id를 입력해 주세요.", "") || "";
+  const linkedCafeId =
+    prompt("중복 처리할 기존 cafe id를 입력해 주세요.", "") || "";
   if (!linkedCafeId.trim()) {
     alert("기존 cafe id를 입력해야 중복 처리할 수 있습니다.");
     return;
@@ -402,9 +467,13 @@ async function markDuplicate(id) {
 }
 
 async function saveNotice() {
-  const res = await api("/notice", { method: "POST", body: $("notice-input").value.trim() });
+  const res = await api("/notice", {
+    method: "POST",
+    body: $("notice-input").value.trim(),
+  });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) throw new Error(data.error || "공지 저장에 실패했습니다.");
+  if (!res.ok || !data.ok)
+    throw new Error(data.error || "공지 저장에 실패했습니다.");
   alert("공지 저장 완료");
 }
 
@@ -477,7 +546,20 @@ async function downloadCsv() {
     return;
   }
 
-  const headers = ["id", "name", "address", "desc", "lat", "lng", "signature", "beanShop", "instagram", "category", "oakerman_pick", "manager_pick"];
+  const headers = [
+    "id",
+    "name",
+    "address",
+    "desc",
+    "lat",
+    "lng",
+    "signature",
+    "beanShop",
+    "instagram",
+    "category",
+    "oakerman_pick",
+    "manager_pick",
+  ];
   const csvRows = rows.map((cafe) => [
     cafe.id,
     cafe.name,
@@ -493,7 +575,10 @@ async function downloadCsv() {
     cafe.manager_pick ? "1" : "0",
   ]);
   const toCell = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-  const csv = [headers.join(","), ...csvRows.map((row) => row.map(toCell).join(","))].join("\n");
+  const csv = [
+    headers.join(","),
+    ...csvRows.map((row) => row.map(toCell).join(",")),
+  ].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const anchor = document.createElement("a");
   anchor.href = URL.createObjectURL(blob);
@@ -523,7 +608,8 @@ async function uploadCsv() {
       body: text,
     });
     const payload = await res.json().catch(() => ({}));
-    if (!res.ok || !payload.ok) throw new Error(payload.error || "CSV 업로드에 실패했습니다.");
+    if (!res.ok || !payload.ok)
+      throw new Error(payload.error || "CSV 업로드에 실패했습니다.");
 
     const added = Number(payload.added || 0);
     const updated = Number(payload.updated || 0);
@@ -558,8 +644,16 @@ async function resetCsv() {
     return;
   }
   const count = state.cafes.length;
-  if (!confirm(`현재 카페 데이터 ${count}개를 모두 삭제합니다.\n이후 CSV 업로드로 다시 넣을 수 있습니다.\n계속할까요?`)) return;
-  const typed = prompt("정말 초기화하려면 아래의 '초기화'를 그대로 입력해 주세요.", "");
+  if (
+    !confirm(
+      `현재 카페 데이터 ${count}개를 모두 삭제합니다.\n이후 CSV 업로드로 다시 넣을 수 있습니다.\n계속할까요?`,
+    )
+  )
+    return;
+  const typed = prompt(
+    "정말 초기화하려면 아래의 '초기화'를 그대로 입력해 주세요.",
+    "",
+  );
   if (typed !== "초기화") {
     alert("초기화를 취소했습니다.");
     return;
@@ -568,7 +662,8 @@ async function resetCsv() {
   const data = await jsonApi("/reset-csv", { method: "POST" });
   $("csv-file").value = "";
   updateCsvFileName();
-  $("csv-msg").textContent = `CSV 초기화 완료: 카페 ${data.deleted || 0}개 삭제`;
+  $("csv-msg").textContent =
+    `CSV 초기화 완료: 카페 ${data.deleted || 0}개 삭제`;
   await loadCafes();
   closeCafeForm(true);
 }
@@ -599,25 +694,35 @@ function renderUsers() {
     return;
   }
 
-  $("user-list").innerHTML = state.users.map((user) => `
+  $("user-list").innerHTML = state.users
+    .map(
+      (user) => `
     <div class="item">
       <h3>${esc(user.username)} <small style="font-size:.72rem;">(${esc(roleLabel(user.role))})</small></h3>
       <div class="mini">가입일: ${esc(user.created_at || "-")}</div>
-      ${user.role === "admin"
-        ? `<div class="mini">admin 계정은 권한 변경 대상에서 제외됩니다.</div>`
-        : `
+      ${
+        user.role === "admin"
+          ? `<div class="mini">admin 계정은 권한 변경 대상에서 제외됩니다.</div>`
+          : `
           <div class="btns" style="margin-top:6px;">
             <button type="button" class="user-pick" data-username="${esc(user.username)}" data-role="${esc(user.role)}">권한 관리에 입력</button>
           </div>
-        `}
+        `
+      }
     </div>
-  `).join("");
+  `,
+    )
+    .join("");
 
   [...document.querySelectorAll(".user-pick")].forEach((btn) => {
     btn.addEventListener("click", () => {
       $("role-username").value = btn.dataset.username || "";
-      $("role-value").value = btn.dataset.role === "manager" ? "manager" : "user";
-      $("role-username").scrollIntoView({ behavior: "smooth", block: "center" });
+      $("role-value").value =
+        btn.dataset.role === "manager" ? "manager" : "user";
+      $("role-username").scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     });
   });
 }
@@ -643,47 +748,72 @@ async function init() {
   $("user-sec").classList.toggle("hidden", !isAdmin);
   $("role-sec").classList.toggle("hidden", !isAdmin);
   $("oakerman-pick").disabled = !isAdmin;
-  $("reviewed-note").textContent = isAdmin ? "전체 매니저/관리자 처리 내역" : "내가 처리한 승인/반려 내역";
+  $("reviewed-note").textContent = isAdmin
+    ? "전체 매니저/관리자 처리 내역"
+    : "내가 처리한 승인/반려 내역";
 
   const errorTabs = [...document.querySelectorAll("#error-tabs button")];
-  errorTabs.forEach((btn) => btn.addEventListener("click", async () => {
-    errorTabs.forEach((item) => item.classList.remove("active"));
-    btn.classList.add("active");
-    state.errorStatus = btn.dataset.status;
-    await loadErrorReports();
-  }));
+  errorTabs.forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      errorTabs.forEach((item) => item.classList.remove("active"));
+      btn.classList.add("active");
+      state.errorStatus = btn.dataset.status;
+      await loadErrorReports();
+    }),
+  );
 
   const reviewedTabs = [...document.querySelectorAll("#reviewed-tabs button")];
-  reviewedTabs.forEach((btn) => btn.addEventListener("click", async () => {
-    reviewedTabs.forEach((item) => item.classList.remove("active"));
-    btn.classList.add("active");
-    state.reviewedStatus = btn.dataset.status;
-    await loadReviewedSubmissions();
-  }));
+  reviewedTabs.forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      reviewedTabs.forEach((item) => item.classList.remove("active"));
+      btn.classList.add("active");
+      state.reviewedStatus = btn.dataset.status;
+      await loadReviewedSubmissions();
+    }),
+  );
 
   $("logout-btn").addEventListener("click", async () => {
     await api("/logout", { method: "POST" }).catch(() => {});
     clearAuthToken();
     location.href = "index.html";
   });
-  $("notice-save").addEventListener("click", () => saveNotice().catch((error) => alert(error.message)));
+  $("notice-save").addEventListener("click", () =>
+    saveNotice().catch((error) => alert(error.message)),
+  );
   $("cafe-search").addEventListener("input", renderCafeList);
   $("new-cafe-btn").addEventListener("click", prepareNewCafe);
-  $("save-cafe-btn").addEventListener("click", () => saveCafe().catch((error) => alert(error.message)));
-  $("delete-btn").addEventListener("click", () => deleteCafe().catch((error) => alert(error.message)));
+  $("save-cafe-btn").addEventListener("click", () =>
+    saveCafe().catch((error) => alert(error.message)),
+  );
+  $("delete-btn").addEventListener("click", () =>
+    deleteCafe().catch((error) => alert(error.message)),
+  );
   $("csv-download").addEventListener("click", downloadCsv);
   $("csv-file").addEventListener("change", updateCsvFileName);
   $("csv-upload").addEventListener("click", uploadCsv);
-  $("csv-reset").addEventListener("click", () => resetCsv().catch((error) => alert(error.message)));
-  $("role-set").addEventListener("click", () => setRole().catch((error) => alert(error.message)));
+  $("csv-reset").addEventListener("click", () =>
+    resetCsv().catch((error) => alert(error.message)),
+  );
+  $("role-set").addEventListener("click", () =>
+    setRole().catch((error) => alert(error.message)),
+  );
   $("user-search").addEventListener("input", () => {
     clearTimeout(state.userSearchTimer);
-    state.userSearchTimer = setTimeout(() => loadUsers().catch((error) => {
-      $("user-count").textContent = error.message;
-    }), 180);
+    state.userSearchTimer = setTimeout(
+      () =>
+        loadUsers().catch((error) => {
+          $("user-count").textContent = error.message;
+        }),
+      180,
+    );
   });
 
-  const tasks = [loadCafes(), loadSubmissions(), loadErrorReports(), loadReviewedSubmissions()];
+  const tasks = [
+    loadCafes(),
+    loadSubmissions(),
+    loadErrorReports(),
+    loadReviewedSubmissions(),
+  ];
   if (isAdmin) tasks.push(loadUsers());
   updateCsvFileName();
   await Promise.all(tasks);
