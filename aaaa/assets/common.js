@@ -1,5 +1,7 @@
 export const API_BASE =
   window.__API_BASE__ || "https://kohee-list.gabefinder.workers.dev";
+const CSRF_STORAGE_KEY = "kohee_csrf_token";
+let csrfTokenMemory = "";
 
 export const CAT_MAP = {
   espresso: "에스프레소",
@@ -38,6 +40,7 @@ export function clearAuthToken() {
     // Remove legacy bearer-token storage from older builds.
     localStorage.removeItem("kohee_auth_token");
   } catch {}
+  clearCsrfToken();
 }
 
 export function getStorageValue(key) {
@@ -66,6 +69,36 @@ export function getCookie(key) {
 
 export const getCookieValue = getCookie;
 
+export function setCsrfToken(token) {
+  csrfTokenMemory = String(token || "");
+  try {
+    if (csrfTokenMemory) localStorage.setItem(CSRF_STORAGE_KEY, csrfTokenMemory);
+    else localStorage.removeItem(CSRF_STORAGE_KEY);
+  } catch {}
+}
+
+export function getCsrfToken() {
+  try {
+    const stored = localStorage.getItem(CSRF_STORAGE_KEY) || "";
+    if (stored) {
+      csrfTokenMemory = stored;
+      return stored;
+    }
+  } catch {}
+  return csrfTokenMemory || getCookie("kohee_csrf");
+}
+
+export function clearCsrfToken() {
+  csrfTokenMemory = "";
+  try {
+    localStorage.removeItem(CSRF_STORAGE_KEY);
+  } catch {}
+}
+
+export function storeCsrfFromPayload(payload) {
+  if (payload?.csrfToken) setCsrfToken(payload.csrfToken);
+}
+
 export function isUnsafeMethod(method) {
   return !["GET", "HEAD", "OPTIONS"].includes(
     String(method || "GET").toUpperCase(),
@@ -76,7 +109,7 @@ export async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   const method = options.method || "GET";
   if (isUnsafeMethod(method)) {
-    const csrfToken = getCookie("kohee_csrf");
+    const csrfToken = getCsrfToken();
     if (csrfToken && !headers.has("x-csrf-token")) {
       headers.set("x-csrf-token", csrfToken);
     }
@@ -109,6 +142,7 @@ export function apiErrorMessage(data = {}) {
 export async function jsonApi(path, options = {}) {
   const res = await api(path, options);
   const data = await res.json().catch(() => ({}));
+  storeCsrfFromPayload(data);
   if (!res.ok || data.ok === false) {
     const error = new Error(apiErrorMessage(data));
     error.code = data.code || "";
