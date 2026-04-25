@@ -97,10 +97,28 @@ Deploy all:
 powershell -ExecutionPolicy Bypass -File .\scripts\deploy-all.ps1
 ```
 
+Run safe release pipeline:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-safe.ps1
+```
+
+Run safe release pipeline and also commit/push:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-safe.ps1 -CommitAndPush -CommitMessage "Your message"
+```
+
 Run smoke test:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1 -Mode full
+```
+
+Run Git save/push helper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\git-sync.ps1 -CommitMessage "Your message"
 ```
 
 Run syntax checks:
@@ -166,6 +184,18 @@ This keeps backup and restore aligned with the same CSV schema used by the admin
   - Exports a timestamped CSV backup
 
 This is the recommended low-risk automation entrypoint because it does not deploy code and does not modify production data.
+
+## Recommended Automation Level
+
+- `scripts/release-safe.ps1`
+  - Syncs page mirrors
+  - Runs syntax checks
+  - Creates a CSV backup
+  - Deploys Worker + Pages
+  - Runs the full smoke test
+  - Can optionally commit/push at the end
+
+This is the recommended "strong but still safe" automation level for KOHEE LIST.
 
 ## CI
 
