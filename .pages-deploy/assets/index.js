@@ -11,7 +11,7 @@ import {
   setStorageValue,
   shareCafe,
   storeCsrfFromPayload,
-} from "./common.js";
+} from "./common.js?v=20260426-1";
 
 let data = [];
 let selectedCategory = null;

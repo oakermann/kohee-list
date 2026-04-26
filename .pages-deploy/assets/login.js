@@ -1,4 +1,4 @@
-import { $, jsonApi } from "./common.js";
+import { $, jsonApi } from "./common.js?v=20260426-1";
 
 function showTab(mode) {
   const isLoginMode = mode === "login";
