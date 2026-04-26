@@ -77,11 +77,22 @@ export async function signup(req, env) {
         throw new HttpError(
           403,
           "First admin code is not configured",
-          "FORBIDDEN",
+          "FIRST_ADMIN_CODE_NOT_CONFIGURED",
+        );
+      }
+      if (!adminCode) {
+        throw new HttpError(
+          403,
+          "First admin code required",
+          "FIRST_ADMIN_CODE_REQUIRED",
         );
       }
       if (adminCode !== expectedCode) {
-        throw new HttpError(403, "Invalid first admin code", "FORBIDDEN");
+        throw new HttpError(
+          403,
+          "Invalid first admin code",
+          "FIRST_ADMIN_CODE_INVALID",
+        );
       }
     }
 

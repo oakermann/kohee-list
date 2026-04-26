@@ -135,6 +135,10 @@ export function apiErrorMessage(data = {}) {
     CSRF_REQUIRED: "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.",
     CSRF_INVALID: "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.",
     FORBIDDEN_ORIGIN: "허용되지 않은 접속 경로입니다.",
+    FIRST_ADMIN_CODE_NOT_CONFIGURED:
+      "최초 관리자 코드가 서버에 설정되지 않았습니다.",
+    FIRST_ADMIN_CODE_REQUIRED: "최초 관리자 코드가 필요합니다.",
+    FIRST_ADMIN_CODE_INVALID: "최초 관리자 코드가 올바르지 않습니다.",
   };
 
   return messages[data.code] || data.error || "요청에 실패했습니다.";

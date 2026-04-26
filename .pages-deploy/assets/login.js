@@ -30,9 +30,11 @@ async function doSignup() {
   try {
     await call("/signup", { username, password });
   } catch (error) {
-    if (
-      !/First admin code|Invalid first admin code/i.test(error.message || "")
-    ) {
+    const needsFirstAdminCode = [
+      "FIRST_ADMIN_CODE_REQUIRED",
+      "FIRST_ADMIN_CODE_INVALID",
+    ].includes(error.code);
+    if (!needsFirstAdminCode) {
       throw error;
     }
 
