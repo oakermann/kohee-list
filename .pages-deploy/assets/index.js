@@ -134,6 +134,7 @@ async function toggleFavorite(cafeId) {
     body: JSON.stringify({ cafe_id: cafeId, action }),
   });
   const payload = await res.json().catch(() => ({}));
+  storeCsrfFromPayload(payload);
   if (!res.ok || !payload.ok)
     throw new Error(payload.error || "찜 처리에 실패했습니다.");
 

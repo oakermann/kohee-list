@@ -8,6 +8,7 @@ import {
   jsonApi,
   roleLabel,
   statusLabel,
+  storeCsrfFromPayload,
 } from "./common.js?v=20260426-1";
 
 const state = {
@@ -473,6 +474,7 @@ async function saveNotice() {
     body: $("notice-input").value.trim(),
   });
   const data = await res.json().catch(() => ({}));
+  storeCsrfFromPayload(data);
   if (!res.ok || !data.ok)
     throw new Error(data.error || "공지 저장에 실패했습니다.");
   alert("공지 저장 완료");
@@ -609,6 +611,7 @@ async function uploadCsv() {
       body: text,
     });
     const payload = await res.json().catch(() => ({}));
+    storeCsrfFromPayload(payload);
     if (!res.ok || !payload.ok)
       throw new Error(payload.error || "CSV 업로드에 실패했습니다.");
 
@@ -655,6 +658,7 @@ async function dryRunCsv() {
       body: text,
     });
     const payload = await res.json().catch(() => ({}));
+    storeCsrfFromPayload(payload);
     if (!res.ok || !payload.ok)
       throw new Error(payload.error || "CSV 검증에 실패했습니다.");
 
