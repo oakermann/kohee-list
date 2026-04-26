@@ -1,4 +1,4 @@
-import { $, jsonApi } from "./common.js";
+import { $, jsonApi } from "./common.js?v=20260426-1";
 
 function categories() {
   return [...document.querySelectorAll('input[name="cat"]:checked')].map(

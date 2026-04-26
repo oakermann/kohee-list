@@ -8,7 +8,7 @@ import {
   jsonApi,
   roleLabel,
   statusLabel,
-} from "./common.js";
+} from "./common.js?v=20260426-1";
 
 const state = {
   me: null,
