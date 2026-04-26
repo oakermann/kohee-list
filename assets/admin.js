@@ -470,6 +470,7 @@ async function markDuplicate(id) {
 async function saveNotice() {
   const res = await api("/notice", {
     method: "POST",
+    headers: { "content-type": "text/plain; charset=utf-8" },
     body: $("notice-input").value.trim(),
   });
   const data = await res.json().catch(() => ({}));
