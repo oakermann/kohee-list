@@ -1,0 +1,123 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kohee-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        shell: powershell
+        run: |
+          if (Test-Path package-lock.json) {
+            npm ci
+          } else {
+            npm install
+          }
+
+      - name: Verify release
+        shell: powershell
+        run: npm run verify:release
+
+      - name: Detect changed areas
+        id: changes
+        shell: powershell
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: node scripts/detect-changed-areas.mjs
+
+      - name: Write initial deploy summary
+        if: always()
+        shell: powershell
+        run: |
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## KOHEE Deploy Summary"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Verify release: completed before deploy detection"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Frontend changed: ${{ steps.changes.outputs.frontendChanged }}"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Worker changed: ${{ steps.changes.outputs.workerChanged }}"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- D1 changed: ${{ steps.changes.outputs.d1Changed }}"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Docs only: ${{ steps.changes.outputs.docsOnlyChanged }}"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Deploy Pages: ${{ steps.changes.outputs.shouldDeployPages }}"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Deploy Worker: ${{ steps.changes.outputs.shouldDeployWorker }}"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Skip reason: ${{ steps.changes.outputs.skipReason }}"
+
+      - name: Block automatic deploy for D1 changes
+        if: steps.changes.outputs.shouldBlockAutoDeployDueToD1 == 'true'
+        shell: powershell
+        run: |
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "D1 change detected. Automatic Cloudflare deploy is blocked until migration backup, plan, and approval are confirmed."
+          throw "D1/schema changes require manual migration planning."
+
+      - name: Check Cloudflare secrets
+        if: steps.changes.outputs.shouldDeployPages == 'true' || steps.changes.outputs.shouldDeployWorker == 'true'
+        shell: powershell
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if (-not $env:CLOUDFLARE_API_TOKEN) {
+            throw "Missing GitHub Actions secret: CLOUDFLARE_API_TOKEN"
+          }
+          if (-not $env:CLOUDFLARE_ACCOUNT_ID) {
+            throw "Missing GitHub Actions secret: CLOUDFLARE_ACCOUNT_ID"
+          }
+
+      - name: Deploy Cloudflare Pages
+        if: steps.changes.outputs.shouldDeployPages == 'true'
+        shell: powershell
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler pages deploy .pages-deploy --project-name kohee --branch main
+
+      - name: Smoke check Pages
+        if: steps.changes.outputs.shouldDeployPages == 'true'
+        shell: powershell
+        run: node scripts/smoke-check.mjs --pages
+
+      - name: Deploy Cloudflare Worker
+        if: steps.changes.outputs.shouldDeployWorker == 'true'
+        shell: powershell
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+
+      - name: Smoke check Worker
+        if: steps.changes.outputs.shouldDeployWorker == 'true'
+        shell: powershell
+        run: node scripts/smoke-check.mjs --worker
+
+      - name: Write final deploy summary
+        if: always()
+        shell: powershell
+        run: |
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### Result"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Cloudflare deploy is controlled by changed-area detection."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- D1 migrations are never applied automatically."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- If Pages/Worker deploy steps were skipped, no Cloudflare publish was needed for this change."

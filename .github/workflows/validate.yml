@@ -5,8 +5,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  syntax:
+  verify:
     runs-on: windows-latest
 
     steps:
@@ -18,9 +21,15 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Run syntax checks
+      - name: Install dependencies
         shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1
+        run: |
+          if (Test-Path package-lock.json) {
+            npm ci
+          } else {
+            npm install
+          }
 
-      - name: Run unit tests
-        run: npm run test:unit
+      - name: Verify release
+        shell: powershell
+        run: npm run verify:release

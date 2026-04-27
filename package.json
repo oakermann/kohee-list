@@ -3,10 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "format": "prettier --write \"*.{html,json,md,toml}\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --ignore-unknown",
-    "format:check": "prettier --check \"*.{html,json,md,toml}\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --ignore-unknown",
+    "format": "prettier --write \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --ignore-unknown",
+    "format:check": "prettier --check \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --ignore-unknown",
     "check:deploy-sync": "node scripts/check-deploy-sync.mjs",
-    "test:unit": "node scripts/test-unit.mjs"
+    "detect:changed": "node scripts/detect-changed-areas.mjs",
+    "smoke:check": "node scripts/smoke-check.mjs",
+    "test:unit": "node scripts/test-unit.mjs",
+    "verify:release": "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify-release.ps1"
   },
   "devDependencies": {
     "prettier": "^3.8.3"

@@ -33,9 +33,9 @@ function Test-PowerShellFile {
 Push-Location $Workspace
 try {
   $jsFiles = @(
-    (Join-Path $Workspace "worker.js"),
-    (Join-Path $Workspace "scripts\check-js-module.mjs")
+    (Join-Path $Workspace "worker.js")
   )
+  $jsFiles += Get-ChildItem -LiteralPath (Join-Path $Workspace "scripts") -Filter *.mjs | ForEach-Object { $_.FullName }
   $jsFiles += Get-ChildItem -LiteralPath (Join-Path $Workspace "server") -Filter *.js | ForEach-Object { $_.FullName }
   $jsFiles += Get-ChildItem -LiteralPath (Join-Path $Workspace ".pages-deploy\assets") -Filter *.js | ForEach-Object { $_.FullName }
 
