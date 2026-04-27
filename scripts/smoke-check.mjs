@@ -45,7 +45,7 @@ async function checkPages() {
       throw new Error(`Pages returned HTTP ${response.status}`);
     }
     const body = await response.text();
-    if (!body.includes("KOHEE") && !body.includes("코히")) {
+    if (!body.includes("KOHEE")) {
       throw new Error("Pages HTML did not include KOHEE marker text");
     }
     console.log(`[smoke] Pages ok: ${PAGES_URL}`);

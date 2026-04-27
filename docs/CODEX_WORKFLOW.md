@@ -76,6 +76,14 @@ npm run verify:release
 - workflow/tooling만 변경된 경우 기본적으로 Cloudflare 배포하지 않는다.
 - D1/schema/migration 변경이 감지되면 자동 배포를 막고 수동 확인 대상으로 둔다.
 
+GitHub JavaScript Action 런타임 경고 대응:
+
+- `actions/checkout`은 `v6`을 사용한다.
+- `actions/setup-node`는 `v6`을 사용한다.
+- 두 action 모두 Node 24 런타임 기반 stable major로 올렸다.
+- 프로젝트 검증에 사용하는 Node.js 버전은 기존처럼 `node-version: "20"`을 유지한다.
+- 즉, GitHub Action 자체 런타임 경고와 프로젝트 실행 Node 버전은 분리해서 관리한다.
+
 ## 5. 변경 영역 감지 기준
 
 `scripts/detect-changed-areas.mjs`가 변경 파일을 기준으로 아래 값을 계산한다.
@@ -131,6 +139,13 @@ GitHub repository Settings -> Secrets and variables -> Actions
 - 로그에 출력하지 않는다.
 - Cloudflare API Token은 필요한 권한으로 제한한다.
 - D1 migration 자동 적용용 토큰으로 쓰지 않는다.
+
+Secrets 확인 원칙:
+
+- Pages 또는 Worker 배포가 필요한 경우에만 Secrets를 확인한다.
+- docs/tooling/workflow만 변경된 경우 Secrets가 없어도 workflow가 실패하지 않는 것이 정상이다.
+- D1 변경이 감지된 경우 Secrets 확인보다 자동 배포 차단이 우선이다.
+- Summary에는 Secrets 값이 아니라 필요 여부와 확인 결과만 표시한다.
 
 ## 7. 로컬 Cloudflare 배포 예외 규칙
 
@@ -272,7 +287,36 @@ node scripts/smoke-check.mjs --worker
 - 관리자 링크 공개 노출 여부
 - 로그인/관리자 플로우
 
-## 15. 완료 보고 형식
+GitHub Actions에서의 smoke check 원칙:
+
+- Pages 배포가 실제로 수행된 경우에만 Pages URL을 확인한다.
+- Worker 배포가 실제로 수행된 경우에만 Worker `/health`를 확인한다.
+- 아무 배포도 없으면 smoke check는 skip된다.
+- Worker를 배포했는데 `/health`가 실패하면 workflow 실패로 처리한다.
+
+## 15. GitHub Actions Summary 확인 항목
+
+`Deploy` workflow summary에서 아래 항목을 확인한다.
+
+- Commit SHA
+- Branch
+- Event
+- frontendChanged
+- workerChanged
+- d1Changed
+- docsOnlyChanged
+- workflowChanged
+- toolingChanged
+- Pages deploy 여부
+- Pages skip reason
+- Worker deploy 여부
+- Worker skip reason
+- D1 auto-deploy blocked 여부
+- Secrets required 여부
+- Secrets check 결과
+- Smoke check 계획 또는 skip 사유
+
+## 16. 완료 보고 형식
 
 Codex는 작업 완료 시 아래 항목을 보고한다.
 

@@ -187,6 +187,32 @@ if (changedFiles.length === 0) {
   skipReason = "Workflow/tooling-only change.";
 }
 
+const shouldDeployPages = frontendChanged && !d1Changed && !docsOnlyChanged;
+const shouldDeployWorker = workerChanged && !d1Changed && !docsOnlyChanged;
+
+function deploySkipReason(kind) {
+  if (d1Changed) return "D1/schema changes require manual migration planning.";
+  if (kind === "pages" && shouldDeployPages) return "not skipped";
+  if (kind === "worker" && shouldDeployWorker) return "not skipped";
+  if (changedFiles.length === 0) return "No changed files detected.";
+  if (docsOnlyChanged) return "Documentation-only change.";
+  if (onlyWorkflowOrTooling && !frontendChanged && !workerChanged) {
+    return "Workflow/tooling-only change.";
+  }
+  if (kind === "pages") return "No frontend deploy source changes.";
+  return "No worker/server changes.";
+}
+
+const smokeCheckPlan =
+  shouldDeployPages || shouldDeployWorker
+    ? [
+        shouldDeployPages ? "Pages smoke check after Pages deploy" : "",
+        shouldDeployWorker ? "Worker health check after Worker deploy" : "",
+      ]
+        .filter(Boolean)
+        .join("; ")
+    : "skipped - no deployment performed";
+
 const result = {
   ok: true,
   changedFiles,
@@ -196,9 +222,12 @@ const result = {
   docsOnlyChanged,
   workflowChanged,
   toolingChanged,
-  shouldDeployPages: frontendChanged && !d1Changed && !docsOnlyChanged,
-  shouldDeployWorker: workerChanged && !d1Changed && !docsOnlyChanged,
+  shouldDeployPages,
+  shouldDeployWorker,
   shouldBlockAutoDeployDueToD1: d1Changed,
+  pagesSkipReason: deploySkipReason("pages"),
+  workerSkipReason: deploySkipReason("worker"),
+  smokeCheckPlan,
   skipReason,
 };
 
