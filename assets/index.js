@@ -4,10 +4,9 @@ import {
   api,
   cleanParts,
   clearAuthToken,
-  esc,
   getStorageValue,
-  modalDescHtml,
   openNaverMapForCafe,
+  safeHttpUrl,
   setStorageValue,
   shareCafe,
   storeCsrfFromPayload,
@@ -48,17 +47,19 @@ function cafeTags(cafe) {
   return tags;
 }
 
-function tagHtml(cafe) {
-  return cafeTags(cafe)
-    .map((tag) => `<span class="tag-small">${esc(tag)}</span>`)
-    .join("");
+function appendTags(container, cafe) {
+  container.replaceChildren();
+  cafeTags(cafe).forEach((tag) => {
+    const item = document.createElement("span");
+    item.className = "tag-small";
+    item.textContent = tag;
+    container.appendChild(item);
+  });
 }
 
-function signatureHtml(values) {
+function signatureText(values) {
   const parts = cleanParts(values);
-  return parts.length
-    ? `<span class="sig-inline">${parts.map((value) => esc(value)).join(", ")}</span>`
-    : "";
+  return parts.length ? parts.join(", ") : "";
 }
 
 function getFavoriteSyncStamp() {
@@ -154,25 +155,104 @@ function formatDistance(distanceKm) {
     : label;
 }
 
-function cafeCardHtml(cafe) {
-  return `
-    <div class="cafe-card" data-cafe-id="${esc(cafe.id)}">
-      <div class="meta-row">
-        <div class="tag-group">${tagHtml(cafe)}</div>
-        ${
-          cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM
-            ? `<span class="distance-badge">${formatDistance(cafe.dis)}</span>`
-            : ""
-        }
-      </div>
-      <h4>${esc(cafe.name)}</h4>
-      <p class="cafe-desc">
-        ${esc(safeText(cafe.desc))}
-        ${signatureHtml(cafe.signature)}
-      </p>
-      <p class="address-full">${esc(safeText(cafe.address))}</p>
-    </div>
-  `;
+function centerMessage(message, subMessage = "") {
+  const box = document.createElement("div");
+  box.className = "center-msg";
+  box.textContent = message;
+  if (subMessage) {
+    box.appendChild(document.createElement("br"));
+    box.append(subMessage);
+  }
+  return box;
+}
+
+function createCafeCard(cafe) {
+  const card = document.createElement("div");
+  card.className = "cafe-card";
+  card.dataset.cafeId = safeText(cafe.id);
+
+  const meta = document.createElement("div");
+  meta.className = "meta-row";
+
+  const tagGroup = document.createElement("div");
+  tagGroup.className = "tag-group";
+  appendTags(tagGroup, cafe);
+  meta.appendChild(tagGroup);
+
+  if (cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM) {
+    const distance = formatDistance(cafe.dis);
+    if (distance) {
+      const badge = document.createElement("span");
+      badge.className = "distance-badge";
+      badge.textContent = distance;
+      meta.appendChild(badge);
+    }
+  }
+
+  const title = document.createElement("h4");
+  title.textContent = safeText(cafe.name);
+
+  const desc = document.createElement("p");
+  desc.className = "cafe-desc";
+  desc.textContent = safeText(cafe.desc);
+  const signature = signatureText(cafe.signature);
+  if (signature) {
+    desc.append(" ");
+    const sig = document.createElement("span");
+    sig.className = "sig-inline";
+    sig.textContent = signature;
+    desc.appendChild(sig);
+  }
+
+  const address = document.createElement("p");
+  address.className = "address-full";
+  address.textContent = safeText(cafe.address);
+
+  card.append(meta, title, desc, address);
+  return card;
+}
+
+function renderCafeCards(cafes) {
+  $("list").replaceChildren(...cafes.map(createCafeCard));
+}
+
+function renderModalDescription(desc, signature) {
+  const wrap = $("m-desc");
+  wrap.replaceChildren();
+
+  const copy = safeText(desc);
+  const signatureValue = signatureText(signature);
+
+  if (copy) {
+    const copyEl = document.createElement("div");
+    copyEl.className = "modal-copy-text";
+    copyEl.textContent = copy;
+    wrap.appendChild(copyEl);
+  }
+
+  if (signatureValue) {
+    const box = document.createElement("div");
+    box.className = "modal-signature";
+
+    const label = document.createElement("div");
+    label.className = "modal-signature-label";
+    label.textContent = "\uB300\uD45C\uBA54\uB274";
+
+    const value = document.createElement("div");
+    value.className = "modal-signature-value";
+    value.textContent = signatureValue;
+
+    box.append(label, value);
+    wrap.appendChild(box);
+  }
+
+  if (!copy && !signatureValue) {
+    const empty = document.createElement("div");
+    empty.className = "modal-copy-empty";
+    empty.textContent =
+      "\uC18C\uAC1C\uAC00 \uC544\uC9C1 \uC5C6\uC2B5\uB2C8\uB2E4.";
+    wrap.appendChild(empty);
+  }
 }
 
 async function loadData() {
@@ -222,7 +302,7 @@ function render() {
       return;
     }
 
-    $("list").innerHTML = nearbyCafes.map(cafeCardHtml).join("");
+    renderCafeCards(nearbyCafes);
     return;
   }
 
@@ -248,7 +328,7 @@ function render() {
     return;
   }
 
-  $("list").innerHTML = filtered.map(cafeCardHtml).join("");
+  renderCafeCards(filtered);
 }
 
 function toggleFilter(categoryKey) {
@@ -424,7 +504,7 @@ function openModal(cafeId) {
   if (!cafe) return;
 
   openModalCafeId = String(cafe.id);
-  $("m-tags").innerHTML = tagHtml(cafe);
+  appendTags($("m-tags"), cafe);
   updateFavoriteButton(cafe.id);
   $("btn-favorite").onclick = async () => {
     try {
@@ -434,8 +514,8 @@ function openModal(cafeId) {
     }
   };
 
-  $("m-name").innerText = cafe.name;
-  $("m-desc").innerHTML = modalDescHtml(cafe.desc, cafe.signature);
+  $("m-name").textContent = safeText(cafe.name);
+  renderModalDescription(cafe.desc, cafe.signature);
 
   $("btn-map").onclick = () => openNaverMapForCafe(cafe);
   $("btn-share").onclick = async () => {
@@ -447,19 +527,21 @@ function openModal(cafeId) {
     }
   };
 
-  if (cafe.beanShop) {
+  const beanShopUrl = safeHttpUrl(cafe.beanShop);
+  if (beanShopUrl) {
     $("btn-bean").classList.remove("is-hidden");
     $("btn-bean").onclick = () =>
-      window.open(cafe.beanShop, "_blank", "noopener");
+      window.open(beanShopUrl, "_blank", "noopener");
   } else {
     $("btn-bean").classList.add("is-hidden");
     $("btn-bean").onclick = null;
   }
 
-  if (cafe.instagram) {
+  const instagramUrl = safeHttpUrl(cafe.instagram);
+  if (instagramUrl) {
     $("btn-insta").classList.remove("is-hidden");
     $("btn-insta").onclick = () =>
-      window.open(cafe.instagram, "_blank", "noopener");
+      window.open(instagramUrl, "_blank", "noopener");
   } else {
     $("btn-insta").classList.add("is-hidden");
     $("btn-insta").onclick = null;
@@ -531,18 +613,24 @@ async function logout() {
   renderAuthMenu();
 }
 
-window.toggleFilter = toggleFilter;
 window.handleSearchInput = handleSearchInput;
 window.logout = logout;
 
-$("tabs").innerHTML = Object.entries(CAT_MAP)
-  .map(
-    ([key, label]) =>
-      `<button class="tab" id="tab-${key}" onclick="toggleFilter('${key}')">${label}</button>`,
-  )
-  .join("");
+Object.entries(CAT_MAP).forEach(([key, label]) => {
+  const tab = document.createElement("button");
+  tab.className = "tab";
+  tab.id = `tab-${key}`;
+  tab.type = "button";
+  tab.textContent = label;
+  tab.addEventListener("click", () => toggleFilter(key));
+  $("tabs").appendChild(tab);
+});
 
 $("nearby-btn").addEventListener("click", handleNearbyClick);
+$("app-title").addEventListener("click", () => location.reload());
+$("modal-bg").addEventListener("click", (event) => {
+  if (event.target === $("modal-bg")) $("modal-bg").style.display = "none";
+});
 $("list").addEventListener("click", (event) => {
   const card = event.target.closest(".cafe-card[data-cafe-id]");
   if (!card) return;

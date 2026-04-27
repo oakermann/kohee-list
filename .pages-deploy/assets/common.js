@@ -69,6 +69,19 @@ export function getCookie(key) {
 
 export const getCookieValue = getCookie;
 
+export function safeHttpUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.toString()
+      : "";
+  } catch {
+    return "";
+  }
+}
+
 export function setCsrfToken(token) {
   csrfTokenMemory = String(token || "");
   try {

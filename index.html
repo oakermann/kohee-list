@@ -514,7 +514,7 @@
   <body>
     <header>
       <div class="header-box">
-        <h1 onclick="location.reload()">[ 코히 리스트 ]</h1>
+        <h1 id="app-title">[ 코히 리스트 ]</h1>
         <div id="notice" class="notice-inline" style="display: none"></div>
         <div id="auth-menu" class="auth-menu"></div>
       </div>
@@ -526,7 +526,7 @@
           <input
             id="search"
             type="text"
-            placeholder="카페나 주소를 검색하새우"
+            placeholder="카페명 또는 주소 검색"
             class="input"
             oninput="handleSearchInput()"
           />
@@ -553,7 +553,7 @@
         <div class="divider"></div>
       </div>
       <div id="list">
-        <div class="center-msg">데이터 로드 중이새우... 🦐</div>
+        <div class="center-msg">데이터를 불러오는 중입니다.</div>
       </div>
     </main>
 
@@ -566,8 +566,8 @@
       <div class="copyright">© 2026 KOHEE LIST. ALL RIGHTS RESERVED.</div>
     </footer>
 
-    <div id="modal-bg" class="overlay" onclick="this.style.display = 'none'">
-      <div class="modal" onclick="event.stopPropagation()">
+    <div id="modal-bg" class="overlay">
+      <div class="modal">
         <div class="modal-meta">
           <div id="m-tags"></div>
           <button
