@@ -47,6 +47,28 @@ function cafeTags(cafe) {
   return tags;
 }
 
+function appendLines(node, lines) {
+  lines.forEach((line, index) => {
+    if (index > 0) node.appendChild(document.createElement("br"));
+    node.appendChild(document.createTextNode(line));
+  });
+}
+
+function renderCenterMessage(lines) {
+  const message = document.createElement("div");
+  message.className = "center-msg";
+  appendLines(message, Array.isArray(lines) ? lines : [lines]);
+  $("list").replaceChildren(message);
+}
+
+function setButtonAction(id, handler) {
+  const current = $(id);
+  const next = current.cloneNode(true);
+  current.replaceWith(next);
+  if (handler) next.addEventListener("click", handler);
+  return next;
+}
+
 function appendTags(container, cafe) {
   container.replaceChildren();
   cafeTags(cafe).forEach((tag) => {
@@ -273,8 +295,10 @@ async function loadData() {
       : [];
     render();
   } catch {
-    $("list").innerHTML =
-      `<div class="center-msg">데이터를 불러오지 못했습니다.<br>잠시 후 다시 시도해 주세요.</div>`;
+    renderCenterMessage([
+      "데이터를 불러오지 못했습니다.",
+      "잠시 후 다시 시도해 주세요.",
+    ]);
   }
 }
 
@@ -297,8 +321,10 @@ function render() {
     nearbyCafes = nearbyCafes.slice(0, 20);
 
     if (!nearbyCafes.length) {
-      $("list").innerHTML =
-        `<div class="center-msg">근처에 해당 카페가 없습니다.<br>GPS를 다시 확인해 주세요.</div>`;
+      renderCenterMessage([
+        "근처에 해당 카페가 없습니다.",
+        "GPS를 다시 확인해 주세요.",
+      ]);
       return;
     }
 
@@ -308,8 +334,10 @@ function render() {
 
   const hasFilter = query.length > 0 || selectedCategory !== null;
   if (!hasFilter) {
-    $("list").innerHTML =
-      `<div class="center-msg">카테고리를 선택하거나<br>카페명 또는 주소를 검색해 보세요.</div>`;
+    renderCenterMessage([
+      "카테고리를 선택하거나",
+      "카페명 또는 주소를 검색해 보세요.",
+    ]);
     return;
   }
 
@@ -323,8 +351,7 @@ function render() {
     .slice(0, 50);
 
   if (!filtered.length) {
-    $("list").innerHTML =
-      `<div class="center-msg">조건에 맞는 결과가 없습니다.</div>`;
+    renderCenterMessage("조건에 맞는 결과가 없습니다.");
     return;
   }
 
@@ -506,45 +533,47 @@ function openModal(cafeId) {
   openModalCafeId = String(cafe.id);
   appendTags($("m-tags"), cafe);
   updateFavoriteButton(cafe.id);
-  $("btn-favorite").onclick = async () => {
+  setButtonAction("btn-favorite", async () => {
     try {
       await toggleFavorite(cafe.id);
     } catch (error) {
       alert(error.message);
     }
-  };
+  });
 
   $("m-name").textContent = safeText(cafe.name);
   renderModalDescription(cafe.desc, cafe.signature);
 
-  $("btn-map").onclick = () => openNaverMapForCafe(cafe);
-  $("btn-share").onclick = async () => {
+  setButtonAction("btn-map", () => openNaverMapForCafe(cafe));
+  setButtonAction("btn-share", async () => {
     try {
       const mode = await shareCafe(cafe);
       if (mode === "copied") alert("클립보드에 복사되었습니다.");
     } catch (error) {
       alert(error.message);
     }
-  };
+  });
 
   const beanShopUrl = safeHttpUrl(cafe.beanShop);
+  const beanButton = setButtonAction(
+    "btn-bean",
+    beanShopUrl ? () => window.open(beanShopUrl, "_blank", "noopener") : null,
+  );
   if (beanShopUrl) {
-    $("btn-bean").classList.remove("is-hidden");
-    $("btn-bean").onclick = () =>
-      window.open(beanShopUrl, "_blank", "noopener");
+    beanButton.classList.remove("is-hidden");
   } else {
-    $("btn-bean").classList.add("is-hidden");
-    $("btn-bean").onclick = null;
+    beanButton.classList.add("is-hidden");
   }
 
   const instagramUrl = safeHttpUrl(cafe.instagram);
+  const instagramButton = setButtonAction(
+    "btn-insta",
+    instagramUrl ? () => window.open(instagramUrl, "_blank", "noopener") : null,
+  );
   if (instagramUrl) {
-    $("btn-insta").classList.remove("is-hidden");
-    $("btn-insta").onclick = () =>
-      window.open(instagramUrl, "_blank", "noopener");
+    instagramButton.classList.remove("is-hidden");
   } else {
-    $("btn-insta").classList.add("is-hidden");
-    $("btn-insta").onclick = null;
+    instagramButton.classList.add("is-hidden");
   }
 
   $("modal-bg").style.display = "flex";
@@ -584,22 +613,32 @@ function renderAuthMenu() {
 
   if (!currentUser) {
     menu.className = "auth-menu is-guest";
-    menu.innerHTML = `
-      <a class="auth-link" href="login.html">로그인</a>
-      <a class="auth-link" href="submit.html">제보하기</a>
-      <a class="auth-link" href="mypage.html">마이페이지</a>
-    `;
+    menu.replaceChildren();
+    appendAuthLink(menu, "login.html", "로그인");
+    appendAuthLink(menu, "submit.html", "제보하기");
+    appendAuthLink(menu, "mypage.html", "마이페이지");
     return;
   }
 
   menu.className = "auth-menu is-logged-in";
-  menu.innerHTML = `
-    <button id="logout-menu-btn" type="button">로그아웃</button>
-    <a class="auth-link" href="submit.html">제보하기</a>
-    <a class="auth-link" href="mypage.html">마이페이지</a>
-  `;
+  menu.replaceChildren();
 
-  $("logout-menu-btn").addEventListener("click", logout);
+  const logoutButton = document.createElement("button");
+  logoutButton.id = "logout-menu-btn";
+  logoutButton.type = "button";
+  logoutButton.textContent = "로그아웃";
+  logoutButton.addEventListener("click", logout);
+  menu.appendChild(logoutButton);
+  appendAuthLink(menu, "submit.html", "제보하기");
+  appendAuthLink(menu, "mypage.html", "마이페이지");
+}
+
+function appendAuthLink(menu, href, text) {
+  const link = document.createElement("a");
+  link.className = "auth-link";
+  link.href = href;
+  link.textContent = text;
+  menu.appendChild(link);
 }
 
 async function logout() {
@@ -613,9 +652,6 @@ async function logout() {
   renderAuthMenu();
 }
 
-window.handleSearchInput = handleSearchInput;
-window.logout = logout;
-
 Object.entries(CAT_MAP).forEach(([key, label]) => {
   const tab = document.createElement("button");
   tab.className = "tab";
@@ -626,6 +662,7 @@ Object.entries(CAT_MAP).forEach(([key, label]) => {
   $("tabs").appendChild(tab);
 });
 
+$("search").addEventListener("input", handleSearchInput);
 $("nearby-btn").addEventListener("click", handleNearbyClick);
 $("app-title").addEventListener("click", () => location.reload());
 $("modal-bg").addEventListener("click", (event) => {
