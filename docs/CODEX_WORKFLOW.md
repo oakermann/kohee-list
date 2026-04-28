@@ -192,6 +192,8 @@ ChatGPT가 사용자 요구를 Codex 작업으로 바꿀 때는 구현 지시로
 | F. DB/migration 작업    | 바로 구현하지 않는다. schema 변경 계획, 백업 계획, rollback 가능성을 정리한다. 원격 D1 자동 적용은 금지한다. 사용자 승인 후 별도 실행한다.                                                                                                                                             |
 | G. 배포/운영 작업       | GitHub Actions Validate와 Deploy workflow 성공을 확인한다. 변경 영역 감지가 정확해야 한다. 필요한 경우에만 Pages/Worker 배포가 실행된다. smoke check 결과를 확인한다. Secrets 값은 노출하지 않는다. 로컬 wrangler 배포를 실행하지 않는다.                                              |
 
+`cafes` lifecycle, soft delete, approved/candidate 상태 모델은 `docs/DATA_LIFECYCLE_PLAN.md`를 기준 계획으로 삼는다.
+
 ## 11. 현재 안정화 우선순위 백로그
 
 아래 목록은 현재 우선순위 기록이다. 이 목록은 즉시 구현 지시가 아니며, 별도 프롬프트와 승인 없이 실행하지 않는다.
