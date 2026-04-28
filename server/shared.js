@@ -16,7 +16,12 @@ export function nowIso() {
 }
 
 export function health(req, env) {
-  return json({ ok: true }, 200, req, env);
+  return json(
+    { ok: true, deployCheck: "codex-worker-20260428" },
+    200,
+    req,
+    env,
+  );
 }
 
 function appendHeaders(headers, source = {}) {
