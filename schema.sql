@@ -62,12 +62,25 @@ CREATE TABLE IF NOT EXISTS cafes (
   category TEXT NOT NULL DEFAULT '[]',
   oakerman_pick INTEGER NOT NULL DEFAULT 0,
   manager_pick INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('candidate', 'approved', 'hidden', 'rejected')),
+  approved_at TEXT,
+  approved_by TEXT,
+  rejected_at TEXT,
+  rejected_by TEXT,
+  hidden_at TEXT,
+  hidden_by TEXT,
+  deleted_at TEXT,
+  deleted_by TEXT,
+  delete_reason TEXT,
+  created_at TEXT,
   created_by TEXT,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_cafes_updated_at ON cafes(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cafes_public_lifecycle ON cafes(status, deleted_at);
+CREATE INDEX IF NOT EXISTS idx_cafes_deleted_at ON cafes(deleted_at);
 
 CREATE TABLE IF NOT EXISTS submissions (
   id TEXT PRIMARY KEY,

@@ -3,7 +3,14 @@
 이 문서는 KOHEE LIST의 `cafes` 데이터를 복구 가능한 lifecycle로 전환하기 위한 계획이다.
 실제 D1 migration 준비 상태와 백업 절차는 `docs/D1_MIGRATION_RUNBOOK.md`를 함께 확인한다.
 
-이번 문서는 계획 모드 산출물이다. 런타임 코드, `schema.sql`, migration 파일, 원격 D1은 수정하지 않는다.
+이 문서는 lifecycle 설계와 phase별 실행 계획을 정리한다. `schema.sql`과 migration 파일은 1차 구현에 맞춰 반영했지만, 런타임 코드와 원격 D1은 아직 수정하지 않는다.
+
+현재 구현 상태:
+
+- `migrations/0005_cafe_lifecycle.sql`은 `cafes` lifecycle 컬럼과 기본 인덱스를 추가하는 1차 migration 파일이다.
+- `schema.sql`은 신규 DB 생성 기준으로 lifecycle 컬럼을 포함한다.
+- 원격 D1에는 아직 적용하지 않았다.
+- public/admin API 필터, `deleteCafe` soft delete 전환, `resetCsv` 안전화, restore/purge/archive 기능은 다음 phase에서 별도로 구현한다.
 
 ## 1. 현재 데이터 흐름
 
@@ -200,6 +207,8 @@ D1/SQLite에서 partial index를 사용할 수 있는지 확인한 뒤 가능하
 WHERE status = 'approved'
   AND deleted_at IS NULL
 ```
+
+이 조건은 정책이다. 실제 `server/cafes.js` public query 반영은 다음 실행 phase에서 수행한다.
 
 반환 가능 필드:
 
@@ -575,7 +584,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 - 검증: public API 필터 테스트, smoke `/data`.
 - rollback: query 필터 commit revert.
 
-### Phase 4. deleteCafe soft delete 전환
+### Phase 4. soft delete + restore
 
 - 목표: `DELETE FROM cafes` 제거.
 - 수정 파일: `server/cafes.js`.
@@ -591,13 +600,34 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 - 검증: admin 권한, restore 후 public 비노출 기본, admin 목록 확인.
 - rollback: restore route/UI revert.
 
-### Phase 6. resetCsv 안전화
+### Phase 6. resetCsv hard delete 제거
 
 - 목표: hard reset 제거와 replace workflow 기반 전환.
 - 수정 파일: `server/cafes.js`, `server/csv.js`, admin assets, scripts.
 - 위험도: 높음.
 - 검증: dry-run, confirm phrase, backup 존재 확인, audit log.
 - rollback: 기존 endpoint 복구 전에는 원격 적용 금지. 적용 후에는 DB backup 필요.
+
+### Phase 6.5. purge/archive 정책 구현
+
+- 목표: soft deleted 데이터가 장기간 누적될 때 안전하게 완전 삭제하거나 archive하는 별도 위험 작업을 제공한다.
+- 수정 파일: 별도 설계 후 결정한다.
+- 위험도: 높음.
+- 검증: dry-run, confirm phrase, admin-only 권한, backup 존재 확인, audit log 확인.
+- rollback: purge는 되돌리기 어렵기 때문에 production D1 전체 백업과 archive export가 선행되어야 한다.
+
+Purge/archive 원칙:
+
+- 기본 삭제는 soft delete다.
+- 즉시 hard delete는 금지한다.
+- purge는 admin만 가능해야 한다.
+- purge 전 production D1 백업은 필수다.
+- purge 전 dry-run과 confirm phrase는 필수다.
+- purge 대상은 `deleted_at`이 일정 기간 지난 항목으로 제한하는 것을 권장한다. 예: 90일 또는 180일 이상.
+- purge 전 favorites/submissions 연결 상태를 확인해야 한다.
+- purge 실행 시 audit log는 필수다.
+- 장기적으로 `cafes_archive` 테이블 또는 별도 export archive 방식을 검토한다.
+- `resetCsv`는 purge가 아니라 replace/hidden workflow로 다룬다.
 
 ### Phase 7. CSV import 상태 정책 연결
 

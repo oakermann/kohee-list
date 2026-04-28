@@ -2,7 +2,7 @@
 
 이 문서는 KOHEE LIST의 D1 migration을 적용하기 전 확인해야 할 준비 상태, 백업 절차, GitHub Actions 처리 정책을 정리한다.
 
-이번 문서는 조사/계획 모드 산출물이다. `schema.sql`, `migrations/**`, 런타임 코드, 원격 D1은 수정하지 않는다.
+이 문서는 D1 변경을 준비하고 적용할 때의 운영 기준이다. migration 파일과 `schema.sql` 변경은 Git에 커밋할 수 있지만, 원격 D1 적용은 production 백업과 사용자 승인 후 별도 수동 절차로만 진행한다.
 
 ## 1. 현재 D1 설정
 
@@ -35,12 +35,13 @@
 - `migrations/0002_rate_limits.sql`
 - `migrations/0003_audit_logs.sql`
 - `migrations/0004_session_security.sql`
+- `migrations/0005_cafe_lifecycle.sql`
 
-`schema.sql`은 base schema에 `rate_limits`, `audit_logs`, session security 컬럼까지 반영한 최종 형태다.
+`schema.sql`은 base schema에 `rate_limits`, `audit_logs`, session security, cafe lifecycle 컬럼까지 반영한 최종 형태다.
 
-현재 `cafes` 테이블에는 lifecycle 필드가 없다.
+`0005_cafe_lifecycle.sql`은 기존 `cafes` row를 기본적으로 `approved` 상태로 유지하고, soft delete와 candidate/hidden/rejected 상태를 표현하기 위한 1차 구조를 추가한다.
 
-없는 필드:
+추가된 lifecycle 필드:
 
 - `status`
 - `approved_at`
@@ -54,6 +55,11 @@
 - `delete_reason`
 - `created_at`
 
+추가된 lifecycle index:
+
+- `idx_cafes_public_lifecycle(status, deleted_at)`
+- `idx_cafes_deleted_at(deleted_at)`
+
 현재 `submissions`에는 `pending`, `approved`, `rejected` status가 있다. 이 status는 사용자 제보 lifecycle이며, `cafes` 공개 lifecycle과 분리해서 다룬다.
 
 ## 3. 원격 D1 schema 조회 상태
@@ -63,12 +69,12 @@
 권장 읽기 전용 확인 명령:
 
 ```powershell
-npx.cmd --no-install wrangler d1 execute kohee-list --remote --command "SELECT type, name, sql FROM sqlite_master WHERE type IN ('table','index') ORDER BY type, name"
-npx.cmd --no-install wrangler d1 execute kohee-list --remote --command "PRAGMA table_info(cafes)"
-npx.cmd --no-install wrangler d1 execute kohee-list --remote --command "PRAGMA table_info(users)"
-npx.cmd --no-install wrangler d1 execute kohee-list --remote --command "PRAGMA table_info(sessions)"
-npx.cmd --no-install wrangler d1 execute kohee-list --remote --command "PRAGMA table_info(submissions)"
-npx.cmd --no-install wrangler d1 execute kohee-list --remote --command "PRAGMA table_info(audit_logs)"
+npx.cmd --no-install wrangler d1 execute kohee-list-db --remote --command "SELECT type, name, sql FROM sqlite_master WHERE type IN ('table','index') ORDER BY type, name"
+npx.cmd --no-install wrangler d1 execute kohee-list-db --remote --command "PRAGMA table_info(cafes)"
+npx.cmd --no-install wrangler d1 execute kohee-list-db --remote --command "PRAGMA table_info(users)"
+npx.cmd --no-install wrangler d1 execute kohee-list-db --remote --command "PRAGMA table_info(sessions)"
+npx.cmd --no-install wrangler d1 execute kohee-list-db --remote --command "PRAGMA table_info(submissions)"
+npx.cmd --no-install wrangler d1 execute kohee-list-db --remote --command "PRAGMA table_info(audit_logs)"
 ```
 
 주의:
@@ -79,14 +85,15 @@ npx.cmd --no-install wrangler d1 execute kohee-list --remote --command "PRAGMA t
 
 현재 확인 결과:
 
-- 로컬 환경에서 `wrangler` 4.85.0 사용 가능.
-- 원격 D1 읽기 쿼리는 Cloudflare API 권한 오류로 완료되지 않았다.
-- 오류 성격: 현재 인증된 Cloudflare 계정 또는 권한이 대상 account/D1에 유효하지 않음.
-- 따라서 로컬 `schema.sql`과 원격 D1 schema의 일치 여부는 아직 확정하지 못했다.
+- 로컬 환경에서 `wrangler` 4.86.0 사용 가능.
+- `kohee-list-db` 이름으로 원격 D1 schema 읽기 전용 조회가 성공했다.
+- `wrangler.toml`의 `database_id`와 D1 list의 database id가 일치함을 확인했다.
+- 로컬 schema/migrations와 원격 D1 schema에는 migration 1차 구현을 막을 큰 차이가 없다.
+- 원격 D1에는 아직 `0005_cafe_lifecycle.sql`을 적용하지 않았다.
 
-사용자가 Cloudflare Dashboard에서 확인할 항목:
+사용자가 Cloudflare Dashboard에서 계속 확인할 항목:
 
-- D1 database `kohee-list`가 현재 Worker `kohee-list`와 같은 계정에 있는지.
+- D1 database `kohee-list-db`가 현재 Worker `kohee-list`와 같은 계정에 있는지.
 - `wrangler.toml`의 account/database 설정이 현재 운영 리소스와 일치하는지.
 - 현재 로그인된 wrangler 계정이 해당 account와 D1 database에 접근 권한이 있는지.
 - D1 console에서 `cafes`, `users`, `sessions`, `submissions`, `audit_logs`, `rate_limits`, `favorites` schema가 로컬 schema와 같은지.
@@ -128,16 +135,21 @@ soft delete/status migration 전에는 production D1 전체 백업이 필수다.
 권장 백업 명령 후보:
 
 ```powershell
-npx.cmd --no-install wrangler d1 export kohee-list --remote --output .\backups\d1\kohee-list-production-YYYYMMDD-HHMMSS.sql
+npx.cmd --no-install wrangler d1 export kohee-list-db --remote --output F:\KOHEE-LIST\backups\d1\kohee-list-production-YYYYMMDD-HHMMSS.sql
 ```
 
 schema-only 확인 후보:
 
 ```powershell
-npx.cmd --no-install wrangler d1 export kohee-list --remote --no-data --output .\backups\d1\kohee-list-schema-YYYYMMDD-HHMMSS.sql
+npx.cmd --no-install wrangler d1 export kohee-list-db --remote --no-data --output F:\KOHEE-LIST\backups\d1\kohee-list-schema-YYYYMMDD-HHMMSS.sql
 ```
 
-이번 조사에서는 위 백업 명령을 실행하지 않았다.
+현재 확보된 백업:
+
+- Full backup: `F:\KOHEE-LIST\backups\d1\kohee-list-production-20260428-224208.sql`
+- Schema-only backup: `F:\KOHEE-LIST\backups\d1\kohee-list-schema-20260428-224208.sql`
+
+백업 파일은 repo 밖에 있으며 Git에 추가하지 않는다.
 
 ### 백업 파일 보관 원칙
 
@@ -216,70 +228,29 @@ D1 변경 시 출력:
 
 ## 6. Migration 준비 상태 체크리스트
 
-| 항목                             | 상태        | 판단                                          |
-| -------------------------------- | ----------- | --------------------------------------------- |
-| 로컬 schema 파악                 | 완료        | `schema.sql`과 migrations 구성을 확인함       |
-| 원격 D1 schema 확인              | 미완료      | wrangler 읽기 쿼리가 권한 오류로 실패         |
-| 로컬/원격 schema 일치 여부       | 미확정      | 원격 schema 조회가 필요                       |
-| production 백업 절차             | 문서화 완료 | 실제 백업 실행은 아직 안 함                   |
-| D1 변경 GitHub Actions 정책      | 완료        | D1 변경 시 success + manual migration summary |
-| migration 파일 추가 가능 여부    | 조건부 가능 | 원격 schema 확인과 백업 절차 확인 후 권장     |
-| 원격 적용 전 검증 방법           | 계획 가능   | local/dry-run/schema query/backup 기반        |
-| rollback 가능성                  | 백업 전제   | 컬럼 추가 rollback은 backup restore 중심      |
-| 다음 실행으로 migration 1차 구현 | 아직 비권장 | 선행 차단 요소 2개 있음                       |
+| 항목                             | 상태      | 판단                                          |
+| -------------------------------- | --------- | --------------------------------------------- |
+| 로컬 schema 파악                 | 완료      | `schema.sql`과 migrations 구성을 확인함       |
+| 원격 D1 schema 확인              | 완료      | `kohee-list-db` 읽기 전용 schema 조회 성공    |
+| 로컬/원격 schema 일치 여부       | 완료      | migration 1차 구현을 막을 큰 차이 없음        |
+| production 백업 절차             | 완료      | full + schema-only 백업을 repo 밖에 생성함    |
+| D1 변경 GitHub Actions 정책      | 완료      | D1 변경 시 success + manual migration summary |
+| migration 파일 추가 가능 여부    | 완료      | `0005_cafe_lifecycle.sql` 작성 가능 상태      |
+| 원격 적용 전 검증 방법           | 계획 가능 | local/dry-run/schema query/backup 기반        |
+| rollback 가능성                  | 백업 전제 | 컬럼 추가 rollback은 backup restore 중심      |
+| 다음 실행으로 migration 1차 구현 | 가능      | 원격 적용 없이 파일 구현 가능                 |
 
 최종 판단:
 
 ```text
-C. migration 구현 전 원격 D1 schema/백업 절차 확인 필요
+A. migration 1차 구현 가능
 ```
+
+단, 이 판단은 migration 파일 작성과 `schema.sql` 반영에 대한 것이다. 원격 D1 적용은 여전히 별도 사용자 승인, 백업 확인, 수동 적용 절차가 필요하다.
 
 ## 7. 다음 실행 작업 추천
 
 추천 1순위:
-
-```text
-원격 D1 schema 확인 수동 작업
-```
-
-작업 모드:
-
-- 조사 모드
-
-수정 파일:
-
-- 없음 또는 확인 결과 문서만
-
-금지 사항:
-
-- `schema.sql` 수정 금지
-- `migrations/**` 추가/수정 금지
-- 원격 D1 적용 금지
-- Cloudflare 로컬 배포 금지
-- 런타임 코드 수정 금지
-
-검증 기준:
-
-- `npm run format:check`
-- `npm run verify:release`
-- `npm run check:deploy-sync`
-- `npm run test:unit`
-- `powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1`
-- `node scripts\detect-changed-areas.mjs --working-tree`
-- `git diff --check`
-- 원격 D1 schema는 읽기 전용으로만 조회
-- production D1 전체 백업 절차 확인
-
-예상 GitHub Actions 결과:
-
-- 문서만 변경하면 Pages/Worker 배포 skip.
-- schema 확인만 수행하면 GitHub Actions 변경 없음.
-
-원격 D1 적용 여부:
-
-- 없음.
-
-추천 2순위:
 
 ```text
 soft delete + status migration 파일 1차 구현
@@ -292,26 +263,76 @@ soft delete + status migration 파일 1차 구현
 수정 파일:
 
 - `schema.sql`
-- `migrations/**`
-- 필요한 테스트 파일
+- `migrations/0005_cafe_lifecycle.sql`
+- lifecycle 정책 문서
 
-필요 조건:
+금지 사항:
 
-- 원격 D1 schema 일치 또는 차이점 문서화.
-- production D1 backup 실행 가능성 확인.
+- 원격 D1 적용 금지
+- Cloudflare 로컬 배포 금지
+- 런타임 코드 수정 금지
+- `deleteCafe`/`resetCsv` 로직 수정 금지
+- public/admin API 로직 수정 금지
+
+검증 기준:
+
+- `npm run format:check`
+- `npm run verify:release`
+- `npm run check:deploy-sync`
+- `npm run test:unit`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1`
+- `node scripts\detect-changed-areas.mjs --working-tree`
+- `git diff --check`
+- `node scripts\detect-changed-areas.mjs --working-tree`에서 `d1Changed=true`, `manualMigrationRequired=true`, `shouldDeployPages=false`, `shouldDeployWorker=false` 확인
+- 원격 D1 쓰기 작업 없음
+- production D1 백업 파일이 Git에 나타나지 않음
+
+예상 GitHub Actions 결과:
+
+- Validate workflow success.
+- Deploy workflow success.
+- D1 변경 감지로 Pages/Worker 배포 skip.
+- Step Summary에 manual migration required 표시.
+- 원격 D1 migration 자동 적용 없음.
 
 원격 D1 적용 여부:
 
-- 없음. migration 파일 작성과 로컬 검증만 수행.
+- 없음.
 
-추천 3순위:
+추천 2순위:
 
 ```text
 원격 D1 migration 수동 적용
 ```
 
+작업 모드:
+
+- 운영 작업
+
 진입 조건:
 
-- migration 구현/검증 완료.
-- production D1 전체 백업 완료.
+- migration 파일 구현/검증 완료.
+- production D1 full + schema-only 백업 확인.
 - 사용자 명시 승인 완료.
+
+금지 사항:
+
+- 승인 없는 D1 적용 금지.
+- 백업 파일 내용 출력 금지.
+- Worker/Pages 로컬 배포 금지.
+
+원격 D1 적용 여부:
+
+- 사용자 승인 후 수동 적용.
+
+추천 3순위:
+
+```text
+public API lifecycle 필터 구현
+```
+
+진입 조건:
+
+- 원격 D1에 `0005_cafe_lifecycle.sql` 적용 완료.
+- `/data` 또는 public cafe API가 새 컬럼을 조회할 수 있음.
+- runtime deploy 전에 staging/remote schema 확인 완료.
