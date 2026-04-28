@@ -112,13 +112,19 @@ jobs:
         if: steps.changes.outputs.shouldBlockAutoDeployDueToD1 == 'true'
         shell: powershell
         run: |
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### Manual migration required"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- D1/schema/migration change detected."
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Pages deploy: skipped — D1 migration requires manual review."
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Worker deploy: skipped — D1 migration requires manual review."
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Remote D1 migration was not applied automatically."
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Confirm production D1 backup, schema match, and manual approval before applying migrations."
+          $summary = @(
+            ""
+            "### Manual migration required"
+            "- D1/schema/migration change detected."
+            "- Pages deploy skipped: D1 migration requires manual review."
+            "- Worker deploy skipped: D1 migration requires manual review."
+            "- Remote D1 migration was not applied automatically."
+            "- Required before manual apply:"
+            "  - production D1 backup"
+            "  - remote schema check"
+            "  - manual approval"
+          )
+          $summary | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
 
       - name: Deploy Cloudflare Pages
         id: pages_deploy
