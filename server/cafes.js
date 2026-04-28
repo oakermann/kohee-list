@@ -36,7 +36,12 @@ export function toCafeResponse(row) {
 export async function getData(req, env) {
   return withGuard(req, env, async () => {
     const rows = await env.DB.prepare(
-      "SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category, oakerman_pick, manager_pick, updated_at FROM cafes ORDER BY updated_at DESC",
+      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
+        oakerman_pick, manager_pick, updated_at
+       FROM cafes
+       WHERE status = 'approved'
+        AND deleted_at IS NULL
+       ORDER BY updated_at DESC`,
     ).all();
     const cafes = (rows.results || []).map(toCafeResponse);
     return json(cafes, 200, req, env);
