@@ -18,7 +18,119 @@ Codex가 임의로 하지 않는 작업:
 - main 브랜치 force push
 - Cloudflare token 또는 account id 하드코딩
 
-## 2. 기본 작업 절차
+KOHEE LIST 2의 고정 규칙:
+
+- role은 `admin`, `manager`, `user`만 사용한다.
+- `super_admin`은 만들지 않는다.
+- 기본 category는 `espresso`, `drip`, `decaf`, `instagram`, `dessert`만 사용한다.
+- 새우톤은 쓰지 않는다.
+- 기능 추가는 사용자가 명시한 경우에만 한다.
+
+## 2. 작업 종류 분류표
+
+사용자의 거친 요구는 먼저 아래 작업 종류 중 하나로 분류한다. 한 프롬프트에는 한 종류의 작업만 담는다.
+
+| 종류 | 예시 | 처리 원칙 |
+| --- | --- | --- |
+| A. 작은 수정 | 문구 수정, 단일 버그 수정, 작은 UI 보정, 작은 검증 로직 수정 | 바로 Codex 프롬프트 작성 가능. 변경 파일을 최소화한다. `npm run verify:release`를 실행한다. |
+| B. 안정화 작업 | XSS 방지, URL 검증, CSV 검증, public/admin 데이터 분리, soft delete, 보안 헤더, 테스트 보강 | 기능 추가와 섞지 않는다. 변경 목적을 보안/안정성으로 제한한다. 검증 기준을 명확히 둔다. |
+| C. 리팩토링 / 코드 정리 | 포맷 정리, 파일 구조 정리, 중복 제거, 함수 분리, naming 정리 | 기능 변경과 섞지 않는다. format-only 또는 refactor-only commit으로 분리한다. 대량 diff 가능성을 보고한다. |
+| D. 기능 추가 | 제보 기능, 픽 뱃지, 관리자 기능 추가, 사용자 기능 추가 | 사용자가 명시한 경우에만 진행한다. 안정화 작업과 섞지 않는다. public/internal 데이터 노출 위험을 검토한다. |
+| E. DB / migration 작업 | D1 schema 변경, `status`/`deleted_at` 추가, `sessions`/`users` 변경, migration 적용 | 바로 구현하지 않는다. 먼저 설계, 백업, 복구, migration 계획을 작성한다. 원격 D1 자동 적용은 금지한다. 사용자 승인 후 진행한다. |
+| F. 배포 / 운영 작업 | GitHub Actions, Cloudflare Pages/Worker 배포, rollback, branch protection, smoke check | 앱 기능과 섞지 않는다. 로컬 Cloudflare 배포는 금지한다. GitHub Actions 중심으로 처리한다. |
+
+## 3. 프롬프트 흔들림 방지 원칙
+
+- 한 프롬프트에는 한 종류의 작업만 담는다.
+- 기능 추가와 리팩토링을 섞지 않는다.
+- 보안 수정과 UI 개선을 섞지 않는다.
+- DB migration과 프론트 수정은 분리한다.
+- “완벽하게”라는 표현은 구체 항목으로 쪼갠다.
+- 백로그 아이디어를 즉시 구현 지시처럼 쓰지 않는다.
+- 확정 규칙과 제안을 분리한다.
+- Codex가 임의로 범위를 넓히지 못하게 작업 범위를 명시한다.
+- 사용자가 말한 최신 지시가 항상 우선이다.
+- 애매하면 Codex가 판단하지 말고 보고한다.
+
+## 4. Codex 프롬프트 기본 골격
+
+Codex에게 작업을 넘길 때는 아래 골격을 기본값으로 사용한다.
+
+```text
+[목표]
+이번 작업의 목적
+
+[작업 종류]
+작은 수정 / 안정화 / 리팩토링 / 기능 추가 / DB 작업 / 운영 작업 중 하나
+
+[작업 범위]
+수정 가능한 파일과 수정 금지 파일
+
+[허용되는 변경]
+이번 작업에서 허용되는 변경
+
+[금지되는 변경]
+이번 작업에서 절대 하지 말 것
+
+[구현 요구사항]
+구체 작업 단계
+
+[검증 기준]
+실행할 명령과 통과 기준
+
+[Git 작업]
+add/commit/push 기준
+
+[Cloudflare 배포]
+기본적으로 GitHub Actions가 처리
+
+[보고 형식]
+변경 요약, 파일, 테스트, 미확인 항목, 위험사항
+```
+
+## 5. KOHEE LIST 전용 금지사항
+
+Codex는 아래 항목을 임의로 하지 않는다.
+
+- `super_admin` 추가
+- role 추가
+- category 추가
+- 새우톤 추가
+- 공개 API에 내부 메모, 선정 근거, 제보자 정보, 관리자 정보 노출
+- 후보 카페 자동 공개
+- D1 migration 자동 적용
+- hard delete 신규 추가
+- Cloudflare token 하드코딩
+- 로컬 Cloudflare 배포 임의 실행
+- 전체 format을 기능 작업과 섞기
+- 원격 `main` force push
+
+## 6. 사용자 요구 해석 규칙
+
+ChatGPT가 사용자 요구를 Codex 작업으로 바꿀 때는 구현 지시로 바로 바꾸지 말고, 먼저 작업 종류와 범위를 확정한다.
+
+- “완전 안정화해라”는 안정화 항목을 목록화하고 단계별로 나눈다.
+- “코드 정리해라”는 format-only, refactor-only, 구조 변경을 분리한다.
+- “보안 봐라”는 XSS, URL, auth, API, headers, data exposure로 나눈다.
+- “기능 추가해라”는 데이터 구조 영향, API 영향, UI 영향, 권한 영향을 확인한 뒤 진행한다.
+- “일단 다 해라”는 바로 구현하지 말고 phase로 나눈다.
+
+## 7. 현재 안정화 우선순위 백로그
+
+아래 목록은 현재 우선순위 기록이다. 이 목록은 즉시 구현 지시가 아니며, 별도 프롬프트와 승인 없이 실행하지 않는다.
+
+1. Codex 유통망 실전 검증
+2. 코드 포맷/구조 정리
+3. 공개 프론트 렌더링 보안 마무리
+4. soft delete + approved 상태 설계
+5. CSV 백업/검증/적용 안정화
+6. public/admin API 정리
+7. security headers / cache policy 점검
+8. 테스트 확대
+9. D1 migration 체계 정리
+10. 기능 추가
+
+## 8. 기본 작업 절차
 
 1. 사용자 요청 범위를 확인한다.
 2. 필요한 파일만 수정한다.
@@ -35,7 +147,7 @@ Codex가 임의로 하지 않는 작업:
 
 기본적으로 전체 `npm run format`은 대량 diff 위험이 있으므로 피한다. 필요한 경우 수정 파일 중심으로 포맷한다.
 
-## 3. Release 검증
+## 9. Release 검증
 
 로컬과 GitHub Actions에서 공통으로 아래 명령을 사용한다.
 
@@ -51,7 +163,7 @@ npm run verify:release
 
 실패하면 어느 단계에서 실패했는지 출력하고 non-zero exit code로 종료한다.
 
-## 4. GitHub Actions 배포 원칙
+## 10. GitHub Actions 배포 원칙
 
 `validate.yml`은 검증 전용이다.
 
@@ -84,7 +196,7 @@ GitHub JavaScript Action 런타임 경고 대응:
 - 프로젝트 검증에 사용하는 Node.js 버전은 기존처럼 `node-version: "20"`을 유지한다.
 - 즉, GitHub Action 자체 런타임 경고와 프로젝트 실행 Node 버전은 분리해서 관리한다.
 
-## 5. 변경 영역 감지 기준
+## 11. 변경 영역 감지 기준
 
 `scripts/detect-changed-areas.mjs`가 변경 파일을 기준으로 아래 값을 계산한다.
 
@@ -122,7 +234,7 @@ D1 변경 기준:
 - `schema.sql`
 - `*.sql`
 
-## 6. GitHub Secrets
+## 12. GitHub Secrets
 
 GitHub Actions 배포에는 아래 Secrets가 필요하다.
 
@@ -147,7 +259,7 @@ Secrets 확인 원칙:
 - D1 변경이 감지된 경우 Secrets 확인보다 자동 배포 차단이 우선이다.
 - Summary에는 Secrets 값이 아니라 필요 여부와 확인 결과만 표시한다.
 
-## 7. 로컬 Cloudflare 배포 예외 규칙
+## 13. 로컬 Cloudflare 배포 예외 규칙
 
 Codex는 기본적으로 로컬 Cloudflare 배포를 실행하지 않는다.
 
@@ -171,7 +283,7 @@ Worker health 확인:
 curl.exe -s https://kohee-list.gabefinder.workers.dev/health
 ```
 
-## 8. D1 / Migration 안전 규칙
+## 14. D1 / Migration 안전 규칙
 
 D1 schema 또는 migration 변경은 일반 프론트 수정처럼 자동 배포하지 않는다.
 
@@ -183,7 +295,7 @@ D1 schema 또는 migration 변경은 일반 프론트 수정처럼 자동 배포
 - D1 변경이 감지되면 GitHub Actions 자동 배포를 막는다.
 - 기존 migration은 이미 적용된 DB에 다시 실행하지 않는다.
 
-## 9. Force Push 안전 규칙
+## 15. Force Push 안전 규칙
 
 `main` 브랜치 force push는 기본 금지다.
 
@@ -209,7 +321,7 @@ git push origin backup/main-before-force
 git push --force-with-lease origin main
 ```
 
-## 10. `.pages-deploy` 동기화 원칙
+## 16. `.pages-deploy` 동기화 원칙
 
 현재 KOHEE LIST는 root 프론트 소스와 `.pages-deploy` 배포 소스가 함께 존재한다.
 
@@ -227,7 +339,7 @@ git push --force-with-lease origin main
 - Codex가 양쪽을 직접 수정하는 방식을 줄인다.
 - `sync:pages` 또는 `build:pages` 명령으로 배포 소스를 생성한다.
 
-## 11. Cache Version 주의
+## 17. Cache Version 주의
 
 현재 HTML과 JS import에는 `?v=20260426-1` 같은 하드코딩 asset version이 남아 있다.
 
@@ -240,7 +352,7 @@ git push --force-with-lease origin main
 
 이번 문서화 작업에서는 앱 런타임 구조를 바꾸지 않기 위해 캐시 버전 자동화는 구현하지 않는다.
 
-## 12. Wrangler 설정 메모
+## 18. Wrangler 설정 메모
 
 Worker 설정은 `wrangler.toml`, Pages 설정은 `wrangler.pages.toml`에 분리되어 있다.
 
@@ -248,7 +360,7 @@ Pages 배포 기준은 `.pages-deploy`다.
 
 Wrangler Pages 배포 시 경고가 나타나면 Pages 설정과 Worker 설정을 무리하게 합치지 말고, 먼저 설정 영향 범위를 확인한다.
 
-## 13. Branch Protection 체크리스트
+## 19. Branch Protection 체크리스트
 
 GitHub repository Settings에서 수동으로 확인할 항목:
 
@@ -262,7 +374,7 @@ GitHub repository Settings에서 수동으로 확인할 항목:
 
 Codex는 GitHub 설정을 임의로 변경하지 않는다.
 
-## 14. Smoke Check
+## 20. Smoke Check
 
 가벼운 배포 확인 명령:
 
@@ -294,7 +406,7 @@ GitHub Actions에서의 smoke check 원칙:
 - 아무 배포도 없으면 smoke check는 skip된다.
 - Worker를 배포했는데 `/health`가 실패하면 workflow 실패로 처리한다.
 
-## 15. GitHub Actions Summary 확인 항목
+## 21. GitHub Actions Summary 확인 항목
 
 `Deploy` workflow summary에서 아래 항목을 확인한다.
 
@@ -316,30 +428,26 @@ GitHub Actions에서의 smoke check 원칙:
 - Secrets check 결과
 - Smoke check 계획 또는 skip 사유
 
-## 16. 완료 보고 형식
+## 22. 완료 보고 형식
 
 Codex는 작업 완료 시 아래 항목을 보고한다.
 
 1. 변경 요약
-2. 변경한 파일
-3. 추가/수정한 package scripts
-4. 추가/수정한 scripts
-5. 추가/수정한 GitHub Actions workflow
-6. GitHub Secrets 필요 항목
-7. 문서화한 운영 규칙
-8. 변경 영역 감지 기준
-9. D1/migration 안전 처리 방식
-10. force push 안전 처리 방식
-11. 실행한 검증 명령
-12. 검증 결과
-13. 커밋 해시
-14. origin/main 해시
-15. push 성공 여부
-16. GitHub Actions 실행 여부
-17. GitHub Actions run URL 또는 확인 방법
-18. Pages 배포 여부와 사유
-19. Worker 배포 여부와 사유
-20. Worker health 확인 결과 또는 미확인 사유
-21. 테스트하지 못한 항목
-22. 추가 확인 필요한 부분
-23. 위험/주의 사항
+2. 작업 전 preflight 결과
+3. 변경한 파일
+4. 추가/수정한 문서 내용
+5. 정리한 작업 분류표
+6. 추가한 프롬프트 흔들림 방지 원칙
+7. KOHEE LIST 전용 금지사항 정리 결과
+8. 현재 안정화 백로그 정리 결과
+9. 실행한 검증 명령
+10. 검증 결과
+11. 변경 영역 감지 결과
+12. 커밋 해시
+13. origin/main 해시
+14. push 성공 여부
+15. GitHub Actions 확인 방법
+16. Pages/Worker 배포 skip 여부
+17. 테스트하지 못한 항목
+18. 추가 확인 필요한 부분
+19. 위험/주의 사항
