@@ -266,7 +266,9 @@ npm run verify:release
 - Worker/server 변경이면 Worker 배포 대상이다.
 - 문서만 변경된 경우 Cloudflare 배포하지 않는다.
 - workflow/tooling만 변경된 경우 기본적으로 Cloudflare 배포하지 않는다.
-- D1/schema/migration 변경이 감지되면 자동 배포를 막고 수동 확인 대상으로 둔다.
+- D1/schema/migration 변경이 감지되면 Pages/Worker 배포를 skip하고 수동 migration 대상으로 둔다.
+- D1/schema/migration 변경만으로 Deploy workflow를 실패시키지 않는다. Summary에 `manual migration required`를 표시하고 success로 종료한다.
+- 원격 D1 migration은 GitHub Actions에서 자동 적용하지 않는다.
 
 GitHub JavaScript Action 런타임 경고 대응:
 
@@ -336,7 +338,8 @@ Secrets 확인 원칙:
 
 - Pages 또는 Worker 배포가 필요한 경우에만 Secrets를 확인한다.
 - docs/tooling/workflow만 변경된 경우 Secrets가 없어도 workflow가 실패하지 않는 것이 정상이다.
-- D1 변경이 감지된 경우 Secrets 확인보다 자동 배포 차단이 우선이다.
+- D1 변경이 감지된 경우 Secrets가 없어도 workflow가 실패하지 않는 것이 정상이다.
+- frontend/worker와 D1이 동시에 바뀐 경우 D1 차단이 우선이며 Pages/Worker 배포는 skip된다.
 - Summary에는 Secrets 값이 아니라 필요 여부와 확인 결과만 표시한다.
 
 ## 17. 로컬 Cloudflare 배포 예외 규칙
@@ -372,7 +375,8 @@ D1 schema 또는 migration 변경은 일반 프론트 수정처럼 자동 배포
 - 원격 D1에 migration을 자동 적용하지 않는다.
 - migration 계획, 백업, 적용 방법, rollback 가능성을 먼저 보고한다.
 - 사용자가 명시적으로 승인한 경우에만 원격 D1 적용을 검토한다.
-- D1 변경이 감지되면 GitHub Actions 자동 배포를 막는다.
+- D1 변경이 감지되면 GitHub Actions는 Pages/Worker 자동 배포를 skip하고 `manual migration required`를 Summary에 표시한다.
+- D1 변경 감지는 workflow 실패가 아니라 success + 수동 migration 안내로 처리한다.
 - 기존 migration은 이미 적용된 DB에 다시 실행하지 않는다.
 
 ## 19. Force Push 안전 규칙

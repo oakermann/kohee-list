@@ -51,7 +51,6 @@ jobs:
 
       - name: Check Cloudflare secrets
         id: secrets
-        if: steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
         shell: powershell
         env:
           NEEDS_CLOUDFLARE: ${{ steps.changes.outputs.shouldDeployPages == 'true' || steps.changes.outputs.shouldDeployWorker == 'true' }}
@@ -104,21 +103,26 @@ jobs:
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Worker deploy: ${{ steps.changes.outputs.shouldDeployWorker }}"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Worker skip reason: ${{ steps.changes.outputs.workerSkipReason }}"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- D1 auto-deploy blocked: ${{ steps.changes.outputs.shouldBlockAutoDeployDueToD1 }}"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Manual migration required: ${{ steps.changes.outputs.manualMigrationRequired }}"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Secrets required: ${{ steps.secrets.outputs.required }}"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Secrets check: ${{ steps.secrets.outputs.result }}"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Smoke check: ${{ steps.changes.outputs.smokeCheckPlan }}"
 
-      - name: Block automatic deploy for D1 changes
+      - name: Record manual migration requirement
         if: steps.changes.outputs.shouldBlockAutoDeployDueToD1 == 'true'
         shell: powershell
         run: |
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "D1 change detected. Automatic Cloudflare deploy is blocked until migration backup, plan, and approval are confirmed."
-          throw "D1/schema changes require manual migration planning."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### Manual migration required"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- D1/schema/migration change detected."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Pages deploy: skipped — D1 migration requires manual review."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Worker deploy: skipped — D1 migration requires manual review."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Remote D1 migration was not applied automatically."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Confirm production D1 backup, schema match, and manual approval before applying migrations."
 
       - name: Deploy Cloudflare Pages
         id: pages_deploy
-        if: steps.changes.outputs.shouldDeployPages == 'true'
+        if: steps.changes.outputs.shouldDeployPages == 'true' && steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
         shell: powershell
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -127,13 +131,13 @@ jobs:
 
       - name: Smoke check Pages
         id: pages_smoke
-        if: steps.changes.outputs.shouldDeployPages == 'true'
+        if: steps.changes.outputs.shouldDeployPages == 'true' && steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
         shell: powershell
         run: node scripts/smoke-check.mjs --pages
 
       - name: Deploy Cloudflare Worker
         id: worker_deploy
-        if: steps.changes.outputs.shouldDeployWorker == 'true'
+        if: steps.changes.outputs.shouldDeployWorker == 'true' && steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
         shell: powershell
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -142,7 +146,7 @@ jobs:
 
       - name: Smoke check Worker
         id: worker_smoke
-        if: steps.changes.outputs.shouldDeployWorker == 'true'
+        if: steps.changes.outputs.shouldDeployWorker == 'true' && steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
         shell: powershell
         run: node scripts/smoke-check.mjs --worker
 
@@ -154,6 +158,7 @@ jobs:
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### Result"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Cloudflare deploy is controlled by changed-area detection."
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- D1 migrations are never applied automatically."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Manual migration required: ${{ steps.changes.outputs.manualMigrationRequired }}"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Pages deploy outcome: ${{ steps.pages_deploy.outcome }}"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Pages smoke outcome: ${{ steps.pages_smoke.outcome }}"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- Worker deploy outcome: ${{ steps.worker_deploy.outcome }}"

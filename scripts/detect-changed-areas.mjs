@@ -17,6 +17,8 @@ const TOOLING_FILES = new Set([
   ".prettierignore",
 ]);
 
+const D1_MANUAL_REVIEW_REASON = "D1 migration requires manual review.";
+
 function argValue(name) {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : "";
@@ -152,6 +154,7 @@ try {
     shouldDeployPages: false,
     shouldDeployWorker: false,
     shouldBlockAutoDeployDueToD1: false,
+    manualMigrationRequired: false,
     skipReason: "Changed-area detection failed; auto deploy disabled.",
   };
 
@@ -180,7 +183,7 @@ let skipReason = "";
 if (changedFiles.length === 0) {
   skipReason = "No changed files detected.";
 } else if (d1Changed) {
-  skipReason = "D1/schema changes require manual migration planning.";
+  skipReason = D1_MANUAL_REVIEW_REASON;
 } else if (docsOnlyChanged) {
   skipReason = "Documentation-only change.";
 } else if (onlyWorkflowOrTooling && !frontendChanged && !workerChanged) {
@@ -191,7 +194,7 @@ const shouldDeployPages = frontendChanged && !d1Changed && !docsOnlyChanged;
 const shouldDeployWorker = workerChanged && !d1Changed && !docsOnlyChanged;
 
 function deploySkipReason(kind) {
-  if (d1Changed) return "D1/schema changes require manual migration planning.";
+  if (d1Changed) return D1_MANUAL_REVIEW_REASON;
   if (kind === "pages" && shouldDeployPages) return "not skipped";
   if (kind === "worker" && shouldDeployWorker) return "not skipped";
   if (changedFiles.length === 0) return "No changed files detected.";
@@ -203,8 +206,9 @@ function deploySkipReason(kind) {
   return "No worker/server changes.";
 }
 
-const smokeCheckPlan =
-  shouldDeployPages || shouldDeployWorker
+const smokeCheckPlan = d1Changed
+  ? `skipped - ${D1_MANUAL_REVIEW_REASON}`
+  : shouldDeployPages || shouldDeployWorker
     ? [
         shouldDeployPages ? "Pages smoke check after Pages deploy" : "",
         shouldDeployWorker ? "Worker health check after Worker deploy" : "",
@@ -225,6 +229,7 @@ const result = {
   shouldDeployPages,
   shouldDeployWorker,
   shouldBlockAutoDeployDueToD1: d1Changed,
+  manualMigrationRequired: d1Changed,
   pagesSkipReason: deploySkipReason("pages"),
   workerSkipReason: deploySkipReason("worker"),
   smokeCheckPlan,
