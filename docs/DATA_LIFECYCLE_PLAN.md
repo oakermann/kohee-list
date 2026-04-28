@@ -1,6 +1,7 @@
 # KOHEE LIST Data Lifecycle Plan
 
 이 문서는 KOHEE LIST의 `cafes` 데이터를 복구 가능한 lifecycle로 전환하기 위한 계획이다.
+실제 D1 migration 준비 상태와 백업 절차는 `docs/D1_MIGRATION_RUNBOOK.md`를 함께 확인한다.
 
 이번 문서는 계획 모드 산출물이다. 런타임 코드, `schema.sql`, migration 파일, 원격 D1은 수정하지 않는다.
 

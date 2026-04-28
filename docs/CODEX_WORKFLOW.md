@@ -193,6 +193,7 @@ ChatGPT가 사용자 요구를 Codex 작업으로 바꿀 때는 구현 지시로
 | G. 배포/운영 작업       | GitHub Actions Validate와 Deploy workflow 성공을 확인한다. 변경 영역 감지가 정확해야 한다. 필요한 경우에만 Pages/Worker 배포가 실행된다. smoke check 결과를 확인한다. Secrets 값은 노출하지 않는다. 로컬 wrangler 배포를 실행하지 않는다.                                              |
 
 `cafes` lifecycle, soft delete, approved/candidate 상태 모델은 `docs/DATA_LIFECYCLE_PLAN.md`를 기준 계획으로 삼는다.
+D1 migration 준비 상태와 백업 절차는 `docs/D1_MIGRATION_RUNBOOK.md`를 함께 확인한다.
 
 ## 11. 현재 안정화 우선순위 백로그
 
