@@ -30,18 +30,19 @@ KOHEE LIST 2의 고정 규칙:
 
 사용자의 거친 요구는 먼저 아래 작업 종류 중 하나로 분류한다. 한 프롬프트에는 한 종류의 작업만 담는다.
 
-| 종류 | 예시 | 처리 원칙 |
-| --- | --- | --- |
-| A. 작은 수정 | 문구 수정, 단일 버그 수정, 작은 UI 보정, 작은 검증 로직 수정 | 바로 Codex 프롬프트 작성 가능. 변경 파일을 최소화한다. `npm run verify:release`를 실행한다. |
-| B. 안정화 작업 | XSS 방지, URL 검증, CSV 검증, public/admin 데이터 분리, soft delete, 보안 헤더, 테스트 보강 | 기능 추가와 섞지 않는다. 변경 목적을 보안/안정성으로 제한한다. 검증 기준을 명확히 둔다. |
-| C. 리팩토링 / 코드 정리 | 포맷 정리, 파일 구조 정리, 중복 제거, 함수 분리, naming 정리 | 기능 변경과 섞지 않는다. format-only 또는 refactor-only commit으로 분리한다. 대량 diff 가능성을 보고한다. |
-| D. 기능 추가 | 제보 기능, 픽 뱃지, 관리자 기능 추가, 사용자 기능 추가 | 사용자가 명시한 경우에만 진행한다. 안정화 작업과 섞지 않는다. public/internal 데이터 노출 위험을 검토한다. |
-| E. DB / migration 작업 | D1 schema 변경, `status`/`deleted_at` 추가, `sessions`/`users` 변경, migration 적용 | 바로 구현하지 않는다. 먼저 설계, 백업, 복구, migration 계획을 작성한다. 원격 D1 자동 적용은 금지한다. 사용자 승인 후 진행한다. |
-| F. 배포 / 운영 작업 | GitHub Actions, Cloudflare Pages/Worker 배포, rollback, branch protection, smoke check | 앱 기능과 섞지 않는다. 로컬 Cloudflare 배포는 금지한다. GitHub Actions 중심으로 처리한다. |
+| 종류                    | 예시                                                                                        | 처리 원칙                                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| A. 작은 수정            | 문구 수정, 단일 버그 수정, 작은 UI 보정, 작은 검증 로직 수정                                | 바로 Codex 프롬프트 작성 가능. 변경 파일을 최소화한다. `npm run verify:release`를 실행한다.                                    |
+| B. 안정화 작업          | XSS 방지, URL 검증, CSV 검증, public/admin 데이터 분리, soft delete, 보안 헤더, 테스트 보강 | 기능 추가와 섞지 않는다. 변경 목적을 보안/안정성으로 제한한다. 검증 기준을 명확히 둔다.                                        |
+| C. 리팩토링 / 코드 정리 | 포맷 정리, 파일 구조 정리, 중복 제거, 함수 분리, naming 정리                                | 기능 변경과 섞지 않는다. format-only 또는 refactor-only commit으로 분리한다. 대량 diff 가능성을 보고한다.                      |
+| D. 기능 추가            | 제보 기능, 픽 뱃지, 관리자 기능 추가, 사용자 기능 추가                                      | 사용자가 명시한 경우에만 진행한다. 안정화 작업과 섞지 않는다. public/internal 데이터 노출 위험을 검토한다.                     |
+| E. DB / migration 작업  | D1 schema 변경, `status`/`deleted_at` 추가, `sessions`/`users` 변경, migration 적용         | 바로 구현하지 않는다. 먼저 설계, 백업, 복구, migration 계획을 작성한다. 원격 D1 자동 적용은 금지한다. 사용자 승인 후 진행한다. |
+| F. 배포 / 운영 작업     | GitHub Actions, Cloudflare Pages/Worker 배포, rollback, branch protection, smoke check      | 앱 기능과 섞지 않는다. 로컬 Cloudflare 배포는 금지한다. GitHub Actions 중심으로 처리한다.                                      |
 
 ## 3. 프롬프트 흔들림 방지 원칙
 
 - 한 프롬프트에는 한 종류의 작업만 담는다.
+- 불가피하게 여러 단계가 들어가면 phase와 commit을 분리한다.
 - 기능 추가와 리팩토링을 섞지 않는다.
 - 보안 수정과 UI 개선을 섞지 않는다.
 - DB migration과 프론트 수정은 분리한다.
@@ -52,7 +53,25 @@ KOHEE LIST 2의 고정 규칙:
 - 사용자가 말한 최신 지시가 항상 우선이다.
 - 애매하면 Codex가 판단하지 말고 보고한다.
 
-## 4. Codex 프롬프트 기본 골격
+## 4. Codex 작업 모드
+
+Codex 작업은 조사, 계획, 실행 중 하나로 시작한다.
+
+| 모드         | 목적                         | 허용                         | 금지                                                    | 사용 예                                                                 |
+| ------------ | ---------------------------- | ---------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| A. 조사 모드 | 코드, 문서, 구조 파악        | 파일 읽기, 검색, 문제점 정리 | 코드 수정, 커밋, push, 배포                             | 현재 보안 상태 조사, D1 migration 영향 조사, public/admin API 구조 조사 |
+| B. 계획 모드 | 단계별 작업안 작성           | 계획서/문서 작성             | 런타임 코드 수정, DB 적용, 배포                         | D1 schema 변경 계획, 인증/권한 구조 계획, public/admin API 분리 계획    |
+| C. 실행 모드 | 지정된 범위 안에서 실제 수정 | 코드 수정, 검증, 커밋, push  | 작업 범위 밖 수정, 임의 기능 추가, 로컬 Cloudflare 배포 | 작은 수정, 범위가 확정된 안정화, 배포 경로 검증                         |
+
+운영 원칙:
+
+- D1, 인증, 권한, public/admin API 분리 같은 큰 작업은 조사 -> 계획 -> 실행 순서로 진행한다.
+- 작은 수정은 바로 실행 모드로 진행할 수 있다.
+- 안정화 작업은 실행 가능하되 기능 추가와 섞지 않는다.
+- 리팩토링은 기능 변경과 분리한다.
+- 실행 모드의 배포는 GitHub Actions가 담당한다.
+
+## 5. Codex 프롬프트 기본 골격
 
 Codex에게 작업을 넘길 때는 아래 골격을 기본값으로 사용한다.
 
@@ -88,7 +107,7 @@ add/commit/push 기준
 변경 요약, 파일, 테스트, 미확인 항목, 위험사항
 ```
 
-## 5. KOHEE LIST 전용 금지사항
+## 6. KOHEE LIST 전용 금지사항
 
 Codex는 아래 항목을 임의로 하지 않는다.
 
@@ -105,7 +124,7 @@ Codex는 아래 항목을 임의로 하지 않는다.
 - 전체 format을 기능 작업과 섞기
 - 원격 `main` force push
 
-## 6. 사용자 요구 해석 규칙
+## 7. 사용자 요구 해석 규칙
 
 ChatGPT가 사용자 요구를 Codex 작업으로 바꿀 때는 구현 지시로 바로 바꾸지 말고, 먼저 작업 종류와 범위를 확정한다.
 
@@ -115,7 +134,65 @@ ChatGPT가 사용자 요구를 Codex 작업으로 바꿀 때는 구현 지시로
 - “기능 추가해라”는 데이터 구조 영향, API 영향, UI 영향, 권한 영향을 확인한 뒤 진행한다.
 - “일단 다 해라”는 바로 구현하지 말고 phase로 나눈다.
 
-## 7. 현재 안정화 우선순위 백로그
+## 8. 작업 중단 조건
+
+아래 조건에서는 Codex가 반드시 멈추고 현재 상태와 필요한 판단을 보고한다.
+
+1. `origin/main`에 로컬에 없는 커밋이 있다.
+2. 미커밋 변경이 있는데 이번 작업과 무관하다.
+3. 테스트 실패가 기존 `main` 문제인지 이번 변경 문제인지 구분할 수 없다.
+4. D1 schema 또는 migration 변경이 필요하다.
+5. 원격 D1 적용이 필요하다.
+6. Cloudflare Secrets가 필요한데 없다.
+7. 변경 파일이 작업 범위를 벗어난다.
+8. diff가 예상보다 지나치게 크다.
+9. 기능 변경과 리팩토링이 섞이기 시작한다.
+10. 보안 수정과 UI 개선이 섞이기 시작한다.
+11. 한글 문서 인코딩 깨짐 가능성이 있다.
+12. `rg` 또는 검색 도구 실패로 필요한 파일 확인을 못 한다.
+13. GitHub Actions workflow syntax가 불확실하다.
+14. push가 거부된다.
+15. force push가 필요해 보인다.
+16. 사용자 지시와 기존 프로젝트 규칙이 충돌한다.
+
+중단 시 원칙:
+
+- 임의로 해결하지 말고 현재 상태와 필요한 판단을 보고한다.
+- merge, rebase, force push를 하지 않는다.
+- D1, Cloudflare, Secrets 관련 작업은 사용자 승인 없이 진행하지 않는다.
+
+## 9. 최종 보고 품질 기준
+
+- 최종 보고는 결과 중심으로 작성한다.
+- 작업 중 발생한 사소한 도구 대체, 검색 명령 대체, 인코딩 재시도는 길게 쓰지 않는다.
+- 작업 결과에 영향을 준 오류, 검증 실패, 파일 깨짐 가능성, 미확인 사항은 반드시 보고한다.
+- `rg`가 실행되지 않으면 PowerShell `Select-String` 또는 `Get-ChildItem` 기반 검색으로 대체한다.
+- 한글 문서는 PowerShell에서 읽을 때 `-Encoding UTF8`을 명시한다.
+- UTF-8 문서를 수정한 경우 저장 후 한글이 깨지지 않았는지 확인한다.
+- 최종 보고에는 내부 시행착오가 아니라 변경 요약, 변경 파일, 검증 결과, 미확인 항목, 위험사항을 중심으로 쓴다.
+
+좋은 보고 예:
+
+- 문서 검색은 PowerShell `Select-String`으로 대체했고, UTF-8 인코딩으로 확인했습니다.
+- 변경 결과에는 영향 없습니다.
+
+나쁜 보고 예:
+
+- `rg` 실패, 콘솔 코드페이지, 재시도 과정을 장황하게 나열하는 보고.
+
+## 10. 작업 종류별 완료 기준
+
+| 종류                    | 완료 기준                                                                                                                                                                                                                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A. 문서/운영 작업       | 문서만 변경되었는지 확인한다. `npm run verify:release`를 통과한다. `detect-changed-areas` 결과가 docs/workflow/tooling 중심인지 확인한다. Pages/Worker 배포 skip이 정상인지 확인한다.                                                                                                  |
+| B. 코드 포맷/정리 작업  | 기능 의미 변경이 없어야 한다. format-only 또는 refactor-only로 보고한다. `npm run verify:release`를 통과한다. 가능하면 `npm run format:check`를 통과한다. diff가 포맷 위주인지 보고한다. 기능 변경이 섞이면 중단한다.                                                                  |
+| C. 프론트 보안 작업     | 사용자/DB/API 값은 `textContent` 또는 안전한 DOM 조립을 사용한다. 위험한 `innerHTML` 사용을 검색한다. `onclick` 문자열 삽입을 제거한다. `data-id` 기반 이벤트 처리와 URL sanitizer를 적용한다. `javascript:`, `data:` 링크를 차단한다. XSS 테스트 문자열로 깨짐/실행 없음 확인을 한다. |
+| D. CSV/data 안정화 작업 | category 허용값을 검증한다. lat/lng 숫자와 범위를 검증한다. URL 검증, 중복 감지, dry-run/preview를 확인한다. 적용 전 백업 또는 백업 계획을 확인한다. 실패 row 리포트를 확인한다.                                                                                                       |
+| E. API 작업             | public 응답 필드 whitelist를 확인한다. 내부 메모, 선정 근거, 제보자, 관리자 정보 노출이 없어야 한다. approved/status/deleted 필터를 확인한다. 권한 없는 요청을 차단한다. admin route는 fail-closed여야 한다.                                                                           |
+| F. DB/migration 작업    | 바로 구현하지 않는다. schema 변경 계획, 백업 계획, rollback 가능성을 정리한다. 원격 D1 자동 적용은 금지한다. 사용자 승인 후 별도 실행한다.                                                                                                                                             |
+| G. 배포/운영 작업       | GitHub Actions Validate와 Deploy workflow 성공을 확인한다. 변경 영역 감지가 정확해야 한다. 필요한 경우에만 Pages/Worker 배포가 실행된다. smoke check 결과를 확인한다. Secrets 값은 노출하지 않는다. 로컬 wrangler 배포를 실행하지 않는다.                                              |
+
+## 11. 현재 안정화 우선순위 백로그
 
 아래 목록은 현재 우선순위 기록이다. 이 목록은 즉시 구현 지시가 아니며, 별도 프롬프트와 승인 없이 실행하지 않는다.
 
@@ -130,7 +207,7 @@ ChatGPT가 사용자 요구를 Codex 작업으로 바꿀 때는 구현 지시로
 9. D1 migration 체계 정리
 10. 기능 추가
 
-## 8. 기본 작업 절차
+## 12. 기본 작업 절차
 
 1. 사용자 요청 범위를 확인한다.
 2. 필요한 파일만 수정한다.
@@ -147,7 +224,7 @@ ChatGPT가 사용자 요구를 Codex 작업으로 바꿀 때는 구현 지시로
 
 기본적으로 전체 `npm run format`은 대량 diff 위험이 있으므로 피한다. 필요한 경우 수정 파일 중심으로 포맷한다.
 
-## 9. Release 검증
+## 13. Release 검증
 
 로컬과 GitHub Actions에서 공통으로 아래 명령을 사용한다.
 
@@ -163,7 +240,7 @@ npm run verify:release
 
 실패하면 어느 단계에서 실패했는지 출력하고 non-zero exit code로 종료한다.
 
-## 10. GitHub Actions 배포 원칙
+## 14. GitHub Actions 배포 원칙
 
 `validate.yml`은 검증 전용이다.
 
@@ -196,7 +273,7 @@ GitHub JavaScript Action 런타임 경고 대응:
 - 프로젝트 검증에 사용하는 Node.js 버전은 기존처럼 `node-version: "20"`을 유지한다.
 - 즉, GitHub Action 자체 런타임 경고와 프로젝트 실행 Node 버전은 분리해서 관리한다.
 
-## 11. 변경 영역 감지 기준
+## 15. 변경 영역 감지 기준
 
 `scripts/detect-changed-areas.mjs`가 변경 파일을 기준으로 아래 값을 계산한다.
 
@@ -234,7 +311,7 @@ D1 변경 기준:
 - `schema.sql`
 - `*.sql`
 
-## 12. GitHub Secrets
+## 16. GitHub Secrets
 
 GitHub Actions 배포에는 아래 Secrets가 필요하다.
 
@@ -259,7 +336,7 @@ Secrets 확인 원칙:
 - D1 변경이 감지된 경우 Secrets 확인보다 자동 배포 차단이 우선이다.
 - Summary에는 Secrets 값이 아니라 필요 여부와 확인 결과만 표시한다.
 
-## 13. 로컬 Cloudflare 배포 예외 규칙
+## 17. 로컬 Cloudflare 배포 예외 규칙
 
 Codex는 기본적으로 로컬 Cloudflare 배포를 실행하지 않는다.
 
@@ -283,7 +360,7 @@ Worker health 확인:
 curl.exe -s https://kohee-list.gabefinder.workers.dev/health
 ```
 
-## 14. D1 / Migration 안전 규칙
+## 18. D1 / Migration 안전 규칙
 
 D1 schema 또는 migration 변경은 일반 프론트 수정처럼 자동 배포하지 않는다.
 
@@ -295,7 +372,7 @@ D1 schema 또는 migration 변경은 일반 프론트 수정처럼 자동 배포
 - D1 변경이 감지되면 GitHub Actions 자동 배포를 막는다.
 - 기존 migration은 이미 적용된 DB에 다시 실행하지 않는다.
 
-## 15. Force Push 안전 규칙
+## 19. Force Push 안전 규칙
 
 `main` 브랜치 force push는 기본 금지다.
 
@@ -321,7 +398,7 @@ git push origin backup/main-before-force
 git push --force-with-lease origin main
 ```
 
-## 16. `.pages-deploy` 동기화 원칙
+## 20. `.pages-deploy` 동기화 원칙
 
 현재 KOHEE LIST는 root 프론트 소스와 `.pages-deploy` 배포 소스가 함께 존재한다.
 
@@ -339,7 +416,7 @@ git push --force-with-lease origin main
 - Codex가 양쪽을 직접 수정하는 방식을 줄인다.
 - `sync:pages` 또는 `build:pages` 명령으로 배포 소스를 생성한다.
 
-## 17. Cache Version 주의
+## 21. Cache Version 주의
 
 현재 HTML과 JS import에는 `?v=20260426-1` 같은 하드코딩 asset version이 남아 있다.
 
@@ -352,7 +429,7 @@ git push --force-with-lease origin main
 
 이번 문서화 작업에서는 앱 런타임 구조를 바꾸지 않기 위해 캐시 버전 자동화는 구현하지 않는다.
 
-## 18. Wrangler 설정 메모
+## 22. Wrangler 설정 메모
 
 Worker 설정은 `wrangler.toml`, Pages 설정은 `wrangler.pages.toml`에 분리되어 있다.
 
@@ -360,21 +437,23 @@ Pages 배포 기준은 `.pages-deploy`다.
 
 Wrangler Pages 배포 시 경고가 나타나면 Pages 설정과 Worker 설정을 무리하게 합치지 말고, 먼저 설정 영향 범위를 확인한다.
 
-## 19. Branch Protection 체크리스트
+## 23. Branch Protection 체크리스트
 
 GitHub repository Settings에서 수동으로 확인할 항목:
 
 - `main` 브랜치 보호
 - force push 금지
+- branch deletion 금지
 - status check 통과 요구
 - `Validate` workflow 통과 요구
 - 필요 시 `Deploy` workflow 확인
 - PR 기반 운영 전환 시 required review 검토
 - GitHub Environments `production` 승인 옵션 검토
+- admins 포함 적용 여부 검토
 
 Codex는 GitHub 설정을 임의로 변경하지 않는다.
 
-## 20. Smoke Check
+## 24. Smoke Check
 
 가벼운 배포 확인 명령:
 
@@ -406,7 +485,7 @@ GitHub Actions에서의 smoke check 원칙:
 - 아무 배포도 없으면 smoke check는 skip된다.
 - Worker를 배포했는데 `/health`가 실패하면 workflow 실패로 처리한다.
 
-## 21. GitHub Actions Summary 확인 항목
+## 25. GitHub Actions Summary 확인 항목
 
 `Deploy` workflow summary에서 아래 항목을 확인한다.
 
@@ -428,26 +507,39 @@ GitHub Actions에서의 smoke check 원칙:
 - Secrets check 결과
 - Smoke check 계획 또는 skip 사유
 
-## 22. 완료 보고 형식
+## 26. 완료 보고 형식
 
 Codex는 작업 완료 시 아래 항목을 보고한다.
 
 1. 변경 요약
 2. 작업 전 preflight 결과
 3. 변경한 파일
-4. 추가/수정한 문서 내용
-5. 정리한 작업 분류표
-6. 추가한 프롬프트 흔들림 방지 원칙
-7. KOHEE LIST 전용 금지사항 정리 결과
-8. 현재 안정화 백로그 정리 결과
-9. 실행한 검증 명령
-10. 검증 결과
-11. 변경 영역 감지 결과
-12. 커밋 해시
-13. origin/main 해시
-14. push 성공 여부
-15. GitHub Actions 확인 방법
-16. Pages/Worker 배포 skip 여부
-17. 테스트하지 못한 항목
-18. 추가 확인 필요한 부분
-19. 위험/주의 사항
+4. 추가/수정한 scripts
+5. 추가/수정한 package scripts
+6. 문서화한 Codex 작업 모드
+7. 문서화한 중단 조건
+8. 문서화한 최종 보고 품질 기준
+9. 문서화한 작업 종류별 완료 기준
+10. 문서화한 프롬프트 흔들림 방지 원칙
+11. Branch protection 조회 결과 또는 확인 필요 사유
+12. Pages 자동 배포 테스트용 변경 내용
+13. Worker 자동 배포 테스트용 변경 내용
+14. 실행한 로컬 검증 명령
+15. 로컬 검증 결과
+16. 변경 영역 감지 결과
+17. 커밋 해시
+18. origin/main 해시
+19. push 성공 여부
+20. GitHub Actions 실행 여부
+21. GitHub Actions run URL 또는 확인 방법
+22. Validate workflow 결과
+23. Deploy workflow 결과
+24. Pages 배포 여부
+25. Pages smoke check 결과
+26. Worker 배포 여부
+27. Worker health 확인 결과
+28. Secrets 검증 결과
+29. 로컬 Cloudflare 배포를 실행하지 않았는지 여부
+30. 테스트하지 못한 항목
+31. 추가 확인 필요한 부분
+32. 위험/주의 사항

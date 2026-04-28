@@ -5,6 +5,7 @@
   "scripts": {
     "format": "prettier --write \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --ignore-unknown",
     "format:check": "prettier --check \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --ignore-unknown",
+    "preflight": "powershell -ExecutionPolicy Bypass -File .\\scripts\\preflight.ps1",
     "check:deploy-sync": "node scripts/check-deploy-sync.mjs",
     "detect:changed": "node scripts/detect-changed-areas.mjs",
     "smoke:check": "node scripts/smoke-check.mjs",
