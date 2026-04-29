@@ -9,7 +9,12 @@ import {
   toCafeResponse,
 } from "../server/cafes.js";
 import { importCsv, parseCsvLine, resetCsv } from "../server/csv.js";
-import { cleanUrl, parseJsonArray } from "../server/shared.js";
+import {
+  cleanUrl,
+  HttpError,
+  parseJsonArray,
+  withGuard,
+} from "../server/shared.js";
 
 assert.deepEqual(parseCsvLine('a,"b,c","d""e"'), ["a", "b,c", 'd"e']);
 assert.throws(() => parseCsvLine('a,"b'), /Malformed CSV row/);
@@ -19,6 +24,67 @@ assert.equal(
   cleanUrl("https://example.com/?x=undefined&ok=1"),
   "https://example.com/?ok=1",
 );
+
+const originalConsoleError = console.error;
+console.error = () => {};
+const unexpectedErrorResponse = await withGuard(
+  new Request("https://kohee.test/data"),
+  {},
+  async () => {
+    throw new Error("D1_ERROR: SELECT * FROM users failed at secret_token");
+  },
+);
+console.error = originalConsoleError;
+assert.equal(unexpectedErrorResponse.status, 500);
+assert.deepEqual(await unexpectedErrorResponse.json(), {
+  ok: false,
+  error: "Server error",
+  code: "SERVER_ERROR",
+});
+
+console.error = () => {};
+const internalHttpErrorResponse = await withGuard(
+  new Request("https://kohee.test/data"),
+  {},
+  async () => {
+    throw new HttpError(500, "SESSION_SECRET is not configured");
+  },
+);
+console.error = originalConsoleError;
+assert.equal(internalHttpErrorResponse.status, 500);
+assert.deepEqual(await internalHttpErrorResponse.json(), {
+  ok: false,
+  error: "Server error",
+  code: "SERVER_ERROR",
+});
+
+const validationErrorResponse = await withGuard(
+  new Request("https://kohee.test/data"),
+  {},
+  async () => {
+    throw new HttpError(400, "name is required", "VALIDATION_ERROR");
+  },
+);
+assert.equal(validationErrorResponse.status, 400);
+assert.deepEqual(await validationErrorResponse.json(), {
+  ok: false,
+  error: "name is required",
+  code: "VALIDATION_ERROR",
+});
+
+const permissionErrorResponse = await withGuard(
+  new Request("https://kohee.test/data"),
+  {},
+  async () => {
+    throw new HttpError(403, "Forbidden", "FORBIDDEN");
+  },
+);
+assert.equal(permissionErrorResponse.status, 403);
+assert.deepEqual(await permissionErrorResponse.json(), {
+  ok: false,
+  error: "Forbidden",
+  code: "FORBIDDEN",
+});
 
 assert.deepEqual(
   applyPickPermission(

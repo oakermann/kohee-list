@@ -445,11 +445,23 @@ export class HttpError extends Error {
   }
 }
 
+export function safeServerErrorBody() {
+  return {
+    ok: false,
+    error: "Server error",
+    code: "SERVER_ERROR",
+  };
+}
+
 export async function withGuard(req, env, fn) {
   try {
     return await fn();
   } catch (err) {
     if (err instanceof HttpError) {
+      if (err.status >= 500) {
+        console.error("request failed", err);
+        return json(safeServerErrorBody(), err.status, req, env);
+      }
       return json(
         { ok: false, error: err.message, code: err.code },
         err.status,
@@ -457,15 +469,7 @@ export async function withGuard(req, env, fn) {
         env,
       );
     }
-    return json(
-      {
-        ok: false,
-        error: err.message || "Server error",
-        code: "SERVER_ERROR",
-      },
-      500,
-      req,
-      env,
-    );
+    console.error("request failed", err);
+    return json(safeServerErrorBody(), 500, req, env);
   }
 }

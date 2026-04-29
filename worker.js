@@ -1,4 +1,9 @@
-import { corsPreflight, isCorsOriginAllowed, json } from "./server/shared.js";
+import {
+  corsPreflight,
+  isCorsOriginAllowed,
+  json,
+  safeServerErrorBody,
+} from "./server/shared.js";
 import { ROUTES } from "./server/routes.js";
 
 export default {
@@ -29,16 +34,8 @@ export default {
         env,
       );
     } catch (err) {
-      return json(
-        {
-          ok: false,
-          error: err.message || "Server error",
-          code: "SERVER_ERROR",
-        },
-        500,
-        req,
-        env,
-      );
+      console.error("worker request failed", err);
+      return json(safeServerErrorBody(), 500, req, env);
     }
   },
 };
