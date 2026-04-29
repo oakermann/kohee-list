@@ -165,7 +165,12 @@ export async function replyErrorReport(req, env) {
       targetType: "error_report",
       targetId: id,
       before: exists,
-      after: { message, replied_by: user.user_id, replied_at: timestamp },
+      after: {
+        actor_role: user.role,
+        message,
+        replied_by: user.user_id,
+        replied_at: timestamp,
+      },
     });
 
     return json({ ok: true }, 200, req, env);
@@ -200,7 +205,11 @@ export async function resolveErrorReport(req, env) {
       targetType: "error_report",
       targetId: id,
       before: exists,
-      after: { status: "resolved", resolved_by: user.user_id },
+      after: {
+        actor_role: user.role,
+        status: "resolved",
+        resolved_by: user.user_id,
+      },
     });
 
     return json({ ok: true }, 200, req, env);

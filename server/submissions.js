@@ -255,6 +255,7 @@ export async function approveSubmission(req, env) {
       targetId: submissionId,
       before: sub,
       after: {
+        actor_role: reviewer.role,
         status: "approved",
         linked_cafe_id: linkedCafeId || null,
         duplicate: !!isDuplicate,
@@ -301,7 +302,11 @@ export async function rejectSubmission(req, env) {
       targetType: "submission",
       targetId: submissionId,
       before: sub,
-      after: { status: "rejected", reject_reason: rejectReason || null },
+      after: {
+        actor_role: reviewer.role,
+        status: "rejected",
+        reject_reason: rejectReason || null,
+      },
     });
 
     return json({ ok: true }, 200, req, env);
@@ -356,7 +361,7 @@ export async function updateSubmission(req, env) {
       targetType: "submission",
       targetId: submissionId,
       before: existing,
-      after: payload,
+      after: { actor_role: reviewer.role, ...payload },
     });
 
     return json({ ok: true }, 200, req, env);

@@ -43,7 +43,7 @@ export async function setRole(req, env) {
       targetType: "user",
       targetId: target.id,
       before: { username: targetUsername, role: target.role },
-      after: { username: targetUsername, role },
+      after: { username: targetUsername, role, actor_role: user.role },
     });
     return json({ ok: true, username: targetUsername, role }, 200, req, env);
   });

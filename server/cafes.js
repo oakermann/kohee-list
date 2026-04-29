@@ -234,7 +234,7 @@ export async function editCafe(req, env) {
 export async function deleteCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
     const id = cleanText(body.id, 80);
@@ -259,7 +259,12 @@ export async function deleteCafe(req, env) {
       targetType: "cafe",
       targetId: id,
       before: exists,
-      after: { id, deleted_at: deletedAt, deleted_by: user.user_id },
+      after: {
+        id,
+        actor_role: user.role,
+        deleted_at: deletedAt,
+        deleted_by: user.user_id,
+      },
     });
     return json({ ok: true }, 200, req, env);
   });
@@ -268,7 +273,7 @@ export async function deleteCafe(req, env) {
 export async function restoreCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
     const id = cleanText(body.id, 80);
@@ -296,6 +301,7 @@ export async function restoreCafe(req, env) {
       before: exists,
       after: {
         id,
+        actor_role: user.role,
         deleted_at: null,
         deleted_by: null,
         delete_reason: null,

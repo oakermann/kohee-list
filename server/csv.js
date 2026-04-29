@@ -341,7 +341,7 @@ async function applyCsvRowsOrThrow(env, user, rows) {
 export async function importCsv(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const dryRun = new URL(req.url).searchParams.get("dryRun") === "1";
     const raw = await req.text();
@@ -358,6 +358,7 @@ export async function importCsv(req, env) {
       action: "csv.import",
       targetType: "cafes",
       after: {
+        actor_role: user.role,
         total: analysis.total,
         ...applied,
         failed: analysis.failed,
@@ -417,6 +418,7 @@ export async function resetCsv(req, env) {
       action: "csv.reset",
       targetType: "cafes",
       after: {
+        actor_role: user.role,
         total: analysis.total,
         deleted,
         deleted_at: deletedAt,

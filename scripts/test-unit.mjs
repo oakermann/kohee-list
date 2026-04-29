@@ -369,7 +369,7 @@ async function requestDeleteCafe(role = "manager") {
   return { response, statements };
 }
 
-for (const role of ["manager", "admin"]) {
+for (const role of ["admin"]) {
   const { response, statements } = await requestDeleteCafe(role);
   assert.equal(response.status, 200);
   assert.equal((await response.json()).ok, true);
@@ -409,7 +409,18 @@ for (const role of ["manager", "admin"]) {
   assert.equal(audit.bindings[2], "cafe.delete");
   assert.match(audit.bindings[6], /"deleted_at"/);
   assert.match(audit.bindings[6], /"deleted_by"/);
+  assert.match(audit.bindings[6], /"actor_role":"admin"/);
+  assert.doesNotMatch(audit.bindings[6], /password|session|secret/i);
 }
+
+const managerDelete = await requestDeleteCafe("manager");
+assert.equal(managerDelete.response.status, 403);
+assert.equal(
+  managerDelete.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*\?/i.test(statement.sql),
+  ),
+  false,
+);
 
 const unauthorizedDelete = await requestDeleteCafe("user");
 assert.equal(unauthorizedDelete.response.status, 403);
@@ -436,7 +447,7 @@ async function requestRestoreCafe(role = "manager") {
   return { response, statements };
 }
 
-for (const role of ["manager", "admin"]) {
+for (const role of ["admin"]) {
   const { response, statements } = await requestRestoreCafe(role);
   assert.equal(response.status, 200);
   assert.equal((await response.json()).ok, true);
@@ -462,7 +473,18 @@ for (const role of ["manager", "admin"]) {
   assert.ok(audit);
   assert.equal(audit.bindings[2], "cafe.restore");
   assert.match(audit.bindings[6], /"deleted_at":null/);
+  assert.match(audit.bindings[6], /"actor_role":"admin"/);
+  assert.doesNotMatch(audit.bindings[6], /password|session|secret/i);
 }
+
+const managerRestore = await requestRestoreCafe("manager");
+assert.equal(managerRestore.response.status, 403);
+assert.equal(
+  managerRestore.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*NULL/i.test(statement.sql),
+  ),
+  false,
+);
 
 const unauthorizedRestore = await requestRestoreCafe("user");
 assert.equal(unauthorizedRestore.response.status, 403);
@@ -583,6 +605,8 @@ assert.ok(resetAudit);
 assert.equal(resetAudit.bindings[2], "csv.reset");
 assert.match(resetAudit.bindings[6], /"deleted_at"/);
 assert.match(resetAudit.bindings[6], /"deleted_by"/);
+assert.match(resetAudit.bindings[6], /"actor_role":"admin"/);
+assert.doesNotMatch(resetAudit.bindings[6], /password|session|secret/i);
 const resetImportUpdate = resetResult.statements.find((statement) =>
   /UPDATE\s+cafes\s+SET\s+name\s*=\s*\?/i.test(statement.sql),
 );
@@ -696,7 +720,7 @@ assert.match(importUpdate.sql, /deleted_by\s*=\s*NULL/i);
 assert.match(importUpdate.sql, /delete_reason\s*=\s*NULL/i);
 
 const invalidImport = await requestImportCsv(
-  "manager",
+  "admin",
   "name,address,desc,category\nBad,Seoul,Coffee,tea",
 );
 assert.equal(invalidImport.response.status, 400);
@@ -707,14 +731,16 @@ assert.equal(
   false,
 );
 
-const unauthorizedImport = await requestImportCsv("user");
-assert.equal(unauthorizedImport.response.status, 403);
-assert.equal(
-  unauthorizedImport.statements.some((statement) =>
-    /UPDATE\s+cafes\s+SET/i.test(statement.sql),
-  ),
-  false,
-);
+for (const role of ["manager", "user"]) {
+  const unauthorizedImport = await requestImportCsv(role);
+  assert.equal(unauthorizedImport.response.status, 403);
+  assert.equal(
+    unauthorizedImport.statements.some((statement) =>
+      /UPDATE\s+cafes\s+SET/i.test(statement.sql),
+    ),
+    false,
+  );
+}
 
 const dryRunInvalidImport = await importCsv(
   new Request("https://kohee.test/import-csv", {
@@ -722,7 +748,7 @@ const dryRunInvalidImport = await importCsv(
     headers: { authorization: "Bearer unit-token" },
     body: "name,address,desc,category\nBad,Seoul,Coffee,tea",
   }),
-  createImportCsvTestEnv("manager").env,
+  createImportCsvTestEnv("admin").env,
 );
 assert.equal(dryRunInvalidImport.status, 400);
 
@@ -732,11 +758,19 @@ const dryRunInvalidPreview = await importCsv(
     headers: { authorization: "Bearer unit-token" },
     body: "name,address,desc,category\nBad,Seoul,Coffee,tea",
   }),
-  createImportCsvTestEnv("manager").env,
+  createImportCsvTestEnv("admin").env,
 );
 assert.equal(dryRunInvalidPreview.status, 200);
 const dryRunInvalidBody = await dryRunInvalidPreview.json();
 assert.equal(dryRunInvalidBody.failed, 1);
 assert.equal(dryRunInvalidBody.failedRows[0].error, "Invalid category value");
+
+const importAudit = importStatements.find((statement) =>
+  /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+);
+assert.ok(importAudit);
+assert.equal(importAudit.bindings[2], "csv.import");
+assert.match(importAudit.bindings[6], /"actor_role":"admin"/);
+assert.doesNotMatch(importAudit.bindings[6], /password|session|secret/i);
 
 console.log("[unit] ok");
