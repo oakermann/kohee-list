@@ -237,23 +237,24 @@ export async function resetCsv(req, env) {
     requireRole(user, ["admin"]);
 
     const countRow = await env.DB.prepare(
-      "SELECT COUNT(*) AS c FROM cafes",
+      "SELECT COUNT(*) AS c FROM cafes WHERE deleted_at IS NULL",
     ).first();
     const deleted = Number(countRow?.c || 0);
+    const deletedAt = nowIso();
 
     await env.DB.prepare(
-      "DELETE FROM favorites WHERE cafe_id IN (SELECT id FROM cafes)",
-    ).run();
-    await env.DB.prepare(
-      "UPDATE submissions SET linked_cafe_id = NULL WHERE linked_cafe_id IN (SELECT id FROM cafes)",
-    ).run();
-    await env.DB.prepare("DELETE FROM cafes").run();
+      `UPDATE cafes
+       SET deleted_at = ?, deleted_by = ?, updated_at = ?
+       WHERE deleted_at IS NULL`,
+    )
+      .bind(deletedAt, user.user_id, deletedAt)
+      .run();
 
     await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "csv.reset",
       targetType: "cafes",
-      after: { deleted },
+      after: { deleted, deleted_at: deletedAt, deleted_by: user.user_id },
     });
 
     return json({ ok: true, deleted }, 200, req, env);

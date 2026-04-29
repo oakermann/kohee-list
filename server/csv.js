@@ -238,7 +238,8 @@ async function applyCsvRows(env, user, rows) {
     await env.DB.prepare(
       `UPDATE cafes SET
         name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, manager_pick = ?, updated_at = ?
+        oakerman_pick = ?, manager_pick = ?, status = 'approved',
+        deleted_at = NULL, deleted_by = NULL, delete_reason = NULL, updated_at = ?
        WHERE id = ?`,
     )
       .bind(

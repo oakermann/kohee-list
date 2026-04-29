@@ -4,9 +4,10 @@ import {
   applyPickPermission,
   deleteCafe,
   getData,
+  resetCsv,
   toCafeResponse,
 } from "../server/cafes.js";
-import { parseCsvLine } from "../server/csv.js";
+import { importCsv, parseCsvLine } from "../server/csv.js";
 import { cleanUrl, parseJsonArray } from "../server/shared.js";
 
 assert.deepEqual(parseCsvLine('a,"b,c","d""e"'), ["a", "b,c", 'd"e']);
@@ -251,5 +252,173 @@ assert.equal(
   ),
   false,
 );
+
+function createResetCsvTestEnv(role = "admin") {
+  const statements = [];
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      DB: {
+        prepare(sql) {
+          const statement = { sql, bindings: [] };
+          statements.push(statement);
+          return {
+            bind(...values) {
+              statement.bindings = values;
+              return this;
+            },
+            first: async () => {
+              if (sql.includes("FROM sessions")) {
+                return {
+                  session_id: "session-1",
+                  user_id: `${role}-user`,
+                  username: role,
+                  role,
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                };
+              }
+              if (sql.includes("COUNT(*) AS c FROM cafes")) return { c: 2 };
+              return null;
+            },
+            run: async () => ({ success: true }),
+          };
+        },
+      },
+    },
+  };
+}
+
+async function requestResetCsv(role = "admin") {
+  const { env, statements } = createResetCsvTestEnv(role);
+  const response = await resetCsv(
+    new Request("https://kohee.test/reset-csv", {
+      method: "POST",
+      headers: { authorization: "Bearer unit-token" },
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+const resetResult = await requestResetCsv("admin");
+assert.equal(resetResult.response.status, 200);
+assert.deepEqual(await resetResult.response.json(), { ok: true, deleted: 2 });
+assert.ok(
+  resetResult.statements.some((statement) =>
+    /COUNT\(\*\)\s+AS\s+c\s+FROM\s+cafes\s+WHERE\s+deleted_at\s+IS\s+NULL/i.test(
+      statement.sql,
+    ),
+  ),
+);
+assert.equal(
+  resetResult.statements.some((statement) =>
+    /DELETE\s+FROM\s+cafes/i.test(statement.sql),
+  ),
+  false,
+);
+assert.equal(
+  resetResult.statements.some((statement) =>
+    /DELETE\s+FROM\s+favorites/i.test(statement.sql),
+  ),
+  false,
+);
+assert.equal(
+  resetResult.statements.some((statement) =>
+    /UPDATE\s+submissions\s+SET\s+linked_cafe_id\s*=\s*NULL/i.test(
+      statement.sql,
+    ),
+  ),
+  false,
+);
+const resetSoftDelete = resetResult.statements.find((statement) =>
+  /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*\?/i.test(statement.sql),
+);
+assert.ok(resetSoftDelete);
+assert.match(resetSoftDelete.sql, /WHERE\s+deleted_at\s+IS\s+NULL/i);
+assert.equal(resetSoftDelete.bindings[1], "admin-user");
+assert.equal(resetSoftDelete.bindings[2], resetSoftDelete.bindings[0]);
+const resetAudit = resetResult.statements.find((statement) =>
+  /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+);
+assert.ok(resetAudit);
+assert.equal(resetAudit.bindings[2], "csv.reset");
+assert.match(resetAudit.bindings[6], /"deleted_at"/);
+assert.match(resetAudit.bindings[6], /"deleted_by"/);
+
+const unauthorizedReset = await requestResetCsv("manager");
+assert.equal(unauthorizedReset.response.status, 403);
+assert.equal(
+  unauthorizedReset.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*\?/i.test(statement.sql),
+  ),
+  false,
+);
+
+function createImportCsvTestEnv() {
+  const statements = [];
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      DB: {
+        prepare(sql) {
+          const statement = { sql, bindings: [] };
+          statements.push(statement);
+          return {
+            bind(...values) {
+              statement.bindings = values;
+              return this;
+            },
+            first: async () => {
+              if (sql.includes("FROM sessions")) {
+                return {
+                  session_id: "session-1",
+                  user_id: "admin-user",
+                  username: "admin",
+                  role: "admin",
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                };
+              }
+              if (sql.includes("FROM cafes") && sql.includes("lower(trim")) {
+                return {
+                  id: "cafe-1",
+                  name: "Imported Cafe",
+                  oakerman_pick: 1,
+                  manager_pick: 0,
+                  deleted_at: "2026-04-28T00:00:00.000Z",
+                };
+              }
+              return null;
+            },
+            run: async () => ({ success: true }),
+          };
+        },
+      },
+    },
+  };
+}
+
+const { env: importEnv, statements: importStatements } =
+  createImportCsvTestEnv();
+const importResponse = await importCsv(
+  new Request("https://kohee.test/import-csv", {
+    method: "POST",
+    headers: { authorization: "Bearer unit-token" },
+    body: "name,address,desc\nImported Cafe,Seoul,Coffee",
+  }),
+  importEnv,
+);
+assert.equal(importResponse.status, 200);
+const importUpdate = importStatements.find((statement) =>
+  /UPDATE\s+cafes\s+SET/i.test(statement.sql),
+);
+assert.ok(importUpdate);
+assert.match(importUpdate.sql, /status\s*=\s*'approved'/i);
+assert.match(importUpdate.sql, /deleted_at\s*=\s*NULL/i);
+assert.match(importUpdate.sql, /deleted_by\s*=\s*NULL/i);
+assert.match(importUpdate.sql, /delete_reason\s*=\s*NULL/i);
 
 console.log("[unit] ok");
