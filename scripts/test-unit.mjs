@@ -11,11 +11,16 @@ import {
 import { importCsv, parseCsvLine, resetCsv } from "../server/csv.js";
 import {
   cleanUrl,
+  health,
+  healthDb,
   HttpError,
   parseJsonArray,
   responseHeaders,
+  versionInfo,
   withGuard,
 } from "../server/shared.js";
+
+const originalConsoleError = console.error;
 
 assert.deepEqual(parseCsvLine('a,"b,c","d""e"'), ["a", "b,c", 'd"e']);
 assert.throws(() => parseCsvLine('a,"b'), /Malformed CSV row/);
@@ -46,7 +51,65 @@ assert.equal(
   "public, max-age=60, s-maxage=60",
 );
 
-const originalConsoleError = console.error;
+const healthResponse = health(new Request("https://kohee.test/health"), {});
+assert.equal(healthResponse.status, 200);
+assert.equal(healthResponse.headers.get("cache-control"), "no-store");
+assert.deepEqual(await healthResponse.json(), {
+  ok: true,
+  service: "kohee-list",
+  deployCheck: "codex-worker-20260428",
+});
+
+const versionResponse = versionInfo(new Request("https://kohee.test/version"), {
+  APP_VERSION: "unit-version",
+});
+assert.equal(versionResponse.status, 200);
+assert.equal(versionResponse.headers.get("cache-control"), "no-store");
+assert.deepEqual(await versionResponse.json(), {
+  ok: true,
+  service: "kohee-list",
+  version: "unit-version",
+  deployCheck: "codex-worker-20260428",
+});
+
+const healthDbResponse = await healthDb(
+  new Request("https://kohee.test/health/db"),
+  {
+    DB: {
+      prepare(sql) {
+        assert.equal(sql, "SELECT 1 AS ok");
+        return { first: async () => ({ ok: 1 }) };
+      },
+    },
+  },
+);
+assert.equal(healthDbResponse.status, 200);
+assert.equal(healthDbResponse.headers.get("cache-control"), "no-store");
+assert.deepEqual(await healthDbResponse.json(), {
+  ok: true,
+  service: "kohee-list",
+  db: "ok",
+});
+
+console.error = () => {};
+const healthDbFailureResponse = await healthDb(
+  new Request("https://kohee.test/health/db"),
+  {
+    DB: {
+      prepare() {
+        throw new Error("D1_ERROR: secret internal detail");
+      },
+    },
+  },
+);
+console.error = originalConsoleError;
+assert.equal(healthDbFailureResponse.status, 503);
+assert.deepEqual(await healthDbFailureResponse.json(), {
+  ok: false,
+  error: "Database unavailable",
+  code: "DB_UNAVAILABLE",
+});
+
 console.error = () => {};
 const unexpectedErrorResponse = await withGuard(
   new Request("https://kohee.test/data"),

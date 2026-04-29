@@ -1,4 +1,4 @@
-import { health } from "./shared.js";
+import { health, healthDb, versionInfo } from "./shared.js";
 import { login, logout, me, signup } from "./auth.js";
 import {
   addCafe,
@@ -38,6 +38,8 @@ export const AUTH_ROUTES = [
 
 export const PUBLIC_ROUTES = [
   ["GET", "/health", health],
+  ["GET", "/health/db", healthDb],
+  ["GET", "/version", versionInfo],
   ["GET", "/data", getData],
   ["GET", "/notice", getNotice],
 ];

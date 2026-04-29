@@ -16,6 +16,7 @@ export const SESSION_COOKIE = "kohee_session";
 export const CSRF_COOKIE = "kohee_csrf";
 export const ROLES = ["user", "manager", "admin"];
 export const SESSION_MAX_AGE = 14 * 24 * 60 * 60;
+export const DEPLOY_CHECK = "codex-worker-20260428";
 
 export function nowIso() {
   return new Date().toISOString();
@@ -23,7 +24,37 @@ export function nowIso() {
 
 export function health(req, env) {
   return json(
-    { ok: true, deployCheck: "codex-worker-20260428" },
+    { ok: true, service: "kohee-list", deployCheck: DEPLOY_CHECK },
+    200,
+    req,
+    env,
+  );
+}
+
+export async function healthDb(req, env) {
+  try {
+    const row = await env.DB.prepare("SELECT 1 AS ok").first();
+    return json(
+      { ok: Number(row?.ok || 0) === 1, service: "kohee-list", db: "ok" },
+      200,
+      req,
+      env,
+    );
+  } catch (err) {
+    console.error("health db check failed", err);
+    return json(
+      { ok: false, error: "Database unavailable", code: "DB_UNAVAILABLE" },
+      503,
+      req,
+      env,
+    );
+  }
+}
+
+export function versionInfo(req, env) {
+  const version = cleanText(env.APP_VERSION, 80) || "unknown";
+  return json(
+    { ok: true, service: "kohee-list", version, deployCheck: DEPLOY_CHECK },
     200,
     req,
     env,
