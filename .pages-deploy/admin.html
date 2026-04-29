@@ -460,6 +460,11 @@
         <div class="meta" style="margin-bottom: 5px; text-align: center">
           카페 관리 (검색/수정/신규/수정 후 승인)
         </div>
+        <select id="cafe-lifecycle" aria-label="카페 표시 범위">
+          <option value="active">활성</option>
+          <option value="deleted">삭제됨</option>
+          <option value="all">전체</option>
+        </select>
         <input id="cafe-search" placeholder="카페명/주소 검색" />
         <div id="cafe-count" class="meta" style="margin: -2px 0 5px">
           카페 데이터 확인 중...

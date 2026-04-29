@@ -4,7 +4,9 @@ import {
   applyPickPermission,
   deleteCafe,
   getData,
+  listCafes,
   resetCsv,
+  restoreCafe,
   toCafeResponse,
 } from "../server/cafes.js";
 import { importCsv, parseCsvLine } from "../server/csv.js";
@@ -129,6 +131,105 @@ assert.equal(publicCafeBody[0].deleted_by, undefined);
 assert.equal(publicCafeBody[0].delete_reason, undefined);
 assert.equal(publicCafeBody[0].approved_by, undefined);
 
+function createListCafesTestEnv(role = "manager") {
+  const statements = [];
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      DB: {
+        prepare(sql) {
+          const statement = { sql, bindings: [] };
+          statements.push(statement);
+          return {
+            bind(...values) {
+              statement.bindings = values;
+              return this;
+            },
+            first: async () => {
+              if (sql.includes("FROM sessions")) {
+                return {
+                  session_id: "session-1",
+                  user_id: `${role}-user`,
+                  username: role,
+                  role,
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                };
+              }
+              return null;
+            },
+            all: async () => ({
+              results: [
+                {
+                  id: "cafe-1",
+                  name: "Admin Cafe",
+                  address: "Seoul",
+                  desc: "Coffee",
+                  lat: 37.5,
+                  lng: 127,
+                  signature: "[]",
+                  beanShop: "",
+                  instagram: "",
+                  category: '["espresso"]',
+                  oakerman_pick: 1,
+                  manager_pick: 0,
+                  updated_at: "2026-04-28T00:00:00.000Z",
+                  status: "approved",
+                  deleted_at: "2026-04-29T00:00:00.000Z",
+                  deleted_by: "admin-user",
+                  delete_reason: "internal",
+                },
+              ],
+            }),
+            run: async () => ({ success: true }),
+          };
+        },
+      },
+    },
+  };
+}
+
+async function requestListCafes(lifecycle, role = "manager") {
+  const { env, statements } = createListCafesTestEnv(role);
+  const response = await listCafes(
+    new Request(`https://kohee.test/cafes?lifecycle=${lifecycle}`, {
+      headers: { authorization: "Bearer unit-token" },
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+const activeList = await requestListCafes("active");
+assert.equal(activeList.response.status, 200);
+assert.match(
+  activeList.statements.find((statement) =>
+    /SELECT\s+id,\s+name,\s+address/i.test(statement.sql),
+  ).sql,
+  /WHERE\s+deleted_at\s+IS\s+NULL/i,
+);
+
+const deletedList = await requestListCafes("deleted");
+const deletedListBody = await deletedList.response.json();
+assert.match(
+  deletedList.statements.find((statement) =>
+    /SELECT\s+id,\s+name,\s+address/i.test(statement.sql),
+  ).sql,
+  /WHERE\s+deleted_at\s+IS\s+NOT\s+NULL/i,
+);
+assert.equal(deletedListBody[0].deleted_at, "2026-04-29T00:00:00.000Z");
+assert.equal(deletedListBody[0].deleted_by, undefined);
+assert.equal(deletedListBody[0].delete_reason, undefined);
+
+const allList = await requestListCafes("all");
+assert.doesNotMatch(
+  allList.statements.find((statement) =>
+    /SELECT\s+id,\s+name,\s+address/i.test(statement.sql),
+  ).sql,
+  /WHERE\s+deleted_at/i,
+);
+
 function createDeleteCafeTestEnv(role = "manager") {
   const statements = [];
   const cafe = {
@@ -249,6 +350,59 @@ assert.equal(unauthorizedDelete.response.status, 403);
 assert.equal(
   unauthorizedDelete.statements.some((statement) =>
     /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*\?/i.test(statement.sql),
+  ),
+  false,
+);
+
+async function requestRestoreCafe(role = "manager") {
+  const { env, statements } = createDeleteCafeTestEnv(role);
+  const response = await restoreCafe(
+    new Request("https://kohee.test/restore", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer unit-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ id: "cafe-1" }),
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+for (const role of ["manager", "admin"]) {
+  const { response, statements } = await requestRestoreCafe(role);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).ok, true);
+  assert.equal(
+    statements.some((statement) =>
+      /DELETE\s+FROM\s+cafes/i.test(statement.sql),
+    ),
+    false,
+  );
+
+  const restore = statements.find((statement) =>
+    /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*NULL/i.test(statement.sql),
+  );
+  assert.ok(restore);
+  assert.match(restore.sql, /deleted_by\s*=\s*NULL/i);
+  assert.match(restore.sql, /delete_reason\s*=\s*NULL/i);
+  assert.doesNotMatch(restore.sql, /status\s*=/i);
+  assert.equal(restore.bindings[1], "cafe-1");
+
+  const audit = statements.find((statement) =>
+    /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+  );
+  assert.ok(audit);
+  assert.equal(audit.bindings[2], "cafe.restore");
+  assert.match(audit.bindings[6], /"deleted_at":null/);
+}
+
+const unauthorizedRestore = await requestRestoreCafe("user");
+assert.equal(unauthorizedRestore.response.status, 403);
+assert.equal(
+  unauthorizedRestore.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*NULL/i.test(statement.sql),
   ),
   false,
 );

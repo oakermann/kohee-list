@@ -6,7 +6,9 @@ import {
   editCafe,
   getData,
   getNotice,
+  listCafes,
   resetCsv,
+  restoreCafe,
   setNotice,
 } from "./cafes.js";
 import {
@@ -58,9 +60,11 @@ export const MANAGER_ROUTES = [
   ["POST", "/approve", approveSubmission],
   ["POST", "/reject", rejectSubmission],
   ["POST", "/update-submission", updateSubmission],
+  ["GET", "/cafes", listCafes],
   ["POST", "/add", addCafe],
   ["POST", "/edit", editCafe],
   ["POST", "/delete", deleteCafe],
+  ["POST", "/restore", restoreCafe],
   ["POST", "/import-csv", importCsv],
 ];
 

@@ -33,6 +33,14 @@ export function toCafeResponse(row) {
   };
 }
 
+export function toAdminCafeResponse(row) {
+  return {
+    ...toCafeResponse(row),
+    status: row.status || "approved",
+    deleted_at: row.deleted_at || null,
+  };
+}
+
 export async function getData(req, env) {
   return withGuard(req, env, async () => {
     const rows = await env.DB.prepare(
@@ -45,6 +53,32 @@ export async function getData(req, env) {
     ).all();
     const cafes = (rows.results || []).map(toCafeResponse);
     return json(cafes, 200, req, env);
+  });
+}
+
+export async function listCafes(req, env) {
+  return withGuard(req, env, async () => {
+    const user = await requireAuth(req, env);
+    requireRole(user, ["manager", "admin"]);
+
+    const url = new URL(req.url);
+    const lifecycle = String(url.searchParams.get("lifecycle") || "active");
+    const where =
+      lifecycle === "deleted"
+        ? "WHERE deleted_at IS NOT NULL"
+        : lifecycle === "all"
+          ? ""
+          : "WHERE deleted_at IS NULL";
+
+    const rows = await env.DB.prepare(
+      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
+        oakerman_pick, manager_pick, updated_at, status, deleted_at
+       FROM cafes
+       ${where}
+       ORDER BY updated_at DESC`,
+    ).all();
+
+    return json((rows.results || []).map(toAdminCafeResponse), 200, req, env);
   });
 }
 
@@ -227,6 +261,48 @@ export async function deleteCafe(req, env) {
       before: exists,
       after: { id, deleted_at: deletedAt, deleted_by: user.user_id },
     });
+    return json({ ok: true }, 200, req, env);
+  });
+}
+
+export async function restoreCafe(req, env) {
+  return withGuard(req, env, async () => {
+    const user = await requireAuth(req, env);
+    requireRole(user, ["manager", "admin"]);
+
+    const body = await readJson(req);
+    const id = cleanText(body.id, 80);
+    if (!id) throw new HttpError(400, "id required");
+
+    const exists = await env.DB.prepare("SELECT * FROM cafes WHERE id = ?")
+      .bind(id)
+      .first();
+    if (!exists) throw new HttpError(404, "Cafe not found");
+
+    const updatedAt = nowIso();
+    await env.DB.prepare(
+      `UPDATE cafes
+       SET deleted_at = NULL, deleted_by = NULL, delete_reason = NULL, updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(updatedAt, id)
+      .run();
+
+    await safeWriteAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "cafe.restore",
+      targetType: "cafe",
+      targetId: id,
+      before: exists,
+      after: {
+        id,
+        deleted_at: null,
+        deleted_by: null,
+        delete_reason: null,
+        updated_at: updatedAt,
+      },
+    });
+
     return json({ ok: true }, 200, req, env);
   });
 }

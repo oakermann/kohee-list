@@ -15,6 +15,7 @@ const state = {
   me: null,
   cafes: [],
   cafeKeyCounts: {},
+  cafeLifecycle: "active",
   submissions: [],
   editApproveId: "",
   editApproveName: "",
@@ -174,8 +175,9 @@ function collectCafeForm() {
 
 async function loadCafes() {
   try {
-    const res = await api("/data");
-    const rows = await res.json();
+    const rows = await jsonApi(
+      `/cafes?lifecycle=${encodeURIComponent(state.cafeLifecycle)}`,
+    );
     state.cafes = Array.isArray(rows) ? rows : [];
     state.cafeKeyCounts = state.cafes.reduce((acc, cafe) => {
       const key = cafeKey(cafe);
@@ -222,9 +224,11 @@ function renderCafeList() {
       <div class="item">
         <h3>${esc(cafe.name)}</h3>
         <div class="mini">ID: ${esc(cafe.id)}${isDuplicateCafe(cafe) ? " (중복)" : ""}</div>
+        ${cafe.deleted_at ? `<div class="mini">삭제됨: ${esc(formatDateTime(cafe.deleted_at))}</div>` : ""}
         <div class="mini">${esc(cafe.address)}</div>
         <div class="btns" style="margin-top:6px;">
           <button type="button" class="pick-cafe" data-id="${esc(cafe.id)}">선택</button>
+          ${cafe.deleted_at ? `<button type="button" class="restore-cafe" data-id="${esc(cafe.id)}">복구</button>` : ""}
         </div>
       </div>
     `,
@@ -242,6 +246,11 @@ function renderCafeList() {
       $("delete-btn").textContent = "삭제";
       openCafeForm();
     });
+  });
+  [...document.querySelectorAll(".restore-cafe")].forEach((btn) => {
+    btn.addEventListener("click", () =>
+      restoreCafe(btn.dataset.id).catch((error) => alert(error.message)),
+    );
   });
 }
 
@@ -541,6 +550,18 @@ async function deleteCafe() {
   closeCafeForm(true);
 }
 
+async function restoreCafe(id) {
+  if (!id) return;
+  if (!confirm("이 카페를 복구할까요?")) return;
+  await jsonApi("/restore", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  await loadCafes();
+  closeCafeForm(true);
+}
+
 async function downloadCsv() {
   const res = await api("/data");
   const rows = await res.json();
@@ -814,6 +835,10 @@ async function init() {
   $("notice-save").addEventListener("click", () =>
     saveNotice().catch((error) => alert(error.message)),
   );
+  $("cafe-lifecycle").addEventListener("change", async () => {
+    state.cafeLifecycle = $("cafe-lifecycle").value;
+    await loadCafes();
+  });
   $("cafe-search").addEventListener("input", renderCafeList);
   $("new-cafe-btn").addEventListener("click", prepareNewCafe);
   $("save-cafe-btn").addEventListener("click", () =>
