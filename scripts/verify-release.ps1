@@ -25,6 +25,7 @@ try {
   Invoke-VerifyStep "syntax checks" {
     powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1
   }
+  Invoke-VerifyStep "repo safety" { npm run check:repo-safety }
 
   Write-Host ""
   Write-Host "[verify] release verification passed"

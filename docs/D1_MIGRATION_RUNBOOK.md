@@ -4,6 +4,8 @@
 
 이 문서는 D1 변경을 준비하고 적용할 때의 운영 기준이다. migration 파일과 `schema.sql` 변경은 Git에 커밋할 수 있지만, 원격 D1 적용은 production 백업과 사용자 승인 후 별도 수동 절차로만 진행한다.
 
+백업 보관 기간, 백업 파일 보안 취급, repo safety check 기준은 `docs/BACKUP_RETENTION_SECURITY.md`를 함께 따른다.
+
 ## 1. 현재 D1 설정
 
 `wrangler.toml` 기준:
@@ -158,6 +160,10 @@ npx.cmd --no-install wrangler d1 export kohee-list-db --remote --no-data --outpu
 - 백업 파일 이름에는 database name, environment, timestamp를 포함한다.
 - 백업 파일은 개인정보, 세션, 제보자 정보, 관리자 정보, audit log를 포함할 수 있다.
 - 백업 파일을 ChatGPT, GitHub Issue, 로그, PR description에 붙여 넣지 않는다.
+- 기본 보관 위치는 repo 밖 `F:\KOHEE-LIST\backups\d1\`이다.
+- full/schema-only migration 백업은 최소 90일 보관하고, 최근 production full backup은 최소 3개를 유지한다.
+- purge/archive 같은 복구가 어려운 작업 전 백업은 최소 180일 보관을 권장한다.
+- `npm run check:repo-safety`가 실패하면 백업 또는 dump 파일을 repo 밖으로 옮긴 뒤 다시 검증한다.
 
 ### 백업 성공 확인
 

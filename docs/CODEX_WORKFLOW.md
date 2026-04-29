@@ -194,6 +194,7 @@ ChatGPT가 사용자 요구를 Codex 작업으로 바꿀 때는 구현 지시로
 
 `cafes` lifecycle, soft delete, approved/candidate 상태 모델은 `docs/DATA_LIFECYCLE_PLAN.md`를 기준 계획으로 삼는다.
 D1 migration 준비 상태와 백업 절차는 `docs/D1_MIGRATION_RUNBOOK.md`를 함께 확인한다.
+백업 보관, 복구 확인, 백업 파일 보안 취급은 `docs/BACKUP_RETENTION_SECURITY.md`를 따른다.
 
 ## 11. 현재 안정화 우선순위 백로그
 
@@ -240,6 +241,7 @@ npm run verify:release
 1. `npm run check:deploy-sync`
 2. `npm run test:unit`
 3. `powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1`
+4. `npm run check:repo-safety`
 
 실패하면 어느 단계에서 실패했는지 출력하고 non-zero exit code로 종료한다.
 
@@ -378,6 +380,8 @@ D1 schema 또는 migration 변경은 일반 프론트 수정처럼 자동 배포
 - D1 변경이 감지되면 GitHub Actions는 Pages/Worker 자동 배포를 skip하고 `manual migration required`를 Summary에 표시한다.
 - D1 변경 감지는 workflow 실패가 아니라 success + 수동 migration 안내로 처리한다.
 - 기존 migration은 이미 적용된 DB에 다시 실행하지 않는다.
+- D1 백업 파일과 DB dump는 repo에 커밋하지 않는다.
+- 위험한 Worker/D1 작업 전 백업과 보관 정책은 `docs/BACKUP_RETENTION_SECURITY.md`를 따른다.
 
 ## 19. Force Push 안전 규칙
 
