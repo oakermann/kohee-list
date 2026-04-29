@@ -13,6 +13,7 @@ import {
   cleanUrl,
   HttpError,
   parseJsonArray,
+  responseHeaders,
   withGuard,
 } from "../server/shared.js";
 
@@ -23,6 +24,26 @@ assert.equal(cleanUrl("javascript:alert(1)"), "");
 assert.equal(
   cleanUrl("https://example.com/?x=undefined&ok=1"),
   "https://example.com/?ok=1",
+);
+
+const adminHeaders = responseHeaders(new Request("https://kohee.test/me"), {});
+assert.equal(adminHeaders.get("cache-control"), "no-store");
+assert.equal(adminHeaders.get("x-content-type-options"), "nosniff");
+assert.equal(adminHeaders.get("x-frame-options"), "DENY");
+assert.equal(adminHeaders.get("referrer-policy"), "no-referrer");
+assert.match(adminHeaders.get("content-security-policy"), /default-src 'none'/);
+assert.match(
+  adminHeaders.get("permissions-policy"),
+  /camera=\(\), microphone=\(\)/,
+);
+
+const publicDataHeaders = responseHeaders(
+  new Request("https://kohee.test/data"),
+  {},
+);
+assert.equal(
+  publicDataHeaders.get("cache-control"),
+  "public, max-age=60, s-maxage=60",
 );
 
 const originalConsoleError = console.error;

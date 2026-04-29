@@ -1,11 +1,17 @@
 export const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
 };
+export const API_CSP =
+  "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 export const SECURITY_HEADERS = {
+  "content-security-policy": API_CSP,
+  "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
   "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
   "referrer-policy": "no-referrer",
-  "cache-control": "no-store",
 };
+export const NO_STORE_CACHE_CONTROL = "no-store";
+export const PUBLIC_DATA_CACHE_CONTROL = "public, max-age=60, s-maxage=60";
 export const SESSION_COOKIE = "kohee_session";
 export const CSRF_COOKIE = "kohee_csrf";
 export const ROLES = ["user", "manager", "admin"];
@@ -39,9 +45,23 @@ export function responseHeaders(req, env, extraHeaders = {}) {
   const headers = new Headers();
   appendHeaders(headers, JSON_HEADERS);
   appendHeaders(headers, SECURITY_HEADERS);
+  appendHeaders(headers, cacheHeaders(req));
   appendHeaders(headers, corsHeaders(req, env));
   appendHeaders(headers, extraHeaders);
   return headers;
+}
+
+export function cacheHeaders(req) {
+  if (req?.method === "GET") {
+    try {
+      const url = new URL(req.url);
+      if (url.pathname === "/data") {
+        return { "cache-control": PUBLIC_DATA_CACHE_CONTROL };
+      }
+    } catch {}
+  }
+
+  return { "cache-control": NO_STORE_CACHE_CONTROL };
 }
 
 export function json(
