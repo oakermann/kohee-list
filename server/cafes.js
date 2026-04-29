@@ -211,21 +211,21 @@ export async function deleteCafe(req, env) {
       .first();
     if (!exists) throw new HttpError(404, "Cafe not found");
 
-    await env.DB.prepare("DELETE FROM favorites WHERE cafe_id = ?")
-      .bind(id)
-      .run();
+    const deletedAt = nowIso();
     await env.DB.prepare(
-      "UPDATE submissions SET linked_cafe_id = NULL WHERE linked_cafe_id = ?",
+      `UPDATE cafes
+       SET deleted_at = ?, deleted_by = ?, updated_at = ?
+       WHERE id = ?`,
     )
-      .bind(id)
+      .bind(deletedAt, user.user_id, deletedAt, id)
       .run();
-    await env.DB.prepare("DELETE FROM cafes WHERE id = ?").bind(id).run();
     await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "cafe.delete",
       targetType: "cafe",
       targetId: id,
       before: exists,
+      after: { id, deleted_at: deletedAt, deleted_by: user.user_id },
     });
     return json({ ok: true }, 200, req, env);
   });
