@@ -53,6 +53,10 @@ function isDuplicateCafe(cafe) {
   return key !== "||" && Number(state.cafeKeyCounts[key] || 0) > 1;
 }
 
+function isAdmin() {
+  return state.me?.role === "admin";
+}
+
 function emptyState(text) {
   return `<div class="item empty-state">${esc(text)}</div>`;
 }
@@ -153,7 +157,8 @@ function clearEditApproveMode(resetForm = false) {
   $("review-mode").innerHTML = "";
   $("save-cafe-btn").textContent = "저장";
   if (resetForm) fillCafeForm({});
-  $("delete-btn").textContent = $("cafe-id").value.trim() ? "삭제" : "닫기";
+  $("delete-btn").textContent =
+    $("cafe-id").value.trim() && isAdmin() ? "삭제" : "닫기";
 }
 
 function collectCafeForm() {
@@ -228,7 +233,7 @@ function renderCafeList() {
         <div class="mini">${esc(cafe.address)}</div>
         <div class="btns" style="margin-top:6px;">
           <button type="button" class="pick-cafe" data-id="${esc(cafe.id)}">선택</button>
-          ${cafe.deleted_at ? `<button type="button" class="restore-cafe" data-id="${esc(cafe.id)}">복구</button>` : ""}
+          ${cafe.deleted_at && isAdmin() ? `<button type="button" class="restore-cafe" data-id="${esc(cafe.id)}">복구</button>` : ""}
         </div>
       </div>
     `,
@@ -243,7 +248,7 @@ function renderCafeList() {
       clearEditApproveMode(false);
       fillCafeForm(cafe);
       $("save-cafe-btn").textContent = "저장";
-      $("delete-btn").textContent = "삭제";
+      $("delete-btn").textContent = isAdmin() ? "삭제" : "닫기";
       openCafeForm();
     });
   });
@@ -540,6 +545,10 @@ async function deleteCafe() {
     closeCafeForm(true);
     return;
   }
+  if (!isAdmin()) {
+    closeCafeForm(true);
+    return;
+  }
   if (!confirm("정말 삭제할까요?")) return;
   await jsonApi("/delete", {
     method: "POST",
@@ -806,12 +815,16 @@ async function init() {
 
   $("hello").textContent = `${state.me.username} (${roleLabel(state.me.role)})`;
 
-  const isAdmin = state.me.role === "admin";
-  $("notice-sec").classList.toggle("hidden", !isAdmin);
-  $("user-sec").classList.toggle("hidden", !isAdmin);
-  $("role-sec").classList.toggle("hidden", !isAdmin);
-  $("oakerman-pick").disabled = !isAdmin;
-  $("reviewed-note").textContent = isAdmin
+  const admin = isAdmin();
+  $("notice-sec").classList.toggle("hidden", !admin);
+  $("user-sec").classList.toggle("hidden", !admin);
+  $("role-sec").classList.toggle("hidden", !admin);
+  $("csv-dry-run").classList.toggle("hidden", !admin);
+  $("csv-upload").classList.toggle("hidden", !admin);
+  $("csv-reset").classList.toggle("hidden", !admin);
+  $("csv-file").disabled = !admin;
+  $("oakerman-pick").disabled = !admin;
+  $("reviewed-note").textContent = admin
     ? "전체 매니저/관리자 처리 내역"
     : "내가 처리한 승인/반려 내역";
 
@@ -882,7 +895,7 @@ async function init() {
     loadErrorReports(),
     loadReviewedSubmissions(),
   ];
-  if (isAdmin) tasks.push(loadUsers());
+  if (admin) tasks.push(loadUsers());
   updateCsvFileName();
   await Promise.all(tasks);
 }
