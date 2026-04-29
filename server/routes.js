@@ -7,7 +7,6 @@ import {
   getData,
   getNotice,
   listCafes,
-  resetCsv,
   restoreCafe,
   setNotice,
 } from "./cafes.js";
@@ -28,7 +27,7 @@ import {
 } from "./errorReports.js";
 import { getFavorites, toggleFavorite } from "./favorites.js";
 import { getUsers, setRole } from "./users.js";
-import { importCsv } from "./csv.js";
+import { importCsv, resetCsv } from "./csv.js";
 
 export const AUTH_ROUTES = [
   ["POST", "/signup", signup],

@@ -19,9 +19,23 @@ const OPTIONAL_HEADERS = [
   "beanShop",
   "instagram",
   "category",
+  "status",
   "oakerman_pick",
   "manager_pick",
 ];
+const ALLOWED_CATEGORIES = new Set([
+  "espresso",
+  "drip",
+  "decaf",
+  "instagram",
+  "dessert",
+]);
+const ALLOWED_CAFE_STATUSES = new Set([
+  "candidate",
+  "approved",
+  "hidden",
+  "rejected",
+]);
 
 export function parseCsvLine(line) {
   const out = [];
@@ -45,6 +59,10 @@ export function parseCsvLine(line) {
       continue;
     }
     current += ch;
+  }
+
+  if (quote) {
+    throw new HttpError(400, "Malformed CSV row", "VALIDATION_ERROR");
   }
 
   out.push(current);
@@ -82,6 +100,7 @@ function buildRowBody(cols, idx) {
     beanShop: rowValue(cols, idx, "beanShop"),
     instagram: rowValue(cols, idx, "instagram"),
     category: splitCsvList(rowValue(cols, idx, "category")),
+    status: cleanText(rowValue(cols, idx, "status"), 40),
     oakerman_pick: boolCsv(rowValue(cols, idx, "oakerman_pick")),
     manager_pick: boolCsv(rowValue(cols, idx, "manager_pick")),
   };
@@ -100,6 +119,44 @@ function validateHeaders(headers) {
     );
   }
   return idx;
+}
+
+function safeCsvErrorMessage(error) {
+  if (error instanceof HttpError) return error.message;
+  return "Invalid CSV row";
+}
+
+function validateRowShape(cols, headers) {
+  if (cols.length !== headers.length) {
+    throw new HttpError(
+      400,
+      "CSV row field count does not match headers",
+      "VALIDATION_ERROR",
+    );
+  }
+}
+
+function validateRowBody(body) {
+  if (!cleanText(body.name, 120)) {
+    throw new HttpError(400, "name is required", "VALIDATION_ERROR");
+  }
+  if (!cleanText(body.address, 200)) {
+    throw new HttpError(400, "address is required", "VALIDATION_ERROR");
+  }
+  if (!cleanText(body.desc, 2000)) {
+    throw new HttpError(400, "desc is required", "VALIDATION_ERROR");
+  }
+
+  const invalidCategories = body.category.filter(
+    (value) => !ALLOWED_CATEGORIES.has(value),
+  );
+  if (invalidCategories.length) {
+    throw new HttpError(400, "Invalid category value", "VALIDATION_ERROR");
+  }
+
+  if (body.status && !ALLOWED_CAFE_STATUSES.has(body.status)) {
+    throw new HttpError(400, "Invalid status value", "VALIDATION_ERROR");
+  }
 }
 
 async function findDuplicateCafe(env, name, address) {
@@ -136,7 +193,9 @@ async function analyzeCsv(raw, env, user) {
     const rowNumber = i + 1;
     try {
       const cols = parseCsvLine(lines[i]);
+      validateRowShape(cols, headers);
       const body = buildRowBody(cols, idx);
+      validateRowBody(body);
       const givenId = cleanText(body.id, 80);
       let action = "add";
       let existing = null;
@@ -182,7 +241,7 @@ async function analyzeCsv(raw, env, user) {
       }
     } catch (err) {
       stats.failed += 1;
-      failedRows.push({ row: rowNumber, error: err.message || "invalid row" });
+      failedRows.push({ row: rowNumber, error: safeCsvErrorMessage(err) });
     }
   }
 
@@ -196,6 +255,12 @@ async function analyzeCsv(raw, env, user) {
     previewRows,
     ...stats,
   };
+}
+
+function throwIfCsvValidationFailed(analysis) {
+  if (analysis.failed > 0) {
+    throw new HttpError(400, "CSV validation failed", "VALIDATION_ERROR");
+  }
 }
 
 async function applyCsvRows(env, user, rows) {
@@ -265,6 +330,14 @@ async function applyCsvRows(env, user, rows) {
   return { added, updated, duplicated };
 }
 
+async function applyCsvRowsOrThrow(env, user, rows) {
+  try {
+    return await applyCsvRows(env, user, rows);
+  } catch {
+    throw new HttpError(500, "CSV apply failed", "SERVER_ERROR");
+  }
+}
+
 export async function importCsv(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
@@ -278,7 +351,8 @@ export async function importCsv(req, env) {
       return json({ ok: true, dryRun: true, ...analysis }, 200, req, env);
     }
 
-    const applied = await applyCsvRows(env, user, analysis.rows);
+    throwIfCsvValidationFailed(analysis);
+    const applied = await applyCsvRowsOrThrow(env, user, analysis.rows);
     await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "csv.import",
@@ -298,6 +372,68 @@ export async function importCsv(req, env) {
         duplicateRows: analysis.duplicateRows,
         failed: analysis.failed,
         failedRows: analysis.failedRows,
+      },
+      200,
+      req,
+      env,
+    );
+  });
+}
+
+export async function resetCsv(req, env) {
+  return withGuard(req, env, async () => {
+    const user = await requireAuth(req, env);
+    requireRole(user, ["admin"]);
+
+    const raw = await req.text();
+    const analysis = await analyzeCsv(raw, env, user);
+    throwIfCsvValidationFailed(analysis);
+
+    let deleted = 0;
+    let deletedAt = "";
+    let applied = { added: 0, updated: 0, duplicated: 0 };
+    try {
+      const countRow = await env.DB.prepare(
+        "SELECT COUNT(*) AS c FROM cafes WHERE deleted_at IS NULL",
+      ).first();
+      deleted = Number(countRow?.c || 0);
+      deletedAt = nowIso();
+
+      await env.DB.prepare(
+        `UPDATE cafes
+         SET deleted_at = ?, deleted_by = ?, updated_at = ?
+         WHERE deleted_at IS NULL`,
+      )
+        .bind(deletedAt, user.user_id, deletedAt)
+        .run();
+
+      applied = await applyCsvRowsOrThrow(env, user, analysis.rows);
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+      throw new HttpError(500, "CSV reset failed", "SERVER_ERROR");
+    }
+    await safeWriteAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "csv.reset",
+      targetType: "cafes",
+      after: {
+        total: analysis.total,
+        deleted,
+        deleted_at: deletedAt,
+        deleted_by: user.user_id,
+        ...applied,
+        failed: analysis.failed,
+      },
+    });
+
+    return json(
+      {
+        ok: true,
+        total: analysis.total,
+        deleted,
+        ...applied,
+        duplicateRows: analysis.duplicateRows,
+        failed: analysis.failed,
       },
       200,
       req,

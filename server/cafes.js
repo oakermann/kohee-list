@@ -307,36 +307,6 @@ export async function restoreCafe(req, env) {
   });
 }
 
-export async function resetCsv(req, env) {
-  return withGuard(req, env, async () => {
-    const user = await requireAuth(req, env);
-    requireRole(user, ["admin"]);
-
-    const countRow = await env.DB.prepare(
-      "SELECT COUNT(*) AS c FROM cafes WHERE deleted_at IS NULL",
-    ).first();
-    const deleted = Number(countRow?.c || 0);
-    const deletedAt = nowIso();
-
-    await env.DB.prepare(
-      `UPDATE cafes
-       SET deleted_at = ?, deleted_by = ?, updated_at = ?
-       WHERE deleted_at IS NULL`,
-    )
-      .bind(deletedAt, user.user_id, deletedAt)
-      .run();
-
-    await safeWriteAuditLog(env, {
-      actorUserId: user.user_id,
-      action: "csv.reset",
-      targetType: "cafes",
-      after: { deleted, deleted_at: deletedAt, deleted_by: user.user_id },
-    });
-
-    return json({ ok: true, deleted }, 200, req, env);
-  });
-}
-
 export async function setNotice(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);

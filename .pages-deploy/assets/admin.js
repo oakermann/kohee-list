@@ -698,11 +698,14 @@ async function resetCsv() {
     alert("CSV 초기화는 admin만 가능합니다.");
     return;
   }
+  const file = $("csv-file").files[0];
+  if (!file) {
+    alert("CSV 파일을 선택해 주세요.");
+    return;
+  }
   const count = state.cafes.length;
   if (
-    !confirm(
-      `현재 카페 데이터 ${count}개를 모두 삭제합니다.\n이후 CSV 업로드로 다시 넣을 수 있습니다.\n계속할까요?`,
-    )
+    !confirm(`CSV 검증 후 현재 활성 카페 ${count}개를 교체합니다.\n계속할까요?`)
   )
     return;
   const typed = prompt(
@@ -714,11 +717,16 @@ async function resetCsv() {
     return;
   }
 
-  const data = await jsonApi("/reset-csv", { method: "POST" });
+  const text = await file.text();
+  const data = await jsonApi("/reset-csv", {
+    method: "POST",
+    headers: { "content-type": "text/plain; charset=utf-8" },
+    body: text,
+  });
   $("csv-file").value = "";
   updateCsvFileName();
   $("csv-msg").textContent =
-    `CSV 초기화 완료: 카페 ${data.deleted || 0}개 삭제`;
+    `CSV 초기화 완료: 삭제 ${data.deleted || 0} / 신규 ${data.added || 0} / 수정 ${data.updated || 0}`;
   await loadCafes();
   closeCafeForm(true);
 }
