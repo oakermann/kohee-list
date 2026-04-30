@@ -229,10 +229,12 @@ function renderCafeList() {
       <div class="item">
         <h3>${esc(cafe.name)}</h3>
         <div class="mini">ID: ${esc(cafe.id)}${isDuplicateCafe(cafe) ? " (중복)" : ""}</div>
+        <div class="mini">상태: ${statusLabel(cafe.status)}</div>
         ${cafe.deleted_at ? `<div class="mini">삭제됨: ${esc(formatDateTime(cafe.deleted_at))}</div>` : ""}
         <div class="mini">${esc(cafe.address)}</div>
         <div class="btns admin-actions">
           <button type="button" class="pick-cafe" data-id="${esc(cafe.id)}">선택</button>
+          ${!cafe.deleted_at && cafe.status === "candidate" && isAdmin() ? `<button type="button" class="approve-cafe" data-id="${esc(cafe.id)}">승인</button>` : ""}
           ${cafe.deleted_at && isAdmin() ? `<button type="button" class="restore-cafe" data-id="${esc(cafe.id)}">복구</button>` : ""}
         </div>
       </div>
@@ -255,6 +257,11 @@ function renderCafeList() {
   [...document.querySelectorAll(".restore-cafe")].forEach((btn) => {
     btn.addEventListener("click", () =>
       restoreCafe(btn.dataset.id).catch((error) => alert(error.message)),
+    );
+  });
+  [...document.querySelectorAll(".approve-cafe")].forEach((btn) => {
+    btn.addEventListener("click", () =>
+      approveCafe(btn.dataset.id).catch((error) => alert(error.message)),
     );
   });
 }
@@ -563,6 +570,18 @@ async function restoreCafe(id) {
   if (!id) return;
   if (!confirm("이 카페를 복구할까요?")) return;
   await jsonApi("/restore", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  await loadCafes();
+  closeCafeForm(true);
+}
+
+async function approveCafe(id) {
+  if (!id) return;
+  if (!confirm("이 카페를 공개할까요?")) return;
+  await jsonApi("/approve-cafe", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ id }),

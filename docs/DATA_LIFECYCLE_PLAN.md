@@ -397,6 +397,8 @@ restore 기능은 필요하다.
 - 기존 CSV duplicate/update row는 `status`가 비어 있으면 기존 row의 `status`를 유지한다.
 - resetCsv에서 기존 row를 재활성화할 때도 `status`를 무조건 `approved`로 바꾸지 않는다.
 - CSV로 공개 상태를 만들려면 `status` 컬럼에 `approved`가 명시되어 있어야 한다.
+- admin만 `/approve-cafe`로 candidate cafe를 `approved`로 승격할 수 있다.
+- manager/user는 cafe를 public 노출 상태로 승인할 수 없다.
 
 ### 기존 approved cafe update
 

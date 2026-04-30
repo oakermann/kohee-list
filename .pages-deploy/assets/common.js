@@ -178,7 +178,13 @@ export function roleLabel(role) {
 
 export function statusLabel(status) {
   return (
-    { pending: "검토중", approved: "승인", rejected: "반려" }[status] || status
+    {
+      pending: "검토중",
+      candidate: "후보",
+      approved: "승인",
+      hidden: "숨김",
+      rejected: "반려",
+    }[status] || status
   );
 }
 

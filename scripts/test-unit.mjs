@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   addCafe,
+  approveCafe,
   applyPickPermission,
   deleteCafe,
   getData,
@@ -649,6 +650,109 @@ assert.equal(unauthorizedRestore.response.status, 403);
 assert.equal(
   unauthorizedRestore.statements.some((statement) =>
     /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*NULL/i.test(statement.sql),
+  ),
+  false,
+);
+
+async function requestApproveCafe(role = "manager", cafeOverrides = {}) {
+  const { env, statements } = createDeleteCafeTestEnv(role);
+  const originalPrepare = env.DB.prepare;
+  env.DB.prepare = (sql) => {
+    const prepared = originalPrepare(sql);
+    if (sql.includes("SELECT * FROM cafes WHERE id = ?")) {
+      prepared.first = async () => ({
+        id: "cafe-1",
+        name: "Candidate Cafe",
+        address: "Seoul",
+        desc: "Coffee",
+        lat: 37.5,
+        lng: 127,
+        signature: "[]",
+        beanShop: "",
+        instagram: "",
+        category: "[]",
+        oakerman_pick: 0,
+        manager_pick: 0,
+        created_by: "manager-user",
+        updated_at: "2026-04-28T00:00:00.000Z",
+        status: "candidate",
+        deleted_at: null,
+        deleted_by: null,
+        ...cafeOverrides,
+      });
+    }
+    return prepared;
+  };
+
+  const response = await approveCafe(
+    new Request("https://kohee.test/approve-cafe", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer unit-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ id: "cafe-1" }),
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+const adminApprove = await requestApproveCafe("admin");
+assert.equal(adminApprove.response.status, 200);
+const approveUpdate = adminApprove.statements.find((statement) =>
+  /UPDATE\s+cafes\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
+);
+assert.ok(approveUpdate);
+assert.match(approveUpdate.sql, /approved_at\s*=\s*\?/i);
+assert.match(approveUpdate.sql, /approved_by\s*=\s*\?/i);
+assert.equal(approveUpdate.bindings[1], "admin-user");
+assert.equal(approveUpdate.bindings[3], "cafe-1");
+const approveAudit = adminApprove.statements.find((statement) =>
+  /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+);
+assert.ok(approveAudit);
+assert.equal(approveAudit.bindings[2], "cafe.approve");
+assert.match(approveAudit.bindings[6], /"status":"approved"/);
+assert.match(approveAudit.bindings[6], /"actor_role":"admin"/);
+assert.doesNotMatch(approveAudit.bindings[6], /password|session|secret/i);
+
+const managerApprove = await requestApproveCafe("manager");
+assert.equal(managerApprove.response.status, 403);
+assert.equal(
+  managerApprove.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
+  ),
+  false,
+);
+
+const unauthorizedApprove = await requestApproveCafe("user");
+assert.equal(unauthorizedApprove.response.status, 403);
+assert.equal(
+  unauthorizedApprove.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
+  ),
+  false,
+);
+
+const deletedCandidateApprove = await requestApproveCafe("admin", {
+  deleted_at: "2026-04-29T00:00:00.000Z",
+});
+assert.equal(deletedCandidateApprove.response.status, 400);
+assert.equal(
+  deletedCandidateApprove.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
+  ),
+  false,
+);
+
+const hiddenCafeApprove = await requestApproveCafe("admin", {
+  status: "hidden",
+});
+assert.equal(hiddenCafeApprove.response.status, 400);
+assert.equal(
+  hiddenCafeApprove.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
   ),
   false,
 );

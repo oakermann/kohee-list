@@ -316,6 +316,54 @@ export async function restoreCafe(req, env) {
   });
 }
 
+export async function approveCafe(req, env) {
+  return withGuard(req, env, async () => {
+    const user = await requireAuth(req, env);
+    requireRole(user, ["admin"]);
+
+    const body = await readJson(req);
+    const id = cleanText(body.id, 80);
+    if (!id) throw new HttpError(400, "id required");
+
+    const exists = await env.DB.prepare("SELECT * FROM cafes WHERE id = ?")
+      .bind(id)
+      .first();
+    if (!exists) throw new HttpError(404, "Cafe not found");
+    if (exists.deleted_at) {
+      throw new HttpError(400, "Restore cafe before approval");
+    }
+    if (exists.status !== "candidate") {
+      throw new HttpError(400, "Only candidate cafes can be approved");
+    }
+
+    const approvedAt = nowIso();
+    await env.DB.prepare(
+      `UPDATE cafes
+       SET status = 'approved', approved_at = ?, approved_by = ?, updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(approvedAt, user.user_id, approvedAt, id)
+      .run();
+
+    await safeWriteAuditLog(env, {
+      actorUserId: user.user_id,
+      action: "cafe.approve",
+      targetType: "cafe",
+      targetId: id,
+      before: exists,
+      after: {
+        id,
+        actor_role: user.role,
+        status: "approved",
+        approved_at: approvedAt,
+        approved_by: user.user_id,
+      },
+    });
+
+    return json({ ok: true }, 200, req, env);
+  });
+}
+
 export async function setNotice(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);

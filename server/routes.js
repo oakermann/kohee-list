@@ -2,6 +2,7 @@ import { health, healthDb, versionInfo } from "./shared.js";
 import { login, logout, me, signup } from "./auth.js";
 import {
   addCafe,
+  approveCafe,
   deleteCafe,
   editCafe,
   getData,
@@ -74,6 +75,7 @@ export const ADMIN_ROUTES = [
   ["POST", "/set-role", setRole],
   ["POST", "/notice", setNotice],
   ["POST", "/reset-csv", resetCsv],
+  ["POST", "/approve-cafe", approveCafe],
 ];
 
 export const ROUTES = [
