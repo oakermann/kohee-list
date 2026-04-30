@@ -11,6 +11,7 @@ import {
   toCafeResponse,
 } from "../server/cafes.js";
 import { importCsv, parseCsvLine, resetCsv } from "../server/csv.js";
+import { approveSubmission } from "../server/submissions.js";
 import {
   cleanUrl,
   health,
@@ -755,6 +756,149 @@ assert.equal(
     /UPDATE\s+cafes\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
   ),
   false,
+);
+
+function createApproveSubmissionTestEnv(role = "manager") {
+  const statements = [];
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      DB: {
+        prepare(sql) {
+          const statement = { sql, bindings: [] };
+          statements.push(statement);
+          return {
+            bind(...values) {
+              statement.bindings = values;
+              return this;
+            },
+            first: async () => {
+              if (sql.includes("FROM sessions")) {
+                return {
+                  session_id: "session-1",
+                  user_id: `${role}-user`,
+                  username: role,
+                  role,
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                };
+              }
+              if (sql.includes("SELECT * FROM submissions WHERE id = ?")) {
+                return {
+                  id: "submission-1",
+                  user_id: "user-1",
+                  name: "Submitted Cafe",
+                  address: "Seoul",
+                  desc: "Coffee",
+                  reason: "good",
+                  signature: '["espresso"]',
+                  beanShop: "",
+                  instagram: "",
+                  status: "pending",
+                  category: '["espresso"]',
+                  oakerman_pick: 0,
+                  manager_pick: 0,
+                  created_at: "2026-04-28T00:00:00.000Z",
+                };
+              }
+              if (sql.includes("SELECT id FROM cafes WHERE id = ?")) {
+                return { id: "existing-cafe" };
+              }
+              return null;
+            },
+            run: async () => ({ success: true }),
+            all: async () => ({ results: [] }),
+          };
+        },
+      },
+    },
+  };
+}
+
+async function requestApproveSubmission(role = "manager", body = {}) {
+  const { env, statements } = createApproveSubmissionTestEnv(role);
+  const response = await approveSubmission(
+    new Request("https://kohee.test/approve", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer unit-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ submissionId: "submission-1", ...body }),
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+for (const role of ["manager", "admin"]) {
+  const { response, statements } = await requestApproveSubmission(role);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.ok(body.linked_cafe_id);
+
+  const cafeInsert = statements.find((statement) =>
+    /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+  );
+  assert.ok(cafeInsert);
+  assert.match(cafeInsert.sql, /status/i);
+  assert.doesNotMatch(cafeInsert.sql, /approved_at|approved_by/i);
+  assert.equal(cafeInsert.bindings[12], "candidate");
+  assert.equal(cafeInsert.bindings[13], `${role}-user`);
+
+  const submissionUpdate = statements.find((statement) =>
+    /UPDATE\s+submissions\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
+  );
+  assert.ok(submissionUpdate);
+  assert.equal(submissionUpdate.bindings[0], `${role}-user`);
+  assert.equal(submissionUpdate.bindings[3], "submission-1");
+
+  const audit = statements.find((statement) =>
+    /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+  );
+  assert.ok(audit);
+  assert.equal(audit.bindings[2], "submission.approve");
+  assert.match(audit.bindings[6], /"status":"approved"/);
+  assert.match(audit.bindings[6], /"duplicate":false/);
+  assert.doesNotMatch(audit.bindings[6], /password|session|secret/i);
+}
+
+const duplicateApprove = await requestApproveSubmission("manager", {
+  duplicate: true,
+  linkedCafeId: "existing-cafe",
+});
+assert.equal(duplicateApprove.response.status, 200);
+assert.equal(
+  duplicateApprove.statements.some((statement) =>
+    /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+  ),
+  false,
+);
+assert.equal(
+  duplicateApprove.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status/i.test(statement.sql),
+  ),
+  false,
+);
+const duplicateAudit = duplicateApprove.statements.find((statement) =>
+  /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+);
+assert.ok(duplicateAudit);
+assert.match(duplicateAudit.bindings[6], /"duplicate":true/);
+
+let candidatePublicSql = "";
+await getData(new Request("https://kohee.test/data"), {
+  DB: {
+    prepare(sql) {
+      candidatePublicSql = sql;
+      return { all: async () => ({ results: [] }) };
+    },
+  },
+});
+assert.match(
+  candidatePublicSql,
+  /WHERE\s+status = 'approved'\s+AND deleted_at IS NULL/i,
 );
 
 function createResetCsvTestEnv(role = "admin") {

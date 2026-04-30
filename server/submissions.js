@@ -215,12 +215,12 @@ export async function approveSubmission(req, env) {
       }
 
       linkedCafeId = crypto.randomUUID();
-      const approvedAt = nowIso();
+      const createdAt = nowIso();
       await env.DB.prepare(
         `INSERT INTO cafes(
           id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-          oakerman_pick, manager_pick, status, approved_at, approved_by, created_by, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          oakerman_pick, manager_pick, status, created_by, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           linkedCafeId,
@@ -235,11 +235,9 @@ export async function approveSubmission(req, env) {
           merged.category,
           merged.oakerman_pick,
           merged.manager_pick,
-          "approved",
-          approvedAt,
+          "candidate",
           reviewer.user_id,
-          reviewer.user_id,
-          approvedAt,
+          createdAt,
         )
         .run();
     }
