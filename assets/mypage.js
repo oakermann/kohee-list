@@ -208,26 +208,55 @@ async function syncFavoritesIfNeeded() {
 }
 
 function renderSubmissions(items) {
-  $("sub-list").innerHTML = items.length
-    ? items
-        .map(
-          (item) => `
-      <article class="card">
-        <div class="card-top">
-          <div class="card-name">${esc(item.name)}</div>
-          <span class="status ${esc(item.status)}">${statusLabel(item.status)}</span>
-        </div>
-        <div class="card-text">
-          ${esc(item.address)}<br>
-          처리현황: ${statusLabel(item.status)}
-          ${item.created_at ? `<br>제보일: ${esc(formatDate(item.created_at))}` : ""}
-          ${item.reject_reason ? `<br>반려 사유: ${esc(item.reject_reason)}` : ""}
-        </div>
-      </article>
-    `,
-        )
-        .join("")
-    : `<div class="empty">아직 제보 내역이 없습니다.</div>`;
+  const list = $("sub-list");
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "아직 제보 내역이 없습니다.";
+    list.replaceChildren(empty);
+    return;
+  }
+
+  const cards = items.map((item) => {
+    const article = document.createElement("article");
+    article.className = "card";
+
+    const top = document.createElement("div");
+    top.className = "card-top";
+
+    const name = document.createElement("div");
+    name.className = "card-name";
+    name.textContent = item.name || "";
+
+    const status = document.createElement("span");
+    status.className = ["status", item.status].filter(Boolean).join(" ");
+    status.textContent = statusLabel(item.status);
+
+    top.append(name, status);
+
+    const text = document.createElement("div");
+    text.className = "card-text";
+    text.append(document.createTextNode(item.address || ""));
+    text.append(document.createElement("br"));
+    text.append(
+      document.createTextNode(`처리현황: ${statusLabel(item.status)}`),
+    );
+    if (item.created_at) {
+      text.append(document.createElement("br"));
+      text.append(
+        document.createTextNode(`제보일: ${formatDate(item.created_at)}`),
+      );
+    }
+    if (item.reject_reason) {
+      text.append(document.createElement("br"));
+      text.append(document.createTextNode(`반려 사유: ${item.reject_reason}`));
+    }
+
+    article.append(top, text);
+    return article;
+  });
+
+  list.replaceChildren(...cards);
 }
 
 function renderErrorReports(items) {
