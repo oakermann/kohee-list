@@ -231,34 +231,79 @@ function renderSubmissions(items) {
 }
 
 function renderErrorReports(items) {
-  $("error-list").innerHTML = items.length
-    ? items
-        .map(
-          (item) => `
-      <article class="card">
-        <div class="card-top">
-          <div class="card-name">${esc(item.title)}</div>
-          <span class="status ${esc(item.status)}">${errorStatusLabel(item.status)}</span>
-        </div>
-        <div class="card-text">
-          ${item.page ? `관련 항목: ${esc(item.page)}<br>` : ""}
-          ${esc(item.content)}
-          ${item.created_at ? `<br>제보일: ${esc(formatDate(item.created_at))}` : ""}
-        </div>
-        <div class="answer-box">
-          <div class="answer-label">운영진 답변</div>
-          <div class="answer-text">${item.reply_message ? esc(item.reply_message) : "아직 답변이 등록되지 않았습니다."}</div>
-          ${
-            item.replied_by_username || item.replied_at
-              ? `<div class="answer-meta">${item.replied_by_username ? `답변자: ${esc(item.replied_by_username)}` : ""}${item.replied_by_username && item.replied_at ? " / " : ""}${item.replied_at ? `답변일: ${esc(formatDate(item.replied_at))}` : ""}</div>`
-              : ""
-          }
-        </div>
-      </article>
-    `,
-        )
-        .join("")
-    : `<div class="empty">아직 오류 제보 내역이 없습니다.</div>`;
+  const list = $("error-list");
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "아직 오류 제보 내역이 없습니다.";
+    list.replaceChildren(empty);
+    return;
+  }
+
+  const cards = items.map((item) => {
+    const article = document.createElement("article");
+    article.className = "card";
+
+    const top = document.createElement("div");
+    top.className = "card-top";
+
+    const name = document.createElement("div");
+    name.className = "card-name";
+    name.textContent = item.title || "";
+
+    const status = document.createElement("span");
+    status.className = ["status", item.status].filter(Boolean).join(" ");
+    status.textContent = errorStatusLabel(item.status);
+
+    top.append(name, status);
+
+    const text = document.createElement("div");
+    text.className = "card-text";
+    if (item.page) {
+      text.append(document.createTextNode(`관련 항목: ${item.page}`));
+      text.append(document.createElement("br"));
+    }
+    text.append(document.createTextNode(item.content || ""));
+    if (item.created_at) {
+      text.append(document.createElement("br"));
+      text.append(
+        document.createTextNode(`제보일: ${formatDate(item.created_at)}`),
+      );
+    }
+
+    const answer = document.createElement("div");
+    answer.className = "answer-box";
+
+    const answerLabel = document.createElement("div");
+    answerLabel.className = "answer-label";
+    answerLabel.textContent = "운영진 답변";
+
+    const answerText = document.createElement("div");
+    answerText.className = "answer-text";
+    answerText.textContent =
+      item.reply_message || "아직 답변이 등록되지 않았습니다.";
+
+    answer.append(answerLabel, answerText);
+
+    if (item.replied_by_username || item.replied_at) {
+      const meta = document.createElement("div");
+      meta.className = "answer-meta";
+      const parts = [];
+      if (item.replied_by_username) {
+        parts.push(`답변자: ${item.replied_by_username}`);
+      }
+      if (item.replied_at) {
+        parts.push(`답변일: ${formatDate(item.replied_at)}`);
+      }
+      meta.textContent = parts.join(" / ");
+      answer.append(meta);
+    }
+
+    article.append(top, text, answer);
+    return article;
+  });
+
+  list.replaceChildren(...cards);
 }
 
 async function loadPage() {
