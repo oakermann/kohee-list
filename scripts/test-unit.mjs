@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  addCafe,
   applyPickPermission,
   deleteCafe,
   getData,
@@ -380,6 +381,79 @@ assert.doesNotMatch(
   /WHERE\s+deleted_at/i,
 );
 
+function createAddCafeTestEnv(role = "manager") {
+  const statements = [];
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      DB: {
+        prepare(sql) {
+          const statement = { sql, bindings: [] };
+          statements.push(statement);
+          return {
+            bind(...values) {
+              statement.bindings = values;
+              return this;
+            },
+            first: async () => {
+              if (sql.includes("FROM sessions")) {
+                return {
+                  session_id: "session-1",
+                  user_id: `${role}-user`,
+                  username: role,
+                  role,
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                };
+              }
+              return null;
+            },
+            run: async () => ({ success: true }),
+          };
+        },
+      },
+    },
+  };
+}
+
+async function requestAddCafe(role = "manager") {
+  const { env, statements } = createAddCafeTestEnv(role);
+  const response = await addCafe(
+    new Request("https://kohee.test/add", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer unit-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        name: "New Cafe",
+        address: "Seoul",
+        desc: "Coffee",
+        category: ["espresso"],
+      }),
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+const managerAdd = await requestAddCafe("manager");
+assert.equal(managerAdd.response.status, 201);
+const managerAddInsert = managerAdd.statements.find((statement) =>
+  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+);
+assert.ok(managerAddInsert);
+assert.match(managerAddInsert.sql, /status/i);
+assert.equal(managerAddInsert.bindings[12], "candidate");
+
+const adminAdd = await requestAddCafe("admin");
+assert.equal(adminAdd.response.status, 201);
+const adminAddInsert = adminAdd.statements.find((statement) =>
+  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+);
+assert.equal(adminAddInsert.bindings[12], "candidate");
+
 function createDeleteCafeTestEnv(role = "manager") {
   const statements = [];
   const cafe = {
@@ -611,6 +685,7 @@ function createResetCsvTestEnv(role = "admin") {
                   name: "Imported Cafe",
                   oakerman_pick: 1,
                   manager_pick: 0,
+                  status: "candidate",
                   deleted_at: "2026-04-28T00:00:00.000Z",
                 };
               }
@@ -695,7 +770,8 @@ const resetImportUpdate = resetResult.statements.find((statement) =>
   /UPDATE\s+cafes\s+SET\s+name\s*=\s*\?/i.test(statement.sql),
 );
 assert.ok(resetImportUpdate);
-assert.match(resetImportUpdate.sql, /status\s*=\s*'approved'/i);
+assert.match(resetImportUpdate.sql, /status\s*=\s*\?/i);
+assert.equal(resetImportUpdate.bindings[11], "candidate");
 assert.match(resetImportUpdate.sql, /deleted_at\s*=\s*NULL/i);
 
 const unauthorizedReset = await requestResetCsv("manager");
@@ -730,7 +806,7 @@ for (const invalidCsv of [
   );
 }
 
-function createImportCsvTestEnv(role = "admin") {
+function createImportCsvTestEnv(role = "admin", existingCafe = true) {
   const statements = [];
   return {
     statements,
@@ -757,11 +833,13 @@ function createImportCsvTestEnv(role = "admin") {
                 };
               }
               if (sql.includes("FROM cafes") && sql.includes("lower(trim")) {
+                if (!existingCafe) return null;
                 return {
                   id: "cafe-1",
                   name: "Imported Cafe",
                   oakerman_pick: 1,
                   manager_pick: 0,
+                  status: "candidate",
                   deleted_at: "2026-04-28T00:00:00.000Z",
                 };
               }
@@ -778,8 +856,9 @@ function createImportCsvTestEnv(role = "admin") {
 async function requestImportCsv(
   role = "admin",
   body = "name,address,desc\nImported Cafe,Seoul,Coffee",
+  existingCafe = true,
 ) {
-  const { env, statements } = createImportCsvTestEnv(role);
+  const { env, statements } = createImportCsvTestEnv(role, existingCafe);
   const response = await importCsv(
     new Request("https://kohee.test/import-csv", {
       method: "POST",
@@ -798,10 +877,39 @@ const importUpdate = importStatements.find((statement) =>
   /UPDATE\s+cafes\s+SET/i.test(statement.sql),
 );
 assert.ok(importUpdate);
-assert.match(importUpdate.sql, /status\s*=\s*'approved'/i);
+assert.match(importUpdate.sql, /status\s*=\s*\?/i);
+assert.equal(importUpdate.bindings[11], "candidate");
 assert.match(importUpdate.sql, /deleted_at\s*=\s*NULL/i);
 assert.match(importUpdate.sql, /deleted_by\s*=\s*NULL/i);
 assert.match(importUpdate.sql, /delete_reason\s*=\s*NULL/i);
+
+const { response: importNewResponse, statements: importNewStatements } =
+  await requestImportCsv(
+    "admin",
+    "name,address,desc\nNew Cafe,Seoul,Coffee",
+    false,
+  );
+assert.equal(importNewResponse.status, 200);
+const importNewInsert = importNewStatements.find((statement) =>
+  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+);
+assert.ok(importNewInsert);
+assert.match(importNewInsert.sql, /status/i);
+assert.equal(importNewInsert.bindings[12], "candidate");
+
+const {
+  response: importApprovedResponse,
+  statements: importApprovedStatements,
+} = await requestImportCsv(
+  "admin",
+  "name,address,desc,status\nApproved CSV,Seoul,Coffee,approved",
+  false,
+);
+assert.equal(importApprovedResponse.status, 200);
+const importApprovedInsert = importApprovedStatements.find((statement) =>
+  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+);
+assert.equal(importApprovedInsert.bindings[12], "approved");
 
 const invalidImport = await requestImportCsv(
   "admin",

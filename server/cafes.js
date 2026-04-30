@@ -135,11 +135,12 @@ export async function addCafe(req, env) {
 
     const id = crypto.randomUUID();
     const updatedAt = nowIso();
+    const status = "candidate";
     await env.DB.prepare(
       `INSERT INTO cafes(
         id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-        oakerman_pick, manager_pick, created_by, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        oakerman_pick, manager_pick, status, created_by, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -154,6 +155,7 @@ export async function addCafe(req, env) {
         payload.category,
         payload.oakerman_pick,
         payload.manager_pick,
+        status,
         user.user_id,
         updatedAt,
       )
@@ -167,6 +169,7 @@ export async function addCafe(req, env) {
       after: {
         id,
         ...payload,
+        status,
         created_by: user.user_id,
         updated_at: updatedAt,
       },

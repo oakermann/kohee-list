@@ -382,14 +382,21 @@ restore 기능은 필요하다.
 
 권장 기본값:
 
-- admin import: `approved`
-- manager import: `candidate` 또는 `approved` 중 정책 결정 필요
+- CSV에 `status`가 없으면 신규 row는 `candidate`
+- CSV가 기존 row를 update하면 기존 `status` 유지
+- CSV에서 `status = 'approved'`가 명시된 경우에만 approved로 반영
 
 안전 기본안:
 
 - CSV import는 기본 `candidate`로 넣고, `publish=1` 또는 admin confirm이 있을 때만 `approved`로 넣는다.
 
-단, 현재 운영에서 CSV가 공개 데이터 관리 수단으로 쓰이고 있으므로 1차 구현에서는 호환성을 위해 admin CSV import는 `approved` 기본을 유지할 수 있다.
+현재 구현 기준:
+
+- `/add`로 생성되는 신규 cafe는 `candidate`로 저장한다.
+- 신규 CSV row는 `status`가 비어 있으면 `candidate`로 저장한다.
+- 기존 CSV duplicate/update row는 `status`가 비어 있으면 기존 row의 `status`를 유지한다.
+- resetCsv에서 기존 row를 재활성화할 때도 `status`를 무조건 `approved`로 바꾸지 않는다.
+- CSV로 공개 상태를 만들려면 `status` 컬럼에 `approved`가 명시되어 있어야 한다.
 
 ### 기존 approved cafe update
 

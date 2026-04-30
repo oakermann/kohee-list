@@ -36,6 +36,7 @@ const ALLOWED_CAFE_STATUSES = new Set([
   "hidden",
   "rejected",
 ]);
+const DEFAULT_IMPORTED_CAFE_STATUS = "candidate";
 
 export function parseCsvLine(line) {
   const out = [];
@@ -161,13 +162,19 @@ function validateRowBody(body) {
 
 async function findDuplicateCafe(env, name, address) {
   return env.DB.prepare(
-    `SELECT id, name, oakerman_pick, manager_pick
+    `SELECT id, name, oakerman_pick, manager_pick, status, deleted_at
      FROM cafes
      WHERE lower(trim(name)) = lower(trim(?)) AND lower(trim(address)) = lower(trim(?))
      LIMIT 1`,
   )
     .bind(name, address)
     .first();
+}
+
+function resolveCsvCafeStatus(csvStatus, existing) {
+  if (csvStatus) return csvStatus;
+  if (existing) return existing.status || "approved";
+  return DEFAULT_IMPORTED_CAFE_STATUS;
 }
 
 async function analyzeCsv(raw, env, user) {
@@ -216,6 +223,7 @@ async function analyzeCsv(raw, env, user) {
       if (!payload.name || !payload.address || !payload.desc) {
         throw new Error("name/address/desc required");
       }
+      const status = resolveCsvCafeStatus(body.status, existing);
 
       if (action === "add") stats.wouldAdd += 1;
       if (action === "update") stats.wouldUpdate += 1;
@@ -229,7 +237,14 @@ async function analyzeCsv(raw, env, user) {
         });
       }
 
-      rows.push({ row: rowNumber, action, givenId, existing, payload });
+      rows.push({
+        row: rowNumber,
+        action,
+        givenId,
+        existing,
+        payload,
+        status,
+      });
       if (previewRows.length < 20) {
         previewRows.push({
           row: rowNumber,
@@ -276,8 +291,8 @@ async function applyCsvRows(env, user, rows) {
       await env.DB.prepare(
         `INSERT INTO cafes(
           id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-          oakerman_pick, manager_pick, created_by, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          oakerman_pick, manager_pick, status, created_by, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           id,
@@ -292,6 +307,7 @@ async function applyCsvRows(env, user, rows) {
           row.payload.category,
           row.payload.oakerman_pick,
           row.payload.manager_pick,
+          row.status,
           user.user_id,
           timestamp,
         )
@@ -303,7 +319,7 @@ async function applyCsvRows(env, user, rows) {
     await env.DB.prepare(
       `UPDATE cafes SET
         name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, manager_pick = ?, status = 'approved',
+        oakerman_pick = ?, manager_pick = ?, status = ?,
         deleted_at = NULL, deleted_by = NULL, delete_reason = NULL, updated_at = ?
        WHERE id = ?`,
     )
@@ -319,6 +335,7 @@ async function applyCsvRows(env, user, rows) {
         row.payload.category,
         row.payload.oakerman_pick,
         row.payload.manager_pick,
+        row.status,
         timestamp,
         id,
       )
