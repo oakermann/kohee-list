@@ -1,0 +1,243 @@
+:root {
+  --bg: #f0f0f0;
+  --ink: #1a1a1a;
+  --line: #1a1a1a;
+  --point: #ff5a00;
+  --thick: 4px;
+  --thin: 2px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Pretendard Variable", sans-serif !important;
+  color: var(--ink) !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  background: var(--bg);
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex-direction: column;
+  padding: 32px 0 56px;
+}
+
+.page {
+  width: 92%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hero {
+  border: var(--thick) solid var(--line);
+  background: var(--bg);
+  text-align: center;
+}
+
+.hero-title {
+  padding: 18px 14px 8px;
+  font-size: clamp(1.6rem, 7vw, 2.35rem);
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.04rem;
+}
+
+.account-line {
+  padding: 0 14px 14px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.45;
+  opacity: 0.78;
+  word-break: keep-all;
+}
+
+.action-strip {
+  border-top: var(--thin) solid var(--line);
+  padding: 9px 10px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  background: white;
+}
+
+.mini-btn,
+.mini-btn:visited {
+  border: var(--thin) solid var(--line);
+  background: var(--bg);
+  min-height: 32px;
+  padding: 7px 12px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.14;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.01rem;
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.08);
+}
+
+.mini-btn.primary {
+  background: var(--line);
+  color: white !important;
+}
+
+.section {
+  border: var(--thick) solid var(--line);
+  background: white;
+}
+
+.section-head {
+  padding: 11px 12px 9px;
+  text-align: center;
+  font-size: 0.94rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.section-rule {
+  border-top: var(--thin) solid var(--line);
+}
+
+.section-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guide {
+  border: 1px dashed rgba(26, 26, 26, 0.55);
+  padding: 12px 10px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.5;
+  opacity: 0.74;
+  word-break: keep-all;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: var(--thin) solid var(--line);
+  background: white;
+  border-radius: 0;
+  padding: 9px 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.01rem;
+  box-shadow: 3px 3px 0 rgba(26, 26, 26, 0.08);
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(26, 26, 26, 0.45) !important;
+  font-weight: 800;
+}
+
+input:focus,
+textarea:focus {
+  background: #fffdf8;
+  box-shadow: 3px 3px 0 rgba(255, 90, 0, 0.22);
+}
+
+textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  min-height: 42px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  font-size: 0.63rem;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.02rem;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.08);
+}
+
+.chip input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--line);
+}
+
+.chip:has(input:checked) {
+  background: var(--line);
+  box-shadow: 2px 2px 0 rgba(255, 90, 0, 0.32);
+}
+
+.chip:has(input:checked) span {
+  color: white !important;
+}
+
+.msg {
+  min-height: 18px;
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1.45;
+  text-align: center;
+  opacity: 0.82;
+  word-break: keep-all;
+}
+
+@media (min-width: 420px) {
+  .cat-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  body {
+    padding-top: 24px;
+  }
+
+  .page {
+    width: 94%;
+  }
+
+  .hero-title {
+    font-size: 1.55rem;
+  }
+
+  .cat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -12,12 +12,15 @@
 
 - `index.html`
 - `admin.html`
-- `login.html`
-- `submit.html`
 - `mypage.html`
 - `.pages-deploy/*.html` 동기화본
 
 이 블록들이 남아 있는 동안 `style-src 'unsafe-inline'` 제거는 UI를 깨뜨릴 수 있다.
+
+정리 완료:
+
+- `login.html` / `.pages-deploy/login.html`: `assets/login.css`로 이동
+- `submit.html` / `.pages-deploy/submit.html`: `assets/submit.css`로 이동
 
 ### Inline style attributes
 
