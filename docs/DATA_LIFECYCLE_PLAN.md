@@ -187,6 +187,29 @@ deleted_at: NULL이면 살아 있음, 값이 있으면 삭제됨
 
 `candidate`는 신규 제보/후보 등록/CSV 후보 workflow에만 사용한다.
 
+### Cafe 검증 및 category 부여 정책
+
+KOHEE LIST는 넓은 지도/리뷰/광고 디렉터리가 아니라 큐레이션된 cafe selection 서비스다. `candidate` cafe는 public 노출 전에 내부 검증을 거쳐야 하며, admin approval이 있어야 `approved`로 승격된다.
+
+검증 원칙:
+
+- `candidate` cafe는 내부 검증 전 public API에 노출하지 않는다.
+- admin approval은 public 노출을 허용하는 명시적 결정이다.
+- public 응답에는 내부 메모, 선정 근거, 제보자 정보, 관리자 정보, audit/security 정보를 노출하지 않는다.
+- category는 단순 메뉴 존재가 아니라 KOHEE LIST 기준에 맞는 근거와 강도에 따라 부여한다.
+
+category별 검증 강도:
+
+| category    | 검증 기준                                                                         |
+| ----------- | --------------------------------------------------------------------------------- |
+| `espresso`  | espresso 품질/정체성을 뒷받침하는 정밀한 근거가 필요하다.                         |
+| `drip`      | drip/hand brew 중심성이 확인되는 정밀한 근거가 필요하다.                          |
+| `decaf`     | decaf 제공과 서비스 적합성이 확인되는 일반 tag-fit 검증이 필요하다.               |
+| `instagram` | 공간/시각적 특성이 tag와 맞는지 확인하는 일반 tag-fit 검증이 필요하다.            |
+| `dessert`   | dessert가 방문 이유가 될 정도로 어울리는지 확인하는 일반 tag-fit 검증이 필요하다. |
+
+`espresso`와 `drip`은 단순히 메뉴에 존재한다는 이유만으로 부여하지 않는다. `decaf`, `instagram`, `dessert`도 public 노출 전 후보 검토에서 category-fit을 확인한다.
+
 ### 추천 인덱스
 
 권장:

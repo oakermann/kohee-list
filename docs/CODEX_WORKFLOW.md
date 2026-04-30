@@ -23,6 +23,9 @@ KOHEE LIST 2의 고정 규칙:
 - role은 `admin`, `manager`, `user`만 사용한다.
 - `super_admin`은 만들지 않는다.
 - 기본 category는 `espresso`, `drip`, `decaf`, `instagram`, `dessert`만 사용한다.
+- category는 단순 메뉴 존재가 아니라 근거와 강도에 따라 부여한다.
+- `espresso`, `drip`은 정밀한 근거 기반 검증이 필요하다.
+- `decaf`, `instagram`, `dessert`는 일반 tag-fit 검증이 필요하다.
 - 새우톤은 쓰지 않는다.
 - 기능 추가는 사용자가 명시한 경우에만 한다.
 
