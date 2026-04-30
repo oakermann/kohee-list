@@ -51,6 +51,18 @@ h1 {
   letter-spacing: -0.05rem;
   line-height: 1.2;
 }
+.hero-title {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.hero-title-bracket {
+  position: relative;
+  top: 0.04em;
+}
+.hero-title-text {
+  display: inline-block;
+}
 
 .main-box {
   background: var(--bg);
