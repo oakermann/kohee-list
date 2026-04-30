@@ -134,6 +134,19 @@ function openModal(cafeId) {
   $("modal-bg").style.display = "flex";
 }
 
+function setupModalOverlay() {
+  const overlay = $("modal-bg");
+  const modal = overlay?.querySelector(".modal");
+  if (!overlay || !modal) return;
+
+  overlay.addEventListener("click", () => {
+    overlay.style.display = "none";
+  });
+  modal.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+}
+
 function renderMenu(user) {
   const roleButton =
     user.role === "admin"
@@ -290,3 +303,5 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
   syncFavoritesIfNeeded().catch(() => {});
 });
+
+setupModalOverlay();
