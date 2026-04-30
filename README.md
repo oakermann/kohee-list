@@ -186,19 +186,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\export-csv.ps1
 Import CSV through the live admin API:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Username <ADMIN_OR_MANAGER_USERNAME> -Password <PASSWORD>
+powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Username <ADMIN_USERNAME> -Password <PASSWORD>
 ```
 
 Preview CSV import without changing D1:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Username <ADMIN_OR_MANAGER_USERNAME> -Password <PASSWORD> -DryRun
+powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Username <ADMIN_USERNAME> -Password <PASSWORD> -DryRun
 ```
 
 Legacy bearer-token mode is still supported for maintenance scripts:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Token <ADMIN_OR_MANAGER_TOKEN>
+powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\backups\cafes-latest.csv -Token <ADMIN_TOKEN>
 ```
 
 ## Smoke Test Coverage
@@ -231,8 +231,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\bac
   - admin can set `oakerman_pick`
 
 The script creates a temporary user and removes it during cleanup.
-It deliberately does not execute `/reset-csv` because that endpoint deletes all
-live cafe rows.
+It deliberately does not execute `/reset-csv` because that endpoint performs a
+large lifecycle reset that marks active cafes deleted before applying the CSV.
 
 ## CSV Backup Flow
 
@@ -241,7 +241,7 @@ live cafe rows.
   - Writes a timestamped CSV backup into `backups/`
 - `scripts/import-csv.ps1`
   - Sends a CSV file to `/import-csv`
-  - Requires a manager/admin bearer token
+  - Requires admin credentials or an admin bearer token
   - Supports `-DryRun` to validate without writing
 
 This keeps backup and restore aligned with the same CSV schema used by the admin console.
@@ -272,7 +272,8 @@ This keeps backup and restore aligned with the same CSV schema used by the admin
 - 로그아웃 가능
 - 일반 유저 제보 가능
 - 일반 유저가 `/add` 접근 시 `403`
-- manager/admin이 카페 추가 가능
+- manager/admin이 후보 카페 추가 가능
+- 후보 카페는 admin 승인 전 public `/data`에 노출되지 않음
 - manager가 `oakerman_pick` 변경 못함
 - admin은 `oakerman_pick` 변경 가능
 - CSV dry-run 가능

@@ -3,23 +3,26 @@
 이 문서는 KOHEE LIST의 `cafes` 데이터를 복구 가능한 lifecycle로 전환하기 위한 계획이다.
 실제 D1 migration 준비 상태와 백업 절차는 `docs/D1_MIGRATION_RUNBOOK.md`를 함께 확인한다.
 
-이 문서는 lifecycle 설계와 phase별 실행 계획을 정리한다. `schema.sql`과 migration 파일은 1차 구현에 맞춰 반영했지만, 런타임 코드와 원격 D1은 아직 수정하지 않는다.
+이 문서는 lifecycle 설계와 phase별 실행 계획, 그리고 현재 구현 정책을 정리한다.
 
 현재 구현 상태:
 
 - `migrations/0005_cafe_lifecycle.sql`은 `cafes` lifecycle 컬럼과 기본 인덱스를 추가하는 1차 migration 파일이다.
 - `schema.sql`은 신규 DB 생성 기준으로 lifecycle 컬럼을 포함한다.
-- 원격 D1에는 아직 적용하지 않았다.
-- public/admin API 필터, `deleteCafe` soft delete 전환, `resetCsv` 안전화, restore/purge/archive 기능은 다음 phase에서 별도로 구현한다.
+- 원격 D1에는 `0005_cafe_lifecycle.sql`이 적용되어 있다.
+- public `/data`는 `status = 'approved' AND deleted_at IS NULL`인 cafe만 반환한다.
+- 신규 `/add` 및 status가 없는 신규 CSV row는 `candidate`로 저장된다.
+- admin만 candidate cafe를 `/approve-cafe`로 `approved` 승격할 수 있다.
+- `deleteCafe`와 `resetCsv`는 recoverable lifecycle 동작으로 처리한다.
+- purge/archive는 아직 구현하지 않았으며 별도 위험 작업으로 분리한다.
 
 ## 1. 현재 데이터 흐름
 
 ### Public data
 
 - `GET /data`는 `server/cafes.js`의 `getData`에서 처리한다.
-- 현재 쿼리는 `cafes` 테이블에서 공개 필드만 선택해 `updated_at DESC`로 반환한다.
+- 현재 쿼리는 `cafes` 테이블에서 `status = 'approved' AND deleted_at IS NULL` 조건을 만족하는 공개 필드만 선택해 `updated_at DESC`로 반환한다.
 - `toCafeResponse`는 반환 필드를 whitelist로 제한한다.
-- 현재 `cafes` 테이블에는 `status`, `deleted_at`이 없으므로 공개 여부를 DB 상태로 구분할 수 없다.
 
 현재 공개 필드:
 
@@ -41,42 +44,43 @@
 
 - `POST /add`: `manager`, `admin`이 `cafes` row를 바로 생성한다.
 - `POST /edit`: `manager`, `admin`이 기존 `cafes` row를 수정한다.
-- `POST /delete`: `manager`, `admin`이 `deleteCafe`를 실행한다.
+- `POST /approve-cafe`: `admin`만 candidate cafe를 public 공개 가능한 `approved` 상태로 승격한다.
+- `POST /delete`: `admin`만 `deleteCafe`를 실행한다.
+- `POST /restore`: `admin`만 soft-deleted cafe를 복구한다.
 - `POST /reset-csv`: `admin`만 `resetCsv`를 실행한다.
-- `POST /import-csv`: `manager`, `admin`이 CSV import를 실행한다.
+- `POST /import-csv`: `admin`만 CSV import를 실행한다.
 
 ### Current deleteCafe
 
-현재 `deleteCafe`는 hard delete다.
+현재 `deleteCafe`는 recoverable soft delete다.
 
-1. `favorites`에서 해당 `cafe_id` row를 삭제한다.
-2. `submissions.linked_cafe_id`를 `NULL`로 바꾼다.
-3. `cafes` row를 `DELETE FROM cafes WHERE id = ?`로 삭제한다.
+1. 대상 cafe row를 유지한다.
+2. `deleted_at`, `deleted_by`, `updated_at`을 기록한다.
+3. favorites와 submissions 연결은 물리 삭제하지 않는다.
 4. `audit_logs`에 `cafe.delete`를 기록한다.
 
-문제:
+유지 원칙:
 
-- `cafes` row가 삭제되면 복구할 수 없다.
-- 삭제 이유, 삭제자, 삭제 시각을 `cafes` 자체에 남기지 않는다.
-- 즐겨찾기 관계가 삭제되어 복구 후 사용자 즐겨찾기를 되살릴 수 없다.
-- 제보와 카페 연결이 끊겨 복구 후 원래 연결을 알 수 없다.
+- deleted cafe는 public `/data`에 노출하지 않는다.
+- 복구는 같은 cafe id를 살리는 방식으로 유지한다.
+- 완전 삭제/purge는 별도 승인된 위험 작업으로만 다룬다.
 
 ### Current resetCsv
 
-현재 `resetCsv`는 전체 cafes hard reset이다.
+현재 `resetCsv`는 recoverable lifecycle reset이다.
 
 1. 전체 `cafes` 개수를 센다.
-2. 모든 cafe와 연결된 `favorites`를 삭제한다.
-3. 모든 cafe와 연결된 `submissions.linked_cafe_id`를 `NULL`로 바꾼다.
-4. `DELETE FROM cafes`를 실행한다.
-5. `audit_logs`에 `csv.reset`을 기록한다.
+2. active cafe를 `deleted_at` 기반으로 soft delete 처리한다.
+3. CSV row를 add/update로 적용한다.
+4. status가 없는 신규 CSV row는 `candidate`로 저장한다.
+5. 기존 row update는 CSV에 status가 없으면 기존 status를 유지한다.
+6. `audit_logs`에 `csv.reset`을 기록한다.
 
-문제:
+유지 원칙:
 
-- 대량 데이터 손실 위험이 크다.
-- 복구 가능한 상태 필드가 없다.
+- cafe row와 linked references를 물리 삭제하지 않는다.
 - 백업 강제, diff, rollback 절차가 API 레벨에서 보장되지 않는다.
-- reset 이후 public API는 빈 배열을 반환한다.
+- reset 이후 public API는 `approved`이면서 `deleted_at IS NULL`인 cafe만 반환한다.
 
 ### Current CSV import
 
@@ -89,19 +93,19 @@
 - dry-run은 preview, duplicateRows, failedRows를 반환한다.
 - 적용 후 `audit_logs`에 `csv.import`를 기록한다.
 
-문제:
+유지 원칙:
 
-- 신규 row를 공개 후보인지 승인 데이터인지 구분할 상태 필드가 없다.
+- 신규 row는 CSV에 `status`가 없으면 `candidate`로 저장한다.
+- CSV가 기존 row를 update할 때 `status`가 없으면 기존 status를 유지한다.
+- CSV에서 `status = 'approved'`가 명시된 경우에만 approved로 반영한다.
 - CSV에서 누락된 기존 cafe를 유지할지 숨길지 정책이 없다.
-- 삭제된 cafe와 같은 `name + address`가 들어올 때 복구인지 신규인지 판단할 상태 필드가 없다.
 - category allowlist, lat/lng range, invalid URL 실패 처리와 연결된 lifecycle 정책이 부족하다.
 
 ### Favorites and submissions
 
 - `favorites`는 `cafes(id)`를 FK로 참조하며 `ON DELETE CASCADE`다.
-- 현재 `deleteCafe`는 FK cascade 이전에 favorites를 직접 삭제한다.
 - `submissions.linked_cafe_id`는 `cafes(id)`를 참조하며 `ON DELETE SET NULL`이다.
-- 현재 `deleteCafe`와 `resetCsv`는 submissions 연결을 직접 `NULL`로 바꾼다.
+- 현재 `deleteCafe`와 `resetCsv`는 cafe row를 물리 삭제하지 않으므로 FK cascade와 `ON DELETE SET NULL`이 일반 삭제 흐름에서 실행되지 않는다.
 
 soft delete 전환 시 원칙:
 
@@ -567,18 +571,19 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 
 ## 9. 테스트 계획
 
-다음 실행 모드에서 추가할 테스트 후보:
+현재 lifecycle 구현에서 유지해야 할 테스트 기준:
 
 - public API가 `deleted_at IS NOT NULL` cafe를 제외한다.
 - public API가 `status != 'approved'` cafe를 제외한다.
 - public API field whitelist가 유지된다.
 - `deleteCafe`가 `DELETE FROM cafes`를 사용하지 않는다.
-- `deleteCafe`가 `deleted_at`, `deleted_by`, `delete_reason`을 기록한다.
+- `deleteCafe`가 `deleted_at`, `deleted_by`를 기록한다.
 - `restoreCafe`가 `deleted_at`을 `NULL`로 복구한다.
-- restore 기본 status가 `hidden` 또는 명시 정책대로 동작한다.
+- restore가 기존 status를 임의로 public 승격하지 않는다.
 - `resetCsv`가 hard delete하지 않는다.
 - CSV import가 기존 `status`를 의도 없이 바꾸지 않는다.
-- CSV import가 deleted cafe와 duplicate를 만나면 conflict로 보고한다.
+- CSV import가 status 없는 신규 row를 `candidate`로 저장한다.
+- CSV import/update/reset이 status를 의도 없이 `approved`로 강제하지 않는다.
 - favorites 조회가 hidden/deleted cafe를 제외한다.
 - favorite add가 hidden/deleted cafe를 거부한다.
 - manager/admin 권한 차이를 확인한다.
@@ -595,6 +600,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 ### Phase 1. migration 문서/백업 확인
 
 - 목표: 실제 원격 적용 전에 백업/복구 절차 확정.
+- 상태: 완료.
 - 수정 파일: docs 또는 운영 문서만.
 - 위험도: 낮음.
 - 검증: 문서 변경만, `npm run verify:release`.
@@ -603,6 +609,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 ### Phase 2. schema/migration 추가
 
 - 목표: `cafes` lifecycle 컬럼과 인덱스 추가.
+- 상태: 완료.
 - 수정 파일: `schema.sql`, `migrations/**`.
 - 위험도: 높음.
 - 검증: local D1 또는 dry-run, schema consistency, unit tests.
@@ -611,6 +618,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 ### Phase 3. public API 필터 추가
 
 - 목표: public `/data`가 approved + not deleted만 반환.
+- 상태: 완료.
 - 수정 파일: `server/cafes.js`, 필요 시 `server/favorites.js`.
 - 위험도: 중간.
 - 검증: public API 필터 테스트, smoke `/data`.
@@ -619,6 +627,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 ### Phase 4. soft delete + restore
 
 - 목표: `DELETE FROM cafes` 제거.
+- 상태: 완료.
 - 수정 파일: `server/cafes.js`.
 - 위험도: 중간-높음.
 - 검증: delete 테스트, audit log 테스트, public 제외 확인.
@@ -627,6 +636,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 ### Phase 5. restoreCafe/admin UI 최소 연결
 
 - 목표: 삭제된 cafe 복구 경로 제공.
+- 상태: 완료.
 - 수정 파일: `server/cafes.js`, `server/routes.js`, `assets/admin.js`, `.pages-deploy/assets/admin.js`, 필요 HTML.
 - 위험도: 중간.
 - 검증: admin 권한, restore 후 public 비노출 기본, admin 목록 확인.
@@ -635,6 +645,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 ### Phase 6. resetCsv hard delete 제거
 
 - 목표: hard reset 제거와 replace workflow 기반 전환.
+- 상태: 완료.
 - 수정 파일: `server/cafes.js`, `server/csv.js`, admin assets, scripts.
 - 위험도: 높음.
 - 검증: dry-run, confirm phrase, backup 존재 확인, audit log.
@@ -643,6 +654,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 ### Phase 6.5. purge/archive 정책 구현
 
 - 목표: soft deleted 데이터가 장기간 누적될 때 안전하게 완전 삭제하거나 archive하는 별도 위험 작업을 제공한다.
+- 상태: 미구현. 별도 승인된 위험 작업으로만 진행한다.
 - 수정 파일: 별도 설계 후 결정한다.
 - 위험도: 높음.
 - 검증: dry-run, confirm phrase, admin-only 권한, backup 존재 확인, audit log 확인.
@@ -664,6 +676,7 @@ Purge/archive 원칙:
 ### Phase 7. CSV import 상태 정책 연결
 
 - 목표: CSV import가 status/deleted 정책을 지키도록 변경.
+- 상태: 완료.
 - 수정 파일: `server/csv.js`, admin assets, tests.
 - 위험도: 중간.
 - 검증: duplicate/deleted/candidate/import tests.
@@ -672,12 +685,15 @@ Purge/archive 원칙:
 ### Phase 8. 테스트 확대
 
 - 목표: lifecycle 회귀 방지.
+- 상태: 진행 중. 현재 핵심 lifecycle unit test는 `scripts/test-unit.mjs`에 포함되어 있다.
 - 수정 파일: `scripts/test-unit.mjs`, 필요 시 `tests/**`, smoke scripts.
 - 위험도: 낮음-중간.
 - 검증: `npm run test:unit`, `npm run verify:release`.
 - rollback: test commit revert.
 
-## 11. 다음 실행 모드 프롬프트 초안
+## 11. 완료된 1차 실행 프롬프트 기록
+
+아래 초안은 lifecycle 1차 구현 전 작성된 기록이다. 현재는 migration 적용, public 필터, soft delete, restore, resetCsv 안전화, CSV status 정책, admin approval flow가 구현되어 있다. 다음 작업 지시로 재사용하지 않는다.
 
 ```text
 [목표]
