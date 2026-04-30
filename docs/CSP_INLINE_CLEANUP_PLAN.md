@@ -8,29 +8,23 @@
 
 ### Inline style blocks
 
-각 HTML은 자체 `<style>` 블록을 포함한다.
+현재 known HTML `<style>` 블록 blocker:
 
-- `index.html`
-- `mypage.html`
-- `.pages-deploy/*.html` 동기화본
-
-이 블록들이 남아 있는 동안 `style-src 'unsafe-inline'` 제거는 UI를 깨뜨릴 수 있다.
+- 없음
 
 정리 완료:
 
 - `login.html` / `.pages-deploy/login.html`: `assets/login.css`로 이동
 - `submit.html` / `.pages-deploy/submit.html`: `assets/submit.css`로 이동
 - `admin.html` / `.pages-deploy/admin.html`: `assets/admin.css`로 이동
+- `index.html` / `.pages-deploy/index.html`: `assets/index.css`로 이동
+- `mypage.html` / `.pages-deploy/mypage.html`: `assets/mypage.css`로 이동
 
 ### Inline style attributes
 
-현재 inline `style=` 속성이 남아 있다.
+현재 known HTML `style=` 속성 blocker:
 
-- `index.html`: notice 표시와 일부 first viewport helper style
-- `mypage.html`: modal heading style
-- `.pages-deploy/*.html` 동기화본
-
-이 속성들이 남아 있는 동안 `style-src 'unsafe-inline'` 제거는 레이아웃을 깨뜨릴 수 있다.
+- 없음
 
 ### Inline event handlers
 
