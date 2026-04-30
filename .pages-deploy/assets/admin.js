@@ -231,7 +231,7 @@ function renderCafeList() {
         <div class="mini">ID: ${esc(cafe.id)}${isDuplicateCafe(cafe) ? " (중복)" : ""}</div>
         ${cafe.deleted_at ? `<div class="mini">삭제됨: ${esc(formatDateTime(cafe.deleted_at))}</div>` : ""}
         <div class="mini">${esc(cafe.address)}</div>
-        <div class="btns" style="margin-top:6px;">
+        <div class="btns admin-actions">
           <button type="button" class="pick-cafe" data-id="${esc(cafe.id)}">선택</button>
           ${cafe.deleted_at && isAdmin() ? `<button type="button" class="restore-cafe" data-id="${esc(cafe.id)}">복구</button>` : ""}
         </div>
@@ -275,12 +275,12 @@ function renderSubmissions() {
     .map(
       (submission) => `
     <div class="item">
-      <h3>${esc(submission.name)} <small style="font-size:.72rem;">(${esc(submission.username)})</small></h3>
+      <h3>${esc(submission.name)} <small class="admin-small">(${esc(submission.username)})</small></h3>
       <div class="mini">${esc(submission.address)}</div>
       <div class="mini">${esc(submission.desc)}</div>
       <div class="mini">추천 이유: ${esc(submission.reason || "-")}</div>
       <div class="mini">상태: ${statusLabel(submission.status)}${submission.reject_reason ? ` / 반려 사유: ${esc(submission.reject_reason)}` : ""}</div>
-      <div class="btns" style="margin-top:6px;">
+      <div class="btns admin-actions">
         <button type="button" class="s-approve" data-id="${esc(submission.id)}">승인</button>
         <button type="button" class="s-edit-approve" data-id="${esc(submission.id)}">수정 후 승인</button>
         <button type="button" class="s-reject warn" data-id="${esc(submission.id)}">반려</button>
@@ -323,7 +323,7 @@ function renderReviewedSubmissions() {
     .map(
       (submission) => `
     <div class="item">
-      <h3>${esc(submission.name)} <small style="font-size:.72rem;">(${esc(submission.username)})</small></h3>
+      <h3>${esc(submission.name)} <small class="admin-small">(${esc(submission.username)})</small></h3>
       <div class="mini">${esc(submission.address)}</div>
       <div class="mini">처리: ${statusLabel(submission.status)}${submission.reviewed_by_username ? ` / 담당: ${esc(submission.reviewed_by_username)}` : ""}</div>
       ${submission.linked_cafe_id ? `<div class="mini">연결 cafe id: ${esc(submission.linked_cafe_id)}</div>` : ""}
@@ -358,7 +358,7 @@ function renderErrorReports() {
     .map(
       (report) => `
     <div class="item">
-      <h3>${esc(report.title)} <small style="font-size:.72rem;">(${esc(report.username)})</small></h3>
+      <h3>${esc(report.title)} <small class="admin-small">(${esc(report.username)})</small></h3>
       <div class="mini">관련: ${esc(report.page || "-")}</div>
       <div class="mini">${esc(report.content)}</div>
       <div class="mini">상태: ${errorStatusLabel(report.status)}${report.resolved_by_username ? ` / 처리: ${esc(report.resolved_by_username)}` : ""}${report.resolved_at ? ` / ${esc(formatDateTime(report.resolved_at))}` : ""}</div>
@@ -770,13 +770,13 @@ function renderUsers() {
     .map(
       (user) => `
     <div class="item">
-      <h3>${esc(user.username)} <small style="font-size:.72rem;">(${esc(roleLabel(user.role))})</small></h3>
+      <h3>${esc(user.username)} <small class="admin-small">(${esc(roleLabel(user.role))})</small></h3>
       <div class="mini">가입일: ${esc(user.created_at || "-")}</div>
       ${
         user.role === "admin"
           ? `<div class="mini">admin 계정은 권한 변경 대상에서 제외됩니다.</div>`
           : `
-          <div class="btns" style="margin-top:6px;">
+          <div class="btns admin-actions">
             <button type="button" class="user-pick" data-username="${esc(user.username)}" data-role="${esc(user.role)}">권한 관리에 입력</button>
           </div>
         `

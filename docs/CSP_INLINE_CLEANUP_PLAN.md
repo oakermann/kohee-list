@@ -11,7 +11,6 @@
 각 HTML은 자체 `<style>` 블록을 포함한다.
 
 - `index.html`
-- `admin.html`
 - `mypage.html`
 - `.pages-deploy/*.html` 동기화본
 
@@ -21,13 +20,13 @@
 
 - `login.html` / `.pages-deploy/login.html`: `assets/login.css`로 이동
 - `submit.html` / `.pages-deploy/submit.html`: `assets/submit.css`로 이동
+- `admin.html` / `.pages-deploy/admin.html`: `assets/admin.css`로 이동
 
 ### Inline style attributes
 
 현재 inline `style=` 속성이 남아 있다.
 
 - `index.html`: notice 표시와 일부 first viewport helper style
-- `admin.html`: section spacing, divider, count/message spacing
 - `mypage.html`: modal heading style
 - `.pages-deploy/*.html` 동기화본
 
