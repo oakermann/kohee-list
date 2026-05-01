@@ -2,8 +2,10 @@ import {
   $,
   CAT_MAP,
   api,
+  buildNaverMapUrls,
   cleanParts,
   clearAuthToken,
+  getCity,
   getStorageValue,
   openNaverMapForCafe,
   safeHttpUrl,
@@ -33,6 +35,33 @@ function safeText(value) {
   return text.toLowerCase() === "undefined" || text.toLowerCase() === "null"
     ? ""
     : text;
+}
+
+async function shareCafeMap(cafe) {
+  const text = `[코히 리스트] ${cafe.name}\n주소: ${cafe.address}`;
+  const keyword = cafe.name
+    ? `${cafe.name} ${getCity(cafe.address || "")}`
+    : "";
+  const mapUrl = keyword ? buildNaverMapUrls(keyword).webUrl : "";
+
+  if (mapUrl) {
+    return shareCafe(cafe, mapUrl);
+  }
+
+  if (navigator.share) {
+    await navigator.share({
+      title: "코히 리스트 공유",
+      text,
+    });
+    return "shared";
+  }
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return "copied";
+  }
+
+  throw new Error(text);
 }
 
 function cafeCategories(cafe) {
@@ -547,7 +576,7 @@ function openModal(cafeId) {
   setButtonAction("btn-map", () => openNaverMapForCafe(cafe));
   setButtonAction("btn-share", async () => {
     try {
-      const mode = await shareCafe(cafe);
+      const mode = await shareCafeMap(cafe);
       if (mode === "copied") alert("클립보드에 복사되었습니다.");
     } catch (error) {
       alert(error.message);
