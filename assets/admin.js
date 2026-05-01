@@ -202,17 +202,21 @@ async function loadCafes() {
 }
 
 function renderCafeList() {
+  const list = $("cafe-list");
   const query = $("cafe-search").value.trim().toLowerCase();
   if (!state.cafes.length) {
-    $("cafe-list").innerHTML = emptyState(
-      "등록된 카페 데이터가 없습니다. 기존 데이터는 CSV 업로드로 먼저 넣어 주세요.",
-    );
+    const empty = document.createElement("div");
+    empty.className = "item empty-state";
+    empty.textContent =
+      "등록된 카페 데이터가 없습니다. 기존 데이터는 CSV 업로드로 먼저 넣어 주세요.";
+    list.replaceChildren(empty);
     return;
   }
   if (!query) {
-    $("cafe-list").innerHTML = emptyState(
-      "카페명을 검색하면 기존 카페 카드가 표시됩니다.",
-    );
+    const empty = document.createElement("div");
+    empty.className = "item empty-state";
+    empty.textContent = "카페명을 검색하면 기존 카페 카드가 표시됩니다.";
+    list.replaceChildren(empty);
     return;
   }
 
@@ -222,48 +226,93 @@ function renderCafeList() {
     )
     .slice(0, 120);
 
-  $("cafe-list").innerHTML = rows.length
-    ? rows
-        .map(
-          (cafe) => `
-      <div class="item">
-        <h3>${esc(cafe.name)}</h3>
-        <div class="mini">ID: ${esc(cafe.id)}${isDuplicateCafe(cafe) ? " (중복)" : ""}</div>
-        <div class="mini">상태: ${statusLabel(cafe.status)}</div>
-        ${cafe.deleted_at ? `<div class="mini">삭제됨: ${esc(formatDateTime(cafe.deleted_at))}</div>` : ""}
-        <div class="mini">${esc(cafe.address)}</div>
-        <div class="btns admin-actions">
-          <button type="button" class="pick-cafe" data-id="${esc(cafe.id)}">선택</button>
-          ${!cafe.deleted_at && cafe.status === "candidate" && isAdmin() ? `<button type="button" class="approve-cafe" data-id="${esc(cafe.id)}">승인</button>` : ""}
-          ${cafe.deleted_at && isAdmin() ? `<button type="button" class="restore-cafe" data-id="${esc(cafe.id)}">복구</button>` : ""}
-        </div>
-      </div>
-    `,
-        )
-        .join("")
-    : emptyState("검색 결과가 없습니다.");
+  if (!rows.length) {
+    const empty = document.createElement("div");
+    empty.className = "item empty-state";
+    empty.textContent = "검색 결과가 없습니다.";
+    list.replaceChildren(empty);
+    return;
+  }
 
-  [...document.querySelectorAll(".pick-cafe")].forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const cafe = state.cafes.find((item) => item.id === btn.dataset.id);
-      if (!cafe) return;
+  const cards = rows.map((cafe) => {
+    const item = document.createElement("div");
+    item.className = "item";
+
+    const name = document.createElement("h3");
+    name.textContent = cafe.name || "";
+
+    const id = document.createElement("div");
+    id.className = "mini";
+    id.textContent = `ID: ${cafe.id}${isDuplicateCafe(cafe) ? " (중복)" : ""}`;
+
+    const status = document.createElement("div");
+    status.className = "mini";
+    status.textContent = `상태: ${statusLabel(cafe.status)}`;
+
+    item.append(name, id, status);
+
+    if (cafe.deleted_at) {
+      const deleted = document.createElement("div");
+      deleted.className = "mini";
+      deleted.textContent = `삭제됨: ${formatDateTime(cafe.deleted_at)}`;
+      item.append(deleted);
+    }
+
+    const address = document.createElement("div");
+    address.className = "mini";
+    address.textContent = cafe.address || "";
+
+    const actions = document.createElement("div");
+    actions.className = "btns admin-actions";
+
+    const pick = document.createElement("button");
+    pick.type = "button";
+    pick.className = "pick-cafe";
+    pick.dataset.id = cafe.id;
+    pick.textContent = "선택";
+    pick.addEventListener("click", () => {
+      const selectedCafe = state.cafes.find(
+        (item) => item.id === pick.dataset.id,
+      );
+      if (!selectedCafe) return;
       clearEditApproveMode(false);
-      fillCafeForm(cafe);
+      fillCafeForm(selectedCafe);
       $("save-cafe-btn").textContent = "저장";
       $("delete-btn").textContent = isAdmin() ? "삭제" : "닫기";
       openCafeForm();
     });
+
+    actions.append(pick);
+
+    if (!cafe.deleted_at && cafe.status === "candidate" && isAdmin()) {
+      const approve = document.createElement("button");
+      approve.type = "button";
+      approve.className = "approve-cafe";
+      approve.dataset.id = cafe.id;
+      approve.textContent = "승인";
+      approve.addEventListener("click", () =>
+        approveCafe(approve.dataset.id).catch((error) => alert(error.message)),
+      );
+      actions.append(approve);
+    }
+
+    if (cafe.deleted_at && isAdmin()) {
+      const restore = document.createElement("button");
+      restore.type = "button";
+      restore.className = "restore-cafe";
+      restore.dataset.id = cafe.id;
+      restore.textContent = "복구";
+      restore.addEventListener("click", () =>
+        restoreCafe(restore.dataset.id).catch((error) => alert(error.message)),
+      );
+      actions.append(restore);
+    }
+
+    item.append(address, actions);
+    return item;
   });
-  [...document.querySelectorAll(".restore-cafe")].forEach((btn) => {
-    btn.addEventListener("click", () =>
-      restoreCafe(btn.dataset.id).catch((error) => alert(error.message)),
-    );
-  });
-  [...document.querySelectorAll(".approve-cafe")].forEach((btn) => {
-    btn.addEventListener("click", () =>
-      approveCafe(btn.dataset.id).catch((error) => alert(error.message)),
-    );
-  });
+
+  list.replaceChildren(...cards);
 }
 
 async function loadSubmissions() {
