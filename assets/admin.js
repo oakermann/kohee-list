@@ -959,43 +959,66 @@ async function loadUsers() {
 }
 
 function renderUsers() {
+  const list = $("user-list");
   $("user-count").textContent = `검색 결과 ${state.users.length}명`;
   if (!state.users.length) {
-    $("user-list").innerHTML = emptyState("해당 아이디의 회원이 없습니다.");
+    const empty = document.createElement("div");
+    empty.className = "item empty-state";
+    empty.textContent = "해당 아이디의 회원이 없습니다.";
+    list.replaceChildren(empty);
     return;
   }
 
-  $("user-list").innerHTML = state.users
-    .map(
-      (user) => `
-    <div class="item">
-      <h3>${esc(user.username)} <small class="admin-small">(${esc(roleLabel(user.role))})</small></h3>
-      <div class="mini">가입일: ${esc(user.created_at || "-")}</div>
-      ${
-        user.role === "admin"
-          ? `<div class="mini">admin 계정은 권한 변경 대상에서 제외됩니다.</div>`
-          : `
-          <div class="btns admin-actions">
-            <button type="button" class="user-pick" data-username="${esc(user.username)}" data-role="${esc(user.role)}">권한 관리에 입력</button>
-          </div>
-        `
-      }
-    </div>
-  `,
-    )
-    .join("");
+  const items = state.users.map((user) => {
+    const item = document.createElement("div");
+    item.className = "item";
 
-  [...document.querySelectorAll(".user-pick")].forEach((btn) => {
-    btn.addEventListener("click", () => {
-      $("role-username").value = btn.dataset.username || "";
-      $("role-value").value =
-        btn.dataset.role === "manager" ? "manager" : "user";
-      $("role-username").scrollIntoView({
-        behavior: "smooth",
-        block: "center",
+    const title = document.createElement("h3");
+    title.append(document.createTextNode(user.username || ""));
+    title.append(document.createTextNode(" "));
+    const role = document.createElement("small");
+    role.className = "admin-small";
+    role.textContent = `(${roleLabel(user.role)})`;
+    title.append(role);
+    item.append(title);
+
+    const createdAt = document.createElement("div");
+    createdAt.className = "mini";
+    createdAt.textContent = `가입일: ${user.created_at || "-"}`;
+    item.append(createdAt);
+
+    if (user.role === "admin") {
+      const notice = document.createElement("div");
+      notice.className = "mini";
+      notice.textContent = "admin 계정은 권한 변경 대상에서 제외됩니다.";
+      item.append(notice);
+    } else {
+      const actions = document.createElement("div");
+      actions.className = "btns admin-actions";
+
+      const pick = document.createElement("button");
+      pick.type = "button";
+      pick.className = "user-pick";
+      pick.dataset.username = user.username || "";
+      pick.dataset.role = user.role || "";
+      pick.textContent = "권한 관리에 입력";
+      pick.addEventListener("click", () => {
+        $("role-username").value = pick.dataset.username || "";
+        $("role-value").value =
+          pick.dataset.role === "manager" ? "manager" : "user";
+        $("role-username").scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       });
-    });
+      actions.append(pick);
+      item.append(actions);
+    }
+
+    return item;
   });
+
+  list.replaceChildren(...items);
 }
 
 async function init() {
