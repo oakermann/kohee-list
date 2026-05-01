@@ -35,10 +35,13 @@ function cafeTags(cafe) {
   return tags;
 }
 
-function tagHtml(cafe) {
-  return cafeTags(cafe)
-    .map((tag) => `<span class="tag-small">${esc(tag)}</span>`)
-    .join("");
+function tagNodes(cafe) {
+  return cafeTags(cafe).map((tag) => {
+    const node = document.createElement("span");
+    node.className = "tag-small";
+    node.textContent = tag;
+    return node;
+  });
 }
 
 function favoriteCafe(cafeId) {
@@ -90,7 +93,7 @@ function openModal(cafeId) {
   if (!cafe) return;
 
   openModalCafeId = String(cafe.id);
-  $("m-tags").innerHTML = tagHtml(cafe);
+  $("m-tags").replaceChildren(...tagNodes(cafe));
   updateFavoriteButton(cafe.id);
   $("btn-favorite").onclick = async () => {
     try {
@@ -169,19 +172,31 @@ function renderMenu(user) {
 }
 
 function renderFavorites(items) {
-  $("fav-list").innerHTML = items.length
-    ? items
-        .map(
-          (item) => `
-      <article class="card fav-card" data-cafe-id="${esc(item.cafe.id)}">
-        <div class="card-name">${esc(item.cafe.name)}</div>
-      </article>
-    `,
-        )
-        .join("")
-    : `<div class="empty">찜한 카페가 없습니다.</div>`;
+  const list = $("fav-list");
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "찜한 카페가 없습니다.";
+    list.replaceChildren(empty);
+    return;
+  }
 
-  [...document.querySelectorAll(".fav-card")].forEach((card) => {
+  const cards = items.map((item) => {
+    const card = document.createElement("article");
+    card.className = "card fav-card";
+    card.dataset.cafeId = item.cafe.id;
+
+    const name = document.createElement("div");
+    name.className = "card-name";
+    name.textContent = item.cafe.name;
+
+    card.append(name);
+    return card;
+  });
+
+  list.replaceChildren(...cards);
+
+  cards.forEach((card) => {
     card.addEventListener("click", () => {
       openModal(card.dataset.cafeId);
     });
