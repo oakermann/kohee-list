@@ -273,43 +273,89 @@ async function loadSubmissions() {
 }
 
 function renderSubmissions() {
+  const list = $("sub-list");
   if (!state.submissions.length) {
-    $("sub-list").innerHTML = emptyState("해당 상태의 제보가 없습니다.");
+    const empty = document.createElement("div");
+    empty.className = "item empty-state";
+    empty.textContent = "해당 상태의 제보가 없습니다.";
+    list.replaceChildren(empty);
     return;
   }
 
-  $("sub-list").innerHTML = state.submissions
-    .map(
-      (submission) => `
-    <div class="item">
-      <h3>${esc(submission.name)} <small class="admin-small">(${esc(submission.username)})</small></h3>
-      <div class="mini">${esc(submission.address)}</div>
-      <div class="mini">${esc(submission.desc)}</div>
-      <div class="mini">추천 이유: ${esc(submission.reason || "-")}</div>
-      <div class="mini">상태: ${statusLabel(submission.status)}${submission.reject_reason ? ` / 반려 사유: ${esc(submission.reject_reason)}` : ""}</div>
-      <div class="btns admin-actions">
-        <button type="button" class="s-approve" data-id="${esc(submission.id)}">승인</button>
-        <button type="button" class="s-edit-approve" data-id="${esc(submission.id)}">수정 후 승인</button>
-        <button type="button" class="s-reject warn" data-id="${esc(submission.id)}">반려</button>
-        <button type="button" class="s-dup" data-id="${esc(submission.id)}">중복 처리</button>
-      </div>
-    </div>
-  `,
-    )
-    .join("");
+  const items = state.submissions.map((submission) => {
+    const item = document.createElement("div");
+    item.className = "item";
 
-  [...document.querySelectorAll(".s-approve")].forEach((btn) =>
-    btn.addEventListener("click", () => approve(btn.dataset.id, false)),
-  );
-  [...document.querySelectorAll(".s-edit-approve")].forEach((btn) =>
-    btn.addEventListener("click", () => approve(btn.dataset.id, true)),
-  );
-  [...document.querySelectorAll(".s-reject")].forEach((btn) =>
-    btn.addEventListener("click", () => reject(btn.dataset.id)),
-  );
-  [...document.querySelectorAll(".s-dup")].forEach((btn) =>
-    btn.addEventListener("click", () => markDuplicate(btn.dataset.id)),
-  );
+    const title = document.createElement("h3");
+    title.append(document.createTextNode(submission.name || ""));
+    const user = document.createElement("small");
+    user.className = "admin-small";
+    user.textContent = `(${submission.username || ""})`;
+    title.append(document.createTextNode(" "), user);
+
+    const address = document.createElement("div");
+    address.className = "mini";
+    address.textContent = submission.address || "";
+
+    const desc = document.createElement("div");
+    desc.className = "mini";
+    desc.textContent = submission.desc || "";
+
+    const reason = document.createElement("div");
+    reason.className = "mini";
+    reason.textContent = `추천 이유: ${submission.reason || "-"}`;
+
+    const status = document.createElement("div");
+    status.className = "mini";
+    status.textContent = `상태: ${statusLabel(submission.status)}${
+      submission.reject_reason
+        ? ` / 반려 사유: ${submission.reject_reason}`
+        : ""
+    }`;
+
+    const actions = document.createElement("div");
+    actions.className = "btns admin-actions";
+
+    const approveBtn = document.createElement("button");
+    approveBtn.type = "button";
+    approveBtn.className = "s-approve";
+    approveBtn.dataset.id = submission.id;
+    approveBtn.textContent = "승인";
+    approveBtn.addEventListener("click", () =>
+      approve(approveBtn.dataset.id, false),
+    );
+
+    const editApproveBtn = document.createElement("button");
+    editApproveBtn.type = "button";
+    editApproveBtn.className = "s-edit-approve";
+    editApproveBtn.dataset.id = submission.id;
+    editApproveBtn.textContent = "수정 후 승인";
+    editApproveBtn.addEventListener("click", () =>
+      approve(editApproveBtn.dataset.id, true),
+    );
+
+    const rejectBtn = document.createElement("button");
+    rejectBtn.type = "button";
+    rejectBtn.className = "s-reject warn";
+    rejectBtn.dataset.id = submission.id;
+    rejectBtn.textContent = "반려";
+    rejectBtn.addEventListener("click", () => reject(rejectBtn.dataset.id));
+
+    const duplicateBtn = document.createElement("button");
+    duplicateBtn.type = "button";
+    duplicateBtn.className = "s-dup";
+    duplicateBtn.dataset.id = submission.id;
+    duplicateBtn.textContent = "중복 처리";
+    duplicateBtn.addEventListener("click", () =>
+      markDuplicate(duplicateBtn.dataset.id),
+    );
+
+    actions.append(approveBtn, editApproveBtn, rejectBtn, duplicateBtn);
+    item.append(title, address, desc, reason, status, actions);
+    return item;
+  });
+
+  list.replaceChildren(...items);
 }
 
 async function loadReviewedSubmissions() {
