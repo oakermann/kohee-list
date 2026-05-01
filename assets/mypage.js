@@ -8,7 +8,6 @@ import {
   formatDate,
   getStorageValue,
   jsonApi,
-  modalDescHtml,
   openNaverMapForCafe,
   roleLabel,
   setStorageValue,
@@ -42,6 +41,43 @@ function tagNodes(cafe) {
     node.textContent = tag;
     return node;
   });
+}
+
+function modalDescNodes(desc, signature) {
+  const nodes = [];
+  const signatureParts = cleanParts(signature);
+
+  if (desc) {
+    const text = document.createElement("div");
+    text.className = "modal-copy-text";
+    text.textContent = desc;
+    nodes.push(text);
+  }
+
+  if (signatureParts.length) {
+    const wrap = document.createElement("div");
+    wrap.className = "modal-signature";
+
+    const label = document.createElement("div");
+    label.className = "modal-signature-label";
+    label.textContent = "대표메뉴";
+
+    const value = document.createElement("div");
+    value.className = "modal-signature-value";
+    value.textContent = signatureParts.join(", ");
+
+    wrap.append(label, value);
+    nodes.push(wrap);
+  }
+
+  if (!nodes.length) {
+    const empty = document.createElement("div");
+    empty.className = "modal-copy-empty";
+    empty.textContent = "소개가 아직 없습니다.";
+    nodes.push(empty);
+  }
+
+  return nodes;
 }
 
 function favoriteCafe(cafeId) {
@@ -104,7 +140,7 @@ function openModal(cafeId) {
   };
 
   $("m-name").innerText = cafe.name;
-  $("m-desc").innerHTML = modalDescHtml(cafe.desc, cafe.signature);
+  $("m-desc").replaceChildren(...modalDescNodes(cafe.desc, cafe.signature));
 
   $("btn-map").onclick = () => openNaverMapForCafe(cafe);
   $("btn-share").onclick = async () => {
