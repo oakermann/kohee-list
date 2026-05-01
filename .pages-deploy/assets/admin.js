@@ -356,44 +356,97 @@ function getReplyInput(id) {
 }
 
 function renderErrorReports() {
+  const list = $("error-list");
   if (!state.errorReports.length) {
-    $("error-list").innerHTML = emptyState("해당 상태의 오류 제보가 없습니다.");
+    const empty = document.createElement("div");
+    empty.className = "item empty-state";
+    empty.textContent = "해당 상태의 오류 제보가 없습니다.";
+    list.replaceChildren(empty);
     return;
   }
 
-  $("error-list").innerHTML = state.errorReports
-    .map(
-      (report) => `
-    <div class="item">
-      <h3>${esc(report.title)} <small class="admin-small">(${esc(report.username)})</small></h3>
-      <div class="mini">관련: ${esc(report.page || "-")}</div>
-      <div class="mini">${esc(report.content)}</div>
-      <div class="mini">상태: ${errorStatusLabel(report.status)}${report.resolved_by_username ? ` / 처리: ${esc(report.resolved_by_username)}` : ""}${report.resolved_at ? ` / ${esc(formatDateTime(report.resolved_at))}` : ""}</div>
-      <div class="reply-block">
-        <div class="reply-meta">
-          ${
-            report.reply_message
-              ? `운영진 답변 등록됨${report.replied_by_username ? ` / ${esc(report.replied_by_username)}` : ""}${report.replied_at ? ` / ${esc(formatDateTime(report.replied_at))}` : ""}`
-              : "운영진 답변이 아직 없습니다."
-          }
-        </div>
-        <textarea class="error-reply-input" data-id="${esc(report.id)}" placeholder="이 오류 제보에 대한 답변을 입력해 주세요.">${esc(report.reply_message || "")}</textarea>
-        <div class="reply-actions">
-          <button type="button" class="e-reply primary" data-id="${esc(report.id)}">${report.reply_message ? "답변 수정" : "답변 저장"}</button>
-          ${report.status === "open" ? `<button type="button" class="e-resolve" data-id="${esc(report.id)}">처리 완료</button>` : ""}
-        </div>
-      </div>
-    </div>
-  `,
-    )
-    .join("");
+  const items = state.errorReports.map((report) => {
+    const item = document.createElement("div");
+    item.className = "item";
 
-  [...document.querySelectorAll(".e-reply")].forEach((btn) => {
-    btn.addEventListener("click", () => saveErrorReply(btn.dataset.id));
+    const title = document.createElement("h3");
+    title.append(document.createTextNode(report.title || ""));
+    const user = document.createElement("small");
+    user.className = "admin-small";
+    user.textContent = `(${report.username || ""})`;
+    title.append(document.createTextNode(" "), user);
+
+    const page = document.createElement("div");
+    page.className = "mini";
+    page.textContent = `관련: ${report.page || "-"}`;
+
+    const content = document.createElement("div");
+    content.className = "mini";
+    content.textContent = report.content || "";
+
+    const status = document.createElement("div");
+    status.className = "mini";
+    const statusParts = [`상태: ${errorStatusLabel(report.status)}`];
+    if (report.resolved_by_username) {
+      statusParts.push(`처리: ${report.resolved_by_username}`);
+    }
+    if (report.resolved_at) {
+      statusParts.push(formatDateTime(report.resolved_at));
+    }
+    status.textContent = statusParts.join(" / ");
+
+    const replyBlock = document.createElement("div");
+    replyBlock.className = "reply-block";
+
+    const replyMeta = document.createElement("div");
+    replyMeta.className = "reply-meta";
+    if (report.reply_message) {
+      const replyParts = ["운영진 답변 등록됨"];
+      if (report.replied_by_username)
+        replyParts.push(report.replied_by_username);
+      if (report.replied_at) replyParts.push(formatDateTime(report.replied_at));
+      replyMeta.textContent = replyParts.join(" / ");
+    } else {
+      replyMeta.textContent = "운영진 답변이 아직 없습니다.";
+    }
+
+    const input = document.createElement("textarea");
+    input.className = "error-reply-input";
+    input.dataset.id = report.id;
+    input.placeholder = "이 오류 제보에 대한 답변을 입력해 주세요.";
+    input.value = report.reply_message || "";
+
+    const actions = document.createElement("div");
+    actions.className = "reply-actions";
+
+    const replyBtn = document.createElement("button");
+    replyBtn.type = "button";
+    replyBtn.className = "e-reply primary";
+    replyBtn.dataset.id = report.id;
+    replyBtn.textContent = report.reply_message ? "답변 수정" : "답변 저장";
+    replyBtn.addEventListener("click", () =>
+      saveErrorReply(replyBtn.dataset.id),
+    );
+    actions.append(replyBtn);
+
+    if (report.status === "open") {
+      const resolveBtn = document.createElement("button");
+      resolveBtn.type = "button";
+      resolveBtn.className = "e-resolve";
+      resolveBtn.dataset.id = report.id;
+      resolveBtn.textContent = "처리 완료";
+      resolveBtn.addEventListener("click", () =>
+        resolveErrorReport(resolveBtn.dataset.id),
+      );
+      actions.append(resolveBtn);
+    }
+
+    replyBlock.append(replyMeta, input, actions);
+    item.append(title, page, content, status, replyBlock);
+    return item;
   });
-  [...document.querySelectorAll(".e-resolve")].forEach((btn) => {
-    btn.addEventListener("click", () => resolveErrorReport(btn.dataset.id));
-  });
+
+  list.replaceChildren(...items);
 }
 
 async function saveErrorReply(id) {
