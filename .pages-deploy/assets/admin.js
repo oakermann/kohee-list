@@ -365,26 +365,58 @@ async function loadReviewedSubmissions() {
 }
 
 function renderReviewedSubmissions() {
+  const list = $("reviewed-list");
   if (!state.reviewedSubmissions.length) {
-    $("reviewed-list").innerHTML = emptyState(
-      "해당 상태의 처리 내역이 없습니다.",
-    );
+    const empty = document.createElement("div");
+    empty.className = "item empty-state";
+    empty.textContent = "해당 상태의 처리 내역이 없습니다.";
+    list.replaceChildren(empty);
     return;
   }
 
-  $("reviewed-list").innerHTML = state.reviewedSubmissions
-    .map(
-      (submission) => `
-    <div class="item">
-      <h3>${esc(submission.name)} <small class="admin-small">(${esc(submission.username)})</small></h3>
-      <div class="mini">${esc(submission.address)}</div>
-      <div class="mini">처리: ${statusLabel(submission.status)}${submission.reviewed_by_username ? ` / 담당: ${esc(submission.reviewed_by_username)}` : ""}</div>
-      ${submission.linked_cafe_id ? `<div class="mini">연결 cafe id: ${esc(submission.linked_cafe_id)}</div>` : ""}
-      ${submission.reject_reason ? `<div class="mini">반려 사유: ${esc(submission.reject_reason)}</div>` : ""}
-    </div>
-  `,
-    )
-    .join("");
+  const items = state.reviewedSubmissions.map((submission) => {
+    const item = document.createElement("div");
+    item.className = "item";
+
+    const title = document.createElement("h3");
+    title.append(document.createTextNode(submission.name || ""));
+    const user = document.createElement("small");
+    user.className = "admin-small";
+    user.textContent = `(${submission.username || ""})`;
+    title.append(document.createTextNode(" "), user);
+
+    const address = document.createElement("div");
+    address.className = "mini";
+    address.textContent = submission.address || "";
+
+    const status = document.createElement("div");
+    status.className = "mini";
+    const statusParts = [`처리: ${statusLabel(submission.status)}`];
+    if (submission.reviewed_by_username) {
+      statusParts.push(`담당: ${submission.reviewed_by_username}`);
+    }
+    status.textContent = statusParts.join(" / ");
+
+    item.append(title, address, status);
+
+    if (submission.linked_cafe_id) {
+      const linkedCafe = document.createElement("div");
+      linkedCafe.className = "mini";
+      linkedCafe.textContent = `연결 cafe id: ${submission.linked_cafe_id}`;
+      item.append(linkedCafe);
+    }
+
+    if (submission.reject_reason) {
+      const rejectReason = document.createElement("div");
+      rejectReason.className = "mini";
+      rejectReason.textContent = `반려 사유: ${submission.reject_reason}`;
+      item.append(rejectReason);
+    }
+
+    return item;
+  });
+
+  list.replaceChildren(...items);
 }
 
 async function loadErrorReports() {
