@@ -557,3 +557,48 @@ Codex는 작업 완료 시 아래 항목을 보고한다.
 30. 테스트하지 못한 항목
 31. 추가 확인 필요한 부분
 32. 위험/주의 사항
+
+## KOHEE CODEX EFFICIENCY MODE v6
+
+This mode keeps Codex work scoped, fast, and verifiable. Use it with the
+existing KOHEE LIST rules. It does not replace security, lifecycle, deployment,
+or D1 migration rules.
+
+### Risk Levels
+
+| Risk | Use when | Default posture |
+| --- | --- | --- |
+| HIGH | Runtime behavior, API/server logic, auth, security, D1/schema, deployment, or broad user-visible behavior can change. | One task, one focused commit, one push after full verification. |
+| MEDIUM | Docs, workflow, tests, scripts, or narrow frontend/server changes with limited blast radius. | Keep an exact file allowlist and run the MEDIUM verification set. |
+| LOW | Tiny scoped edits inside an already identified file/function. | Inspect only the target function/file unless a direct dependency must be checked. |
+| AUDIT | Investigation, review, status check, or planning only. | No code change, no commit, no push, no deploy. |
+
+### Verification Matrix
+
+| Risk | Required verification |
+| --- | --- |
+| HIGH | `npm run check:deploy-sync`, `npm run test:unit`, `powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1`, `npm run verify:release`, `npm run format:check`, `git diff --check` |
+| MEDIUM | `npm run check:deploy-sync`, `npm run test:unit`, `npm run verify:release`, `git diff --check` |
+| LOW | `npm run check:deploy-sync`, `npm run test:unit`, `git diff --check` |
+| AUDIT | No code change, no commit, no push, no deploy. Run read-only checks only when useful. |
+
+### Scope Rules
+
+- Every prompt must declare an exact file and function allowlist when possible.
+- Do not perform broad refactors while completing feature, security, docs, or ops work.
+- LOW risk work inspects only the target function/file unless a direct dependency is required to avoid a mistake.
+- HIGH risk work stays one task per commit and one push after required verification passes.
+- If the requested scope starts to expand, stop and report the new scope instead of continuing.
+
+### Report Format
+
+Use this compact report format for v6 tasks:
+
+```text
+Risk:
+Files:
+Tests:
+Commit:
+Push:
+Risks:
+```
