@@ -258,6 +258,21 @@ async function syncFavoritesIfNeeded() {
   await loadFavorites();
 }
 
+function renderMe(user) {
+  const name = document.createTextNode(user.username || "");
+  const badge = document.createElement("span");
+  badge.className = "role-badge";
+  badge.textContent = roleLabel(user.role);
+  $("me").replaceChildren(name, document.createTextNode(" "), badge);
+}
+
+function renderEmpty(targetId, message) {
+  const empty = document.createElement("div");
+  empty.className = "empty";
+  empty.textContent = message;
+  $(targetId).replaceChildren(empty);
+}
+
 function renderSubmissions(items) {
   const list = $("sub-list");
   if (!items.length) {
@@ -394,8 +409,7 @@ async function loadPage() {
   }
 
   currentUser = meData.user;
-  $("me").innerHTML =
-    `${esc(currentUser.username)} <span class="role-badge">${roleLabel(currentUser.role)}</span>`;
+  renderMe(currentUser);
   renderMenu(currentUser);
 
   const [submissions, errorReports] = await Promise.all([
@@ -410,12 +424,9 @@ async function loadPage() {
 
 loadPage().catch((error) => {
   $("me").textContent = error.message;
-  $("fav-list").innerHTML =
-    `<div class="empty">찜 목록을 불러오지 못했습니다.</div>`;
-  $("sub-list").innerHTML =
-    `<div class="empty">제보 내역을 불러오지 못했습니다.</div>`;
-  $("error-list").innerHTML =
-    `<div class="empty">오류 제보 내역을 불러오지 못했습니다.</div>`;
+  renderEmpty("fav-list", "찜 목록을 불러오지 못했습니다.");
+  renderEmpty("sub-list", "제보 내역을 불러오지 못했습니다.");
+  renderEmpty("error-list", "오류 제보 내역을 불러오지 못했습니다.");
 });
 
 window.addEventListener("storage", (event) => {
