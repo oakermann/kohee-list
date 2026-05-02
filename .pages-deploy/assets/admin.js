@@ -140,12 +140,22 @@ function setEditApproveMode(submission) {
   state.editApproveId = submission.id;
   state.editApproveName = submission.name || "";
   openCafeForm(false);
-  $("review-mode").classList.remove("hidden");
-  $("review-mode").innerHTML = `
-    <h3>수정 후 승인 준비 중</h3>
-    <div class="mini">대상 제보: ${esc(state.editApproveName)}</div>
-    <div class="mini">아래 입력칸을 보완한 뒤 <b>수정 후 승인 저장</b>을 누르면 카페로 등록됩니다.</div>
-  `;
+  const reviewMode = $("review-mode");
+  const title = document.createElement("h3");
+  title.textContent = "수정 후 승인 준비 중";
+
+  const target = document.createElement("div");
+  target.className = "mini";
+  target.textContent = `대상 제보: ${state.editApproveName}`;
+
+  const guide = document.createElement("div");
+  guide.className = "mini";
+  const saveLabel = document.createElement("b");
+  saveLabel.textContent = "수정 후 승인 저장";
+  guide.append("아래 입력칸을 보완한 뒤 ", saveLabel, "을 누르면 카페로 등록됩니다.");
+
+  reviewMode.classList.remove("hidden");
+  reviewMode.replaceChildren(title, target, guide);
   $("save-cafe-btn").textContent = "수정 후 승인 저장";
   $("delete-btn").textContent = "취소";
 }
