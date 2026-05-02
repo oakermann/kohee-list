@@ -3,7 +3,6 @@ import {
   api,
   clearAuthToken,
   errorStatusLabel,
-  esc,
   formatDate,
   jsonApi,
   roleLabel,
@@ -55,10 +54,6 @@ function isDuplicateCafe(cafe) {
 
 function isAdmin() {
   return state.me?.role === "admin";
-}
-
-function emptyState(text) {
-  return `<div class="item empty-state">${esc(text)}</div>`;
 }
 
 function formatDateTime(value) {
@@ -205,9 +200,10 @@ async function loadCafes() {
     state.cafes = [];
     state.cafeKeyCounts = {};
     $("cafe-count").textContent = "카페 데이터를 불러오지 못했습니다.";
-    $("cafe-list").innerHTML = emptyState(
-      `카페 데이터 로드 실패: ${error.message}`,
-    );
+    const empty = document.createElement("div");
+    empty.className = "item empty-state";
+    empty.textContent = `카페 데이터 로드 실패: ${error.message}`;
+    $("cafe-list").replaceChildren(empty);
   }
 }
 
