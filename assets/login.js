@@ -1,4 +1,7 @@
-import { $, jsonApi } from "./common.js?v=20260426-1";
+import { $, clearAuthToken, jsonApi } from "./common.js?v=20260426-1";
+
+const SESSION_SAVE_ERROR =
+  "로그인 세션을 저장하지 못했습니다. Chrome 사이트 쿠키/권한 설정을 확인해 주세요.";
 
 function showTab(mode) {
   const isLoginMode = mode === "login";
@@ -16,10 +19,18 @@ async function call(path, payload) {
   });
 }
 
+async function verifyLoginSession() {
+  const data = await jsonApi("/me");
+  if (data?.user) return;
+  clearAuthToken();
+  throw new Error(SESSION_SAVE_ERROR);
+}
+
 async function doLogin() {
   const username = $("login-id").value.trim().toLowerCase();
   const password = $("login-pw").value;
   await call("/login", { username, password });
+  await verifyLoginSession();
   location.href = "index.html";
 }
 
@@ -51,6 +62,7 @@ async function doSignup() {
   }
 
   await call("/login", { username, password });
+  await verifyLoginSession();
   location.href = "index.html";
 }
 
