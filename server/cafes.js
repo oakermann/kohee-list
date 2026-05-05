@@ -364,6 +364,72 @@ export async function approveCafe(req, env) {
   });
 }
 
+async function setCafeHoldStatus(req, env, fromStatus, toStatus) {
+  return withGuard(req, env, async () => {
+    const user = await requireAuth(req, env);
+    requireRole(user, ["admin"]);
+
+    const body = await readJson(req);
+    const id = cleanText(body.id, 80);
+    if (!id) throw new HttpError(400, "id required");
+
+    const exists = await env.DB.prepare("SELECT * FROM cafes WHERE id = ?")
+      .bind(id)
+      .first();
+    if (!exists) throw new HttpError(404, "Cafe not found");
+    if (exists.deleted_at) {
+      throw new HttpError(400, "Restore cafe before status change");
+    }
+    if (exists.status !== fromStatus) {
+      throw new HttpError(400, `Only ${fromStatus} cafes can be updated`);
+    }
+
+    const updatedAt = nowIso();
+    if (toStatus === "hidden") {
+      await env.DB.prepare(
+        `UPDATE cafes
+         SET status = 'hidden', hidden_at = ?, hidden_by = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+        .bind(updatedAt, user.user_id, updatedAt, id)
+        .run();
+    } else {
+      await env.DB.prepare(
+        `UPDATE cafes
+         SET status = 'candidate', hidden_at = NULL, hidden_by = NULL, updated_at = ?
+         WHERE id = ?`,
+      )
+        .bind(updatedAt, id)
+        .run();
+    }
+
+    await safeWriteAuditLog(env, {
+      actorUserId: user.user_id,
+      action: toStatus === "hidden" ? "cafe.hold" : "cafe.unhold",
+      targetType: "cafe",
+      targetId: id,
+      before: exists,
+      after: {
+        id,
+        actor_role: user.role,
+        status: toStatus,
+        hidden_at: toStatus === "hidden" ? updatedAt : null,
+        hidden_by: toStatus === "hidden" ? user.user_id : null,
+      },
+    });
+
+    return json({ ok: true }, 200, req, env);
+  });
+}
+
+export async function holdCafe(req, env) {
+  return setCafeHoldStatus(req, env, "candidate", "hidden");
+}
+
+export async function unholdCafe(req, env) {
+  return setCafeHoldStatus(req, env, "hidden", "candidate");
+}
+
 export async function setNotice(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);

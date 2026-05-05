@@ -6,8 +6,10 @@ import {
   applyPickPermission,
   deleteCafe,
   getData,
+  holdCafe,
   listCafes,
   restoreCafe,
+  unholdCafe,
   toCafeResponse,
 } from "../server/cafes.js";
 import { importCsv, parseCsvLine, resetCsv } from "../server/csv.js";
@@ -754,6 +756,144 @@ assert.equal(hiddenCafeApprove.response.status, 400);
 assert.equal(
   hiddenCafeApprove.statements.some((statement) =>
     /UPDATE\s+cafes\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
+  ),
+  false,
+);
+
+async function requestCafeHoldAction(
+  action,
+  role = "manager",
+  cafeOverrides = {},
+) {
+  const { env, statements } = createDeleteCafeTestEnv(role);
+  const originalPrepare = env.DB.prepare;
+  env.DB.prepare = (sql) => {
+    const prepared = originalPrepare(sql);
+    if (sql.includes("SELECT * FROM cafes WHERE id = ?")) {
+      prepared.first = async () => ({
+        id: "cafe-1",
+        name: "Candidate Hold Cafe",
+        address: "Seoul",
+        desc: "Coffee",
+        lat: 37.5,
+        lng: 127,
+        signature: "[]",
+        beanShop: "",
+        instagram: "",
+        category: "[]",
+        oakerman_pick: 0,
+        manager_pick: 0,
+        created_by: "manager-user",
+        updated_at: "2026-04-28T00:00:00.000Z",
+        status: action === "hold" ? "candidate" : "hidden",
+        deleted_at: null,
+        deleted_by: null,
+        ...cafeOverrides,
+      });
+    }
+    return prepared;
+  };
+
+  const handler = action === "hold" ? holdCafe : unholdCafe;
+  const path = action === "hold" ? "/hold-cafe" : "/unhold-cafe";
+  const response = await handler(
+    new Request(`https://kohee.test${path}`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer unit-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ id: "cafe-1" }),
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+const adminHold = await requestCafeHoldAction("hold", "admin");
+assert.equal(adminHold.response.status, 200);
+const holdUpdate = adminHold.statements.find((statement) =>
+  /UPDATE\s+cafes\s+SET\s+status\s*=\s*'hidden'/i.test(statement.sql),
+);
+assert.ok(holdUpdate);
+assert.match(holdUpdate.sql, /hidden_at\s*=\s*\?/i);
+assert.match(holdUpdate.sql, /hidden_by\s*=\s*\?/i);
+assert.equal(holdUpdate.bindings[1], "admin-user");
+assert.equal(holdUpdate.bindings[3], "cafe-1");
+const holdAudit = adminHold.statements.find((statement) =>
+  /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+);
+assert.ok(holdAudit);
+assert.equal(holdAudit.bindings[2], "cafe.hold");
+assert.match(holdAudit.bindings[6], /"status":"hidden"/);
+assert.match(holdAudit.bindings[6], /"actor_role":"admin"/);
+assert.doesNotMatch(holdAudit.bindings[6], /password|session|secret/i);
+
+const adminUnhold = await requestCafeHoldAction("unhold", "admin");
+assert.equal(adminUnhold.response.status, 200);
+const unholdUpdate = adminUnhold.statements.find((statement) =>
+  /UPDATE\s+cafes\s+SET\s+status\s*=\s*'candidate'/i.test(statement.sql),
+);
+assert.ok(unholdUpdate);
+assert.match(unholdUpdate.sql, /hidden_at\s*=\s*NULL/i);
+assert.match(unholdUpdate.sql, /hidden_by\s*=\s*NULL/i);
+assert.equal(unholdUpdate.bindings[1], "cafe-1");
+const unholdAudit = adminUnhold.statements.find((statement) =>
+  /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+);
+assert.ok(unholdAudit);
+assert.equal(unholdAudit.bindings[2], "cafe.unhold");
+assert.match(unholdAudit.bindings[6], /"status":"candidate"/);
+assert.match(unholdAudit.bindings[6], /"hidden_at":null/);
+assert.doesNotMatch(unholdAudit.bindings[6], /password|session|secret/i);
+
+const managerHold = await requestCafeHoldAction("hold", "manager");
+assert.equal(managerHold.response.status, 403);
+assert.equal(
+  managerHold.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'hidden'/i.test(statement.sql),
+  ),
+  false,
+);
+
+const unauthorizedUnhold = await requestCafeHoldAction("unhold", "user");
+assert.equal(unauthorizedUnhold.response.status, 403);
+assert.equal(
+  unauthorizedUnhold.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'candidate'/i.test(statement.sql),
+  ),
+  false,
+);
+
+const deletedHold = await requestCafeHoldAction("hold", "admin", {
+  deleted_at: "2026-04-29T00:00:00.000Z",
+});
+assert.equal(deletedHold.response.status, 400);
+assert.equal(
+  deletedHold.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'hidden'/i.test(statement.sql),
+  ),
+  false,
+);
+
+const approvedHold = await requestCafeHoldAction("hold", "admin", {
+  status: "approved",
+});
+assert.equal(approvedHold.response.status, 400);
+assert.equal(
+  approvedHold.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'hidden'/i.test(statement.sql),
+  ),
+  false,
+);
+
+const candidateUnhold = await requestCafeHoldAction("unhold", "admin", {
+  status: "candidate",
+});
+assert.equal(candidateUnhold.response.status, 400);
+assert.equal(
+  candidateUnhold.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+status\s*=\s*'candidate'/i.test(statement.sql),
   ),
   false,
 );

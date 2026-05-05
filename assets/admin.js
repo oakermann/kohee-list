@@ -524,6 +524,30 @@ function reviewConsoleCafeItem(cafe) {
   status.textContent = `상태: ${statusLabel(cafe.status)}`;
 
   item.append(title, address, status);
+
+  if (isAdmin()) {
+    const actions = document.createElement("div");
+    actions.className = "item-actions";
+
+    if (cafe.status === "candidate") {
+      const hold = document.createElement("button");
+      hold.type = "button";
+      hold.textContent = "보류";
+      hold.addEventListener("click", () => holdCafe(cafe.id));
+      actions.append(hold);
+    }
+
+    if (cafe.status === "hidden") {
+      const unhold = document.createElement("button");
+      unhold.type = "button";
+      unhold.textContent = "후보로 복귀";
+      unhold.addEventListener("click", () => unholdCafe(cafe.id));
+      actions.append(unhold);
+    }
+
+    if (actions.children.length) item.append(actions);
+  }
+
   return item;
 }
 
@@ -543,20 +567,18 @@ function renderReviewConsole() {
     return;
   }
 
-  if (state.reviewConsoleTab === "hold") {
-    note.textContent = "보류 상태는 hidden/hold API가 생기면 연결합니다.";
-    list.replaceChildren(
-      reviewConsoleEmpty("아직 연결된 보류 목록이 없습니다."),
-    );
-    return;
-  }
-
   const targetStatus =
-    state.reviewConsoleTab === "approved" ? "approved" : "candidate";
+    state.reviewConsoleTab === "approved"
+      ? "approved"
+      : state.reviewConsoleTab === "hold"
+        ? "hidden"
+        : "candidate";
   note.textContent =
     targetStatus === "approved"
       ? "공개 중인 카페를 기존 카페 관리 데이터에서 확인합니다."
-      : "공개 전 후보 카페를 기존 카페 관리 데이터에서 확인합니다.";
+      : targetStatus === "hidden"
+        ? "보류 중인 후보 카페를 기존 카페 관리 데이터에서 확인합니다."
+        : "공개 전 후보 카페를 기존 카페 관리 데이터에서 확인합니다.";
   const cafes = state.cafes
     .filter((cafe) => !cafe.deleted_at && cafe.status === targetStatus)
     .map(reviewConsoleCafeItem);
@@ -859,6 +881,30 @@ async function approveCafe(id) {
   if (!id) return;
   if (!confirm("이 카페를 공개할까요?")) return;
   await jsonApi("/approve-cafe", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  await loadCafes();
+  closeCafeForm(true);
+}
+
+async function holdCafe(id) {
+  if (!id) return;
+  if (!confirm("이 후보 카페를 보류할까요?")) return;
+  await jsonApi("/hold-cafe", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  await loadCafes();
+  closeCafeForm(true);
+}
+
+async function unholdCafe(id) {
+  if (!id) return;
+  if (!confirm("이 보류 카페를 후보로 되돌릴까요?")) return;
+  await jsonApi("/unhold-cafe", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ id }),

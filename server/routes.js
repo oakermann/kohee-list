@@ -7,9 +7,11 @@ import {
   editCafe,
   getData,
   getNotice,
+  holdCafe,
   listCafes,
   restoreCafe,
   setNotice,
+  unholdCafe,
 } from "./cafes.js";
 import {
   approveSubmission,
@@ -76,6 +78,8 @@ export const ADMIN_ROUTES = [
   ["POST", "/notice", setNotice],
   ["POST", "/reset-csv", resetCsv],
   ["POST", "/approve-cafe", approveCafe],
+  ["POST", "/hold-cafe", holdCafe],
+  ["POST", "/unhold-cafe", unholdCafe],
 ];
 
 export const ROUTES = [

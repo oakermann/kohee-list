@@ -13,6 +13,7 @@
 - public `/data`는 `status = 'approved' AND deleted_at IS NULL`인 cafe만 반환한다.
 - 신규 `/add` 및 status가 없는 신규 CSV row는 `candidate`로 저장된다.
 - admin만 candidate cafe를 `/approve-cafe`로 `approved` 승격할 수 있다.
+- admin만 candidate cafe를 `/hold-cafe`로 `hidden` 보류 처리하고 `/unhold-cafe`로 다시 `candidate` 상태로 되돌릴 수 있다.
 - `deleteCafe`와 `resetCsv`는 recoverable lifecycle 동작으로 처리한다.
 - purge/archive는 아직 구현하지 않았으며 별도 위험 작업으로 분리한다.
 
@@ -45,6 +46,8 @@
 - `POST /add`: `manager`, `admin`이 `cafes` row를 바로 생성한다.
 - `POST /edit`: `manager`, `admin`이 기존 `cafes` row를 수정한다.
 - `POST /approve-cafe`: `admin`만 candidate cafe를 public 공개 가능한 `approved` 상태로 승격한다.
+- `POST /hold-cafe`: `admin`만 active candidate cafe를 public 비노출 `hidden` 보류 상태로 전환한다.
+- `POST /unhold-cafe`: `admin`만 active hidden cafe를 다시 `candidate` 상태로 전환한다.
 - `POST /delete`: `admin`만 `deleteCafe`를 실행한다.
 - `POST /restore`: `admin`만 soft-deleted cafe를 복구한다.
 - `POST /reset-csv`: `admin`만 `resetCsv`를 실행한다.
@@ -425,6 +428,7 @@ restore 기능은 필요하다.
 - resetCsv에서 기존 row를 재활성화할 때도 `status`를 무조건 `approved`로 바꾸지 않는다.
 - CSV로 공개 상태를 만들려면 `status` 컬럼에 `approved`가 명시되어 있어야 한다.
 - admin만 `/approve-cafe`로 candidate cafe를 `approved`로 승격할 수 있다.
+- admin만 `/hold-cafe`와 `/unhold-cafe`로 active cafe의 `candidate`와 `hidden` 상태를 오갈 수 있다.
 - manager/user는 cafe를 public 노출 상태로 승인할 수 없다.
 
 ### 기존 approved cafe update
