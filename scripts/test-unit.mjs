@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import vm from "node:vm";
 
 import {
   addCafe,
@@ -332,6 +334,8 @@ function createListCafesTestEnv(role = "manager") {
                   updated_at: "2026-04-28T00:00:00.000Z",
                   status: "approved",
                   deleted_at: "2026-04-29T00:00:00.000Z",
+                  hidden_at: "2026-04-28T12:00:00.000Z",
+                  hidden_by: "admin-user",
                   deleted_by: "admin-user",
                   delete_reason: "internal",
                 },
@@ -373,7 +377,15 @@ assert.match(
   ).sql,
   /WHERE\s+deleted_at\s+IS\s+NOT\s+NULL/i,
 );
+assert.match(
+  deletedList.statements.find((statement) =>
+    /SELECT\s+id,\s+name,\s+address/i.test(statement.sql),
+  ).sql,
+  /hidden_at,\s+hidden_by/i,
+);
 assert.equal(deletedListBody[0].deleted_at, "2026-04-29T00:00:00.000Z");
+assert.equal(deletedListBody[0].hidden_at, "2026-04-28T12:00:00.000Z");
+assert.equal(deletedListBody[0].hidden_by, "admin-user");
 assert.equal(deletedListBody[0].deleted_by, undefined);
 assert.equal(deletedListBody[0].delete_reason, undefined);
 
@@ -897,6 +909,125 @@ assert.equal(
   ),
   false,
 );
+
+function textOfAdminNode(node) {
+  if (!node) return "";
+  return `${node.textContent || ""}${(node.children || [])
+    .map(textOfAdminNode)
+    .join("")}`;
+}
+
+class AdminClassList {
+  constructor() {
+    this.values = new Set();
+  }
+
+  add(value) {
+    this.values.add(value);
+  }
+
+  remove(value) {
+    this.values.delete(value);
+  }
+
+  contains(value) {
+    return this.values.has(value);
+  }
+
+  toggle(value, force) {
+    if (force) this.add(value);
+    else this.remove(value);
+  }
+}
+
+class AdminNode {
+  constructor(tagName = "div") {
+    this.tagName = tagName;
+    this.children = [];
+    this.classList = new AdminClassList();
+    this.dataset = {};
+    this.eventListeners = {};
+    this.textContent = "";
+  }
+
+  append(...children) {
+    this.children.push(...children);
+  }
+
+  replaceChildren(...children) {
+    this.children = children;
+    this.textContent = "";
+  }
+
+  addEventListener(type, handler) {
+    this.eventListeners[type] = handler;
+  }
+}
+
+const adminSource = await fs.readFile("assets/admin.js", "utf8");
+const adminBody = adminSource
+  .replace(/import[\s\S]*?from "\.\/common\.js\?v=20260426-1";\s*/, "")
+  .replace(/init\(\)\.catch[\s\S]*$/, "");
+const adminElements = new Map([
+  ["review-console-list", new AdminNode()],
+  ["review-console-note", new AdminNode()],
+]);
+const adminContext = {
+  console,
+  document: {
+    createElement: (tagName) => new AdminNode(tagName),
+    createTextNode: (text) => {
+      const node = new AdminNode("#text");
+      node.textContent = text;
+      return node;
+    },
+    querySelectorAll: () => [],
+  },
+  $: (id) => adminElements.get(id),
+  statusLabel: (status) => status,
+  formatDate: (value) => String(value || ""),
+  errorStatusLabel: (status) => status,
+  roleLabel: (role) => role,
+  api: async () => ({}),
+  jsonApi: async () => ({}),
+  clearAuthToken() {},
+  storeCsrfFromPayload() {},
+  alert() {},
+  confirm: () => true,
+  prompt: () => "",
+  setTimeout: (handler) => handler(),
+  clearTimeout() {},
+  location: { href: "" },
+};
+vm.createContext(adminContext);
+vm.runInContext(
+  `${adminBody}\nthis.__adminTest = { state, renderReviewConsole };`,
+  adminContext,
+);
+adminContext.__adminTest.state.me = { role: "admin" };
+adminContext.__adminTest.state.reviewConsoleTab = "hold";
+adminContext.__adminTest.state.cafes = [
+  {
+    id: "imported-hidden",
+    name: "Imported Hidden",
+    address: "Seoul",
+    status: "hidden",
+    hidden_at: null,
+    deleted_at: null,
+  },
+  {
+    id: "candidate-hold",
+    name: "Candidate Hold",
+    address: "Seoul",
+    status: "hidden",
+    hidden_at: "2026-05-05T00:00:00.000Z",
+    deleted_at: null,
+  },
+];
+adminContext.__adminTest.renderReviewConsole();
+const holdListText = textOfAdminNode(adminElements.get("review-console-list"));
+assert.match(holdListText, /Candidate Hold/);
+assert.doesNotMatch(holdListText, /Imported Hidden/);
 
 function createApproveSubmissionTestEnv(role = "manager") {
   const statements = [];

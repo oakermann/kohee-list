@@ -143,6 +143,7 @@ soft delete 전환 시 원칙:
 - `candidate`: 후보 데이터. public API에 노출하지 않는다.
 - `approved`: 승인된 공개 가능 데이터.
 - `hidden`: 운영자가 숨긴 데이터. 삭제는 아니며 public API에 노출하지 않는다.
+- `hidden` + `hidden_at`: candidate review console에서 보류 처리한 후보 데이터다.
 - `rejected`: 후보 검토 후 반려된 데이터. public API에 노출하지 않는다.
 
 삭제 상태는 `status = 'deleted'`가 아니라 `deleted_at` 계열 필드로 분리하는 것을 권장한다.

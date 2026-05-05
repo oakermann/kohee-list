@@ -537,7 +537,7 @@ function reviewConsoleCafeItem(cafe) {
       actions.append(hold);
     }
 
-    if (cafe.status === "hidden") {
+    if (cafe.status === "hidden" && cafe.hidden_at) {
       const unhold = document.createElement("button");
       unhold.type = "button";
       unhold.textContent = "후보로 복귀";
@@ -580,7 +580,12 @@ function renderReviewConsole() {
         ? "보류 중인 후보 카페를 기존 카페 관리 데이터에서 확인합니다."
         : "공개 전 후보 카페를 기존 카페 관리 데이터에서 확인합니다.";
   const cafes = state.cafes
-    .filter((cafe) => !cafe.deleted_at && cafe.status === targetStatus)
+    .filter(
+      (cafe) =>
+        !cafe.deleted_at &&
+        cafe.status === targetStatus &&
+        (targetStatus !== "hidden" || cafe.hidden_at),
+    )
     .map(reviewConsoleCafeItem);
   list.replaceChildren(
     ...(cafes.length ? cafes : [reviewConsoleEmpty("해당 카페가 없습니다.")]),

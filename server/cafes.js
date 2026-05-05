@@ -38,6 +38,8 @@ export function toAdminCafeResponse(row) {
     ...toCafeResponse(row),
     status: row.status || "approved",
     deleted_at: row.deleted_at || null,
+    hidden_at: row.hidden_at || null,
+    hidden_by: row.hidden_by || null,
   };
 }
 
@@ -72,7 +74,7 @@ export async function listCafes(req, env) {
 
     const rows = await env.DB.prepare(
       `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-        oakerman_pick, manager_pick, updated_at, status, deleted_at
+        oakerman_pick, manager_pick, updated_at, status, deleted_at, hidden_at, hidden_by
        FROM cafes
        ${where}
        ORDER BY updated_at DESC`,
