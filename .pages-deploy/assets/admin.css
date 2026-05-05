@@ -289,6 +289,7 @@ input[type="file"]::file-selector-button {
   color: #fff !important;
 }
 #sub-list,
+#review-console-list,
 #error-list,
 #reviewed-list,
 #user-list {
@@ -434,6 +435,13 @@ input[type="file"]::file-selector-button {
 }
 .admin-review-mode {
   margin-bottom: 6px;
+}
+.review-console-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.review-console-tabs button {
+  padding-left: 5px;
+  padding-right: 5px;
 }
 .admin-status-msg {
   margin-top: 6px;

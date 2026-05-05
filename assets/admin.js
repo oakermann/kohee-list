@@ -20,6 +20,7 @@ const state = {
   editApproveName: "",
   errorReports: [],
   errorStatus: "open",
+  reviewConsoleTab: "submissions",
   reviewedSubmissions: [],
   reviewedStatus: "approved",
   users: [],
@@ -200,6 +201,7 @@ async function loadCafes() {
     }, {});
     $("cafe-count").textContent = `로드된 카페 ${state.cafes.length}개`;
     renderCafeList();
+    renderReviewConsole();
   } catch (error) {
     state.cafes = [];
     state.cafeKeyCounts = {};
@@ -208,6 +210,7 @@ async function loadCafes() {
     empty.className = "item empty-state";
     empty.textContent = `카페 데이터 로드 실패: ${error.message}`;
     $("cafe-list").replaceChildren(empty);
+    renderReviewConsole();
   }
 }
 
@@ -329,6 +332,7 @@ async function loadSubmissions() {
   const data = await jsonApi("/submissions?status=pending");
   state.submissions = data.items || [];
   renderSubmissions();
+  renderReviewConsole();
 }
 
 function renderSubmissions() {
@@ -476,6 +480,89 @@ function renderReviewedSubmissions() {
   });
 
   list.replaceChildren(...items);
+}
+
+function reviewConsoleEmpty(message) {
+  const empty = document.createElement("div");
+  empty.className = "item empty-state";
+  empty.textContent = message;
+  return empty;
+}
+
+function reviewConsoleSubmissionItem(submission) {
+  const item = document.createElement("div");
+  item.className = "item";
+
+  const title = document.createElement("h3");
+  title.textContent = submission.name || "";
+
+  const address = document.createElement("div");
+  address.className = "mini";
+  address.textContent = submission.address || "";
+
+  const status = document.createElement("div");
+  status.className = "mini";
+  status.textContent = `상태: ${statusLabel(submission.status)}`;
+
+  item.append(title, address, status);
+  return item;
+}
+
+function reviewConsoleCafeItem(cafe) {
+  const item = document.createElement("div");
+  item.className = "item";
+
+  const title = document.createElement("h3");
+  title.textContent = cafe.name || "";
+
+  const address = document.createElement("div");
+  address.className = "mini";
+  address.textContent = cafe.address || "";
+
+  const status = document.createElement("div");
+  status.className = "mini";
+  status.textContent = `상태: ${statusLabel(cafe.status)}`;
+
+  item.append(title, address, status);
+  return item;
+}
+
+function renderReviewConsole() {
+  const list = $("review-console-list");
+  const note = $("review-console-note");
+  if (!list || !note) return;
+
+  if (state.reviewConsoleTab === "submissions") {
+    note.textContent = "검토 대기 제보를 기존 제보 목록과 함께 확인합니다.";
+    const items = state.submissions.map(reviewConsoleSubmissionItem);
+    list.replaceChildren(
+      ...(items.length
+        ? items
+        : [reviewConsoleEmpty("검토 대기 제보가 없습니다.")]),
+    );
+    return;
+  }
+
+  if (state.reviewConsoleTab === "hold") {
+    note.textContent = "보류 상태는 hidden/hold API가 생기면 연결합니다.";
+    list.replaceChildren(
+      reviewConsoleEmpty("아직 연결된 보류 목록이 없습니다."),
+    );
+    return;
+  }
+
+  const targetStatus =
+    state.reviewConsoleTab === "approved" ? "approved" : "candidate";
+  note.textContent =
+    targetStatus === "approved"
+      ? "공개 중인 카페를 기존 카페 관리 데이터에서 확인합니다."
+      : "공개 전 후보 카페를 기존 카페 관리 데이터에서 확인합니다.";
+  const cafes = state.cafes
+    .filter((cafe) => !cafe.deleted_at && cafe.status === targetStatus)
+    .map(reviewConsoleCafeItem);
+  list.replaceChildren(
+    ...(cafes.length ? cafes : [reviewConsoleEmpty("해당 카페가 없습니다.")]),
+  );
 }
 
 async function loadErrorReports() {
@@ -1077,6 +1164,18 @@ async function init() {
       btn.classList.add("active");
       state.reviewedStatus = btn.dataset.status;
       await loadReviewedSubmissions();
+    }),
+  );
+
+  const reviewConsoleTabs = [
+    ...document.querySelectorAll("#review-console-tabs button"),
+  ];
+  reviewConsoleTabs.forEach((btn) =>
+    btn.addEventListener("click", () => {
+      reviewConsoleTabs.forEach((item) => item.classList.remove("active"));
+      btn.classList.add("active");
+      state.reviewConsoleTab = btn.dataset.tab;
+      renderReviewConsole();
     }),
   );
 
