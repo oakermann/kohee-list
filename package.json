@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "format": "prettier --write \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --end-of-line auto --ignore-unknown",
-    "format:check": "prettier --check \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \"scripts/**/*.mjs\" \"worker.js\" --end-of-line auto --ignore-unknown",
+    "format": "prettier --write \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \"assets/**/*.css\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \".pages-deploy/assets/**/*.css\" \"scripts/**/*.mjs\" \"worker.js\" --end-of-line auto --ignore-unknown",
+    "format:check": "prettier --check \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \"assets/**/*.css\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \".pages-deploy/assets/**/*.css\" \"scripts/**/*.mjs\" \"worker.js\" --end-of-line auto --ignore-unknown",
     "preflight": "powershell -ExecutionPolicy Bypass -File .\\scripts\\preflight.ps1",
     "check:repo-safety": "node scripts/check-repo-safety.mjs",
     "check:deploy-sync": "node scripts/check-deploy-sync.mjs",
