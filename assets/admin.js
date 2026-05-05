@@ -147,7 +147,11 @@ function setEditApproveMode(submission) {
   guide.className = "mini";
   const saveLabel = document.createElement("b");
   saveLabel.textContent = "수정 후 승인 저장";
-  guide.append("아래 입력칸을 보완한 뒤 ", saveLabel, "을 누르면 카페로 등록됩니다.");
+  guide.append(
+    "아래 입력칸을 보완한 뒤 ",
+    saveLabel,
+    "을 누르면 카페로 등록됩니다.",
+  );
 
   reviewMode.classList.remove("hidden");
   reviewMode.replaceChildren(title, target, guide);
