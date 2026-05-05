@@ -528,9 +528,28 @@ function setNearbyLoading(isLoading) {
   btn.classList.toggle("is-loading", isLoading);
 }
 
+function geolocationErrorMessage(error) {
+  const permissionDenied = 1;
+  const positionUnavailable = 2;
+  const timeout = 3;
+  if (!navigator.geolocation) {
+    return "이 브라우저에서는 위치 기능을 사용할 수 없습니다.\n카페명 또는 주소로 검색해 주세요.";
+  }
+  if (error?.code === permissionDenied) {
+    return "브라우저 위치 권한이 차단되어 있습니다.\nChrome 사이트 설정에서 위치 권한을 허용해 주세요.";
+  }
+  if (error?.code === positionUnavailable) {
+    return "현재 위치를 확인할 수 없습니다.\n기기 또는 OS 위치 서비스가 켜져 있는지 확인해 주세요.";
+  }
+  if (error?.code === timeout) {
+    return "위치 확인 시간이 초과되었습니다.\n잠시 후 다시 시도하거나 카페명/주소로 검색해 주세요.";
+  }
+  return "위치 정보를 가져오지 못했습니다.\nChrome 위치 권한과 기기 위치 서비스를 확인해 주세요.";
+}
+
 async function handleNearbyClick() {
   if (!navigator.geolocation) {
-    alert("이 기기에서는 위치 기능을 사용할 수 없습니다.");
+    alert(geolocationErrorMessage());
     return;
   }
 
@@ -546,9 +565,7 @@ async function handleNearbyClick() {
     clearDistances();
     nearbyMode = false;
     render();
-    alert(
-      "위치 정보를 가져오지 못했습니다.\nGPS 또는 브라우저 권한을 확인해 주세요.",
-    );
+    alert(geolocationErrorMessage(error));
     console.error(error);
   } finally {
     setNearbyLoading(false);
