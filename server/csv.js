@@ -162,7 +162,7 @@ function validateRowBody(body) {
 
 async function findDuplicateCafe(env, name, address) {
   return env.DB.prepare(
-    `SELECT id, name, oakerman_pick, manager_pick, status, deleted_at, deleted_by, delete_reason
+    `SELECT *
      FROM cafes
      WHERE lower(trim(name)) = lower(trim(?)) AND lower(trim(address)) = lower(trim(?))
      LIMIT 1`,
@@ -371,16 +371,31 @@ function resetSnapshotFromCafe(row) {
   if (!row?.id) return null;
   return {
     id: row.id,
+    name: row.name || "",
+    address: row.address || "",
+    desc: row.desc || "",
+    lat: row.lat ?? 0,
+    lng: row.lng ?? 0,
+    signature: row.signature || "[]",
+    beanShop: row.beanShop || "",
+    instagram: row.instagram || "",
+    category: row.category || "[]",
+    oakerman_pick: row.oakerman_pick ?? 0,
+    manager_pick: row.manager_pick ?? 0,
     status: row.status || DEFAULT_IMPORTED_CAFE_STATUS,
+    hidden_at: row.hidden_at || null,
+    hidden_by: row.hidden_by || null,
     deleted_at: row.deleted_at || null,
     deleted_by: row.deleted_by || null,
     delete_reason: row.delete_reason || null,
+    updated_at: row.updated_at || null,
   };
 }
 
 async function snapshotActiveCafeResetState(env) {
   const rows = await env.DB.prepare(
-    `SELECT id, status, deleted_at, deleted_by, delete_reason
+    `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
+      oakerman_pick, manager_pick, status, hidden_at, hidden_by, deleted_at, deleted_by, delete_reason, updated_at
      FROM cafes
      WHERE deleted_at IS NULL`,
   ).all();
@@ -402,15 +417,30 @@ async function rollbackResetCsv(env, user, rows, snapshots) {
   for (const snapshot of snapshots) {
     await env.DB.prepare(
       `UPDATE cafes
-       SET status = ?, deleted_at = ?, deleted_by = ?, delete_reason = ?, updated_at = ?
+       SET name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
+        oakerman_pick = ?, manager_pick = ?, status = ?, hidden_at = ?, hidden_by = ?,
+        deleted_at = ?, deleted_by = ?, delete_reason = ?, updated_at = ?
        WHERE id = ?`,
     )
       .bind(
+        snapshot.name,
+        snapshot.address,
+        snapshot.desc,
+        snapshot.lat,
+        snapshot.lng,
+        snapshot.signature,
+        snapshot.beanShop,
+        snapshot.instagram,
+        snapshot.category,
+        snapshot.oakerman_pick,
+        snapshot.manager_pick,
         snapshot.status,
+        snapshot.hidden_at,
+        snapshot.hidden_by,
         snapshot.deleted_at,
         snapshot.deleted_by,
         snapshot.delete_reason,
-        rolledBackAt,
+        snapshot.updated_at || rolledBackAt,
         snapshot.id,
       )
       .run();

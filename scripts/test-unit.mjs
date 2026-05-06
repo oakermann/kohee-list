@@ -1174,7 +1174,7 @@ assert.match(
 
 function createResetCsvTestEnv(role = "admin", options = {}) {
   const statements = [];
-  let failedApply = false;
+  let applyAttempts = 0;
   return {
     statements,
     env: {
@@ -1203,12 +1203,23 @@ function createResetCsvTestEnv(role = "admin", options = {}) {
                 return {
                   id: "cafe-1",
                   name: "Imported Cafe",
+                  address: "Seoul",
+                  desc: "Original coffee",
+                  lat: 37.5,
+                  lng: 127,
+                  signature: '["drip"]',
+                  beanShop: "https://beans.example",
+                  instagram: "https://instagram.example/imported",
+                  category: '["drip"]',
                   oakerman_pick: 1,
                   manager_pick: 0,
                   status: "candidate",
+                  hidden_at: null,
+                  hidden_by: null,
                   deleted_at: "2026-04-28T00:00:00.000Z",
                   deleted_by: "previous-admin",
                   delete_reason: "previous reset",
+                  updated_at: "2026-04-28T00:00:00.000Z",
                 };
               }
               if (sql.includes("COUNT(*) AS c FROM cafes")) return { c: 2 };
@@ -1216,17 +1227,31 @@ function createResetCsvTestEnv(role = "admin", options = {}) {
             },
             all: async () => {
               if (
-                sql.includes("SELECT id, status, deleted_at, deleted_by") &&
+                sql.includes("SELECT id, name, address, desc") &&
                 sql.includes("WHERE deleted_at IS NULL")
               ) {
                 return {
                   results: [
                     {
                       id: "active-1",
+                      name: "Active Cafe",
+                      address: "Busan",
+                      desc: "Active original",
+                      lat: 35.1,
+                      lng: 129.1,
+                      signature: '["espresso"]',
+                      beanShop: "",
+                      instagram: "",
+                      category: '["espresso"]',
+                      oakerman_pick: 0,
+                      manager_pick: 1,
                       status: "approved",
+                      hidden_at: null,
+                      hidden_by: null,
                       deleted_at: null,
                       deleted_by: null,
                       delete_reason: null,
+                      updated_at: "2026-04-27T00:00:00.000Z",
                     },
                   ],
                 };
@@ -1236,11 +1261,13 @@ function createResetCsvTestEnv(role = "admin", options = {}) {
             run: async () => {
               if (
                 options.failApplyAfterSoftDelete &&
-                !failedApply &&
-                /UPDATE\s+cafes\s+SET\s+name\s*=\s*\?/i.test(sql)
+                /UPDATE\s+cafes\s+SET\s+name\s*=\s*\?/i.test(sql) &&
+                /deleted_at\s*=\s*NULL/i.test(sql)
               ) {
-                failedApply = true;
-                throw new Error("D1 raw reset apply detail");
+                applyAttempts += 1;
+                if (applyAttempts >= (options.failApplyAttempt || 1)) {
+                  throw new Error("D1 raw reset apply detail");
+                }
               }
               return { success: true };
             },
@@ -1344,8 +1371,8 @@ assert.equal(resetApprovedUpdate.bindings[13], null);
 
 const failingReset = await requestResetCsv(
   "admin",
-  "name,address,desc,category\nImported Cafe,Seoul,Coffee,espresso",
-  { failApplyAfterSoftDelete: true },
+  "name,address,desc,category\nImported Cafe,Seoul,Changed once,espresso\nImported Cafe,Seoul,Changed twice,espresso",
+  { failApplyAfterSoftDelete: true, failApplyAttempt: 2 },
 );
 assert.equal(failingReset.response.status, 500);
 assert.deepEqual(await failingReset.response.json(), {
@@ -1358,28 +1385,33 @@ assert.ok(
     /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*\?/i.test(statement.sql),
   ),
 );
-const rollbackStatements = failingReset.statements.filter((statement) =>
-  /UPDATE\s+cafes\s+SET\s+status\s*=\s*\?,\s+deleted_at\s*=\s*\?/i.test(
-    statement.sql,
-  ),
+const rollbackStatements = failingReset.statements.filter(
+  (statement) =>
+    /UPDATE\s+cafes\s+SET\s+name\s*=\s*\?,\s+address\s*=\s*\?/i.test(
+      statement.sql,
+    ) && /delete_reason\s*=\s*\?/i.test(statement.sql),
 );
 assert.equal(rollbackStatements.length, 2);
 assert.ok(
   rollbackStatements.some(
     (statement) =>
-      statement.bindings[0] === "approved" &&
-      statement.bindings[1] === null &&
-      statement.bindings[5] === "active-1",
+      statement.bindings[0] === "Active Cafe" &&
+      statement.bindings[1] === "Busan" &&
+      statement.bindings[11] === "approved" &&
+      statement.bindings[14] === null &&
+      statement.bindings[18] === "active-1",
   ),
 );
 assert.ok(
   rollbackStatements.some(
     (statement) =>
-      statement.bindings[0] === "candidate" &&
-      statement.bindings[1] === "2026-04-28T00:00:00.000Z" &&
-      statement.bindings[2] === "previous-admin" &&
-      statement.bindings[3] === "previous reset" &&
-      statement.bindings[5] === "cafe-1",
+      statement.bindings[0] === "Imported Cafe" &&
+      statement.bindings[2] === "Original coffee" &&
+      statement.bindings[11] === "candidate" &&
+      statement.bindings[14] === "2026-04-28T00:00:00.000Z" &&
+      statement.bindings[15] === "previous-admin" &&
+      statement.bindings[16] === "previous reset" &&
+      statement.bindings[18] === "cafe-1",
   ),
 );
 assert.equal(

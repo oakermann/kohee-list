@@ -83,7 +83,7 @@
 
 - cafe row와 linked references를 물리 삭제하지 않는다.
 - 백업 강제와 diff는 API 레벨에서 보장되지 않는다.
-- apply 실패 시 reset 전 lifecycle 필드로 되돌리는 보상 rollback을 시도한다.
+- apply 실패 시 reset 전 cafe 상태와 resetCsv가 수정할 수 있는 필드로 되돌리는 보상 rollback을 시도한다.
 - reset 이후 public API는 `approved`이면서 `deleted_at IS NULL`인 cafe만 반환한다.
 
 ### Current CSV import
@@ -406,7 +406,7 @@ restore 기능은 필요하다.
 
 - soft reset에서는 favorites와 submissions 연결을 유지한다.
 - public/favorites 조회에서 hidden/deleted cafe를 제외한다.
-- rollback은 status/deleted_at/deleted_by/delete_reason을 이전 snapshot으로 되돌리는 방식이다.
+- rollback은 resetCsv가 수정할 수 있는 cafe 필드를 이전 snapshot으로 되돌리는 방식이다.
 
 ## 7. CSV import와 상태 모델 연결
 
