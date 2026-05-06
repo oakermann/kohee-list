@@ -1,0 +1,127 @@
+{
+  "project": "KOHEE LIST",
+  "authModelTarget": "admin_user",
+  "legacyRoles": ["manager"],
+  "invariants": {
+    "publicCafeWhere": "status = 'approved' AND deleted_at IS NULL",
+    "newCafeDefaultStatus": "candidate",
+    "publicApprovalGate": "approveCafe",
+    "holdDefinition": "status = 'hidden' AND hidden_at IS NOT NULL",
+    "legacyHiddenDefinition": "status = 'hidden' AND hidden_at IS NULL",
+    "csvApprovedStagesAs": "candidate",
+    "csvHiddenStagesAs": "hidden_with_hidden_at",
+    "resetCsvSafeError": "CSV reset failed"
+  },
+  "lanes": {
+    "PUBLIC_EXPOSURE": {
+      "purpose": "Prevent candidate, hidden, rejected, or deleted cafes from public/user exposure.",
+      "files": [
+        "server/cafes.js",
+        "server/favorites.js",
+        "assets/index.js",
+        "assets/mypage.js",
+        "scripts/test-unit.mjs"
+      ]
+    },
+    "AUTH_ROLE": {
+      "purpose": "Authentication, CSRF, roles, admin/user authorization, and manager removal.",
+      "files": [
+        "server/routes.js",
+        "server/shared.js",
+        "server/auth.js",
+        "server/security.js",
+        "server/users.js",
+        "assets/admin.js",
+        "scripts/test-unit.mjs"
+      ]
+    },
+    "LIFECYCLE": {
+      "purpose": "Cafe lifecycle transitions: candidate, hold, approved, deleted, restore.",
+      "files": [
+        "server/cafes.js",
+        "server/csv.js",
+        "server/submissions.js",
+        "server/favorites.js",
+        "schema.sql",
+        "scripts/test-unit.mjs",
+        "docs/DATA_LIFECYCLE_PLAN.md"
+      ]
+    },
+    "CSV_PIPELINE": {
+      "purpose": "CSV import, reset, rollback, review exports, and future reviewed import staging.",
+      "files": [
+        "server/csv.js",
+        "server/cafes.js",
+        "server/submissions.js",
+        "assets/admin.js",
+        "scripts/test-unit.mjs",
+        "docs/DATA_LIFECYCLE_PLAN.md"
+      ]
+    },
+    "FRONTEND_RENDERING": {
+      "purpose": "Frontend rendering safety, admin/mypage/index UI, XSS-safe DOM updates, and external links.",
+      "files": [
+        "assets/common.js",
+        "assets/index.js",
+        "assets/mypage.js",
+        "assets/admin.js",
+        "index.html",
+        "mypage.html",
+        "admin.html",
+        "submit.html",
+        "login.html",
+        ".pages-deploy"
+      ]
+    },
+    "DEPLOY_SAFETY": {
+      "purpose": "GitHub Actions, Cloudflare deploy safety, D1 migration blocking, repo safety, and deploy sync.",
+      "files": [
+        "package.json",
+        "scripts",
+        ".github/workflows",
+        "_headers",
+        ".pages-deploy/_headers",
+        "wrangler.toml"
+      ]
+    }
+  },
+  "verify": {
+    "LOW": [
+      "npm run check:deploy-sync",
+      "npm run test:unit",
+      "git diff --check"
+    ],
+    "MEDIUM": [
+      "npm run check:deploy-sync",
+      "npm run test:unit",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\check-syntax.ps1",
+      "npm run format:check",
+      "git diff --check"
+    ],
+    "HIGH": [
+      "npm run check:deploy-sync",
+      "npm run test:unit",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\check-syntax.ps1",
+      "npm run verify:release",
+      "npm run format:check",
+      "git diff --check",
+      "npm run check:repo-safety"
+    ]
+  },
+  "reportFormat": [
+    "Risk",
+    "Lane",
+    "Commit",
+    "Changed files",
+    "Changed functions",
+    "Tests",
+    "Remaining risks"
+  ],
+  "forbidden": [
+    "broad refactor",
+    "manager expansion",
+    "aaa/aaaa changes",
+    "deploy unless explicitly requested",
+    "changes outside allowlist"
+  ]
+}

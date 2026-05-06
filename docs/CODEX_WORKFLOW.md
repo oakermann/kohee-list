@@ -602,3 +602,12 @@ Commit:
 Push:
 Risks:
 ```
+
+### KOHEE operating contract
+
+- Codex must read root `AGENTS.md` and `kohee.contract.json` before planning.
+- Future prompts should include a Lane plus exact file/function allowlists.
+- Reports must include Lane and Changed functions.
+- Manager is legacy; do not add or expand manager-specific features.
+- The final authorization model is admin/user.
+- This contract is documentation/coordination only; it does not change runtime behavior.
