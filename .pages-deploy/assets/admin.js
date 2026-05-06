@@ -918,7 +918,169 @@ async function unholdCafe(id) {
   closeCafeForm(true);
 }
 
+const CAFE_REVIEW_EXPORT_HEADERS = [
+  "id",
+  "name",
+  "address",
+  "desc",
+  "lat",
+  "lng",
+  "signature",
+  "beanShop",
+  "instagram",
+  "category",
+  "status",
+  "oakerman_pick",
+  "manager_pick",
+  "updated_at",
+  "hidden_at",
+];
+const SUBMISSION_REVIEW_EXPORT_HEADERS = [
+  "id",
+  "user_id",
+  "username",
+  "name",
+  "address",
+  "desc",
+  "reason",
+  "signature",
+  "beanShop",
+  "instagram",
+  "category",
+  "status",
+  "oakerman_pick",
+  "manager_pick",
+  "created_at",
+];
+
+function csvCell(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function csvList(value) {
+  return Array.isArray(value) ? value.join(",") : value || "";
+}
+
+function cafeReviewExportRow(cafe) {
+  return [
+    cafe.id,
+    cafe.name,
+    cafe.address,
+    cafe.desc,
+    cafe.lat,
+    cafe.lng,
+    csvList(cafe.signature),
+    cafe.beanShop || "",
+    cafe.instagram || "",
+    csvList(cafe.category),
+    cafe.status || "",
+    cafe.oakerman_pick ? "1" : "0",
+    cafe.manager_pick ? "1" : "0",
+    cafe.updated_at || "",
+    cafe.hidden_at || "",
+  ];
+}
+
+function submissionReviewExportRow(submission) {
+  return [
+    submission.id,
+    submission.user_id,
+    submission.username,
+    submission.name,
+    submission.address,
+    submission.desc,
+    submission.reason || "",
+    csvList(submission.signature),
+    submission.beanShop || "",
+    submission.instagram || "",
+    csvList(submission.category),
+    submission.status || "",
+    submission.oakerman_pick ? "1" : "0",
+    submission.manager_pick ? "1" : "0",
+    submission.created_at || "",
+  ];
+}
+
+function buildCsv(headers, rows) {
+  return [
+    headers.join(","),
+    ...rows.map((row) => row.map(csvCell).join(",")),
+  ].join("\n");
+}
+
+function downloadCsvFile(filename, csv) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const anchor = document.createElement("a");
+  anchor.href = URL.createObjectURL(blob);
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(anchor.href);
+}
+
+function reviewExportFiles(
+  cafes = state.cafes,
+  submissions = state.submissions,
+) {
+  const activeCafes = cafes.filter((cafe) => !cafe.deleted_at);
+  return [
+    {
+      filename: "submissions_review_export.csv",
+      headers: SUBMISSION_REVIEW_EXPORT_HEADERS,
+      rows: submissions.map(submissionReviewExportRow),
+    },
+    {
+      filename: "candidate_review_export.csv",
+      headers: CAFE_REVIEW_EXPORT_HEADERS,
+      rows: activeCafes
+        .filter((cafe) => cafe.status === "candidate")
+        .map(cafeReviewExportRow),
+    },
+    {
+      filename: "hold_review_export.csv",
+      headers: CAFE_REVIEW_EXPORT_HEADERS,
+      rows: activeCafes
+        .filter((cafe) => cafe.status === "hidden" && cafe.hidden_at)
+        .map(cafeReviewExportRow),
+    },
+    {
+      filename: "approved_review_export.csv",
+      headers: CAFE_REVIEW_EXPORT_HEADERS,
+      rows: activeCafes
+        .filter((cafe) => cafe.status === "approved")
+        .map(cafeReviewExportRow),
+    },
+  ];
+}
+
 async function downloadCsv() {
+  try {
+    $("csv-msg").textContent = "CSV ?ㅼ슫濡쒕뱶 以?..";
+    const [cafes, submissionData] = await Promise.all([
+      jsonApi("/cafes?lifecycle=active"),
+      jsonApi("/submissions?status=pending"),
+    ]);
+    const files = reviewExportFiles(
+      Array.isArray(cafes) ? cafes : [],
+      submissionData.items || [],
+    );
+    if (!files.some((file) => file.rows.length)) {
+      alert("?ㅼ슫濡쒕뱶???곗씠?곌? ?놁뒿?덈떎.");
+      $("csv-msg").textContent = "";
+      return;
+    }
+
+    files.forEach((file) =>
+      downloadCsvFile(file.filename, buildCsv(file.headers, file.rows)),
+    );
+    $("csv-msg").textContent =
+      `CSV ?ㅼ슫濡쒕뱶 ?꾨즺: ${files.map((file) => file.filename).join(", ")}`;
+  } catch (error) {
+    $("csv-msg").textContent = `CSV ?ㅼ슫濡쒕뱶 ?ㅽ뙣: ${error.message}`;
+    alert(error.message);
+  }
+}
+
+async function downloadPublicCsv() {
   const res = await api("/data");
   const rows = await res.json();
   if (!rows.length) {
@@ -954,10 +1116,9 @@ async function downloadCsv() {
     cafe.oakerman_pick ? "1" : "0",
     cafe.manager_pick ? "1" : "0",
   ]);
-  const toCell = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
   const csv = [
     headers.join(","),
-    ...csvRows.map((row) => row.map(toCell).join(",")),
+    ...csvRows.map((row) => row.map(csvCell).join(",")),
   ].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const anchor = document.createElement("a");

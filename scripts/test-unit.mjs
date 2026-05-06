@@ -962,6 +962,10 @@ class AdminNode {
   addEventListener(type, handler) {
     this.eventListeners[type] = handler;
   }
+
+  click() {
+    if (this.eventListeners.click) this.eventListeners.click();
+  }
 }
 
 const adminSource = await fs.readFile("assets/admin.js", "utf8");
@@ -969,13 +973,28 @@ const adminBody = adminSource
   .replace(/import[\s\S]*?from "\.\/common\.js\?v=20260426-1";\s*/, "")
   .replace(/init\(\)\.catch[\s\S]*$/, "");
 const adminElements = new Map([
+  ["csv-msg", new AdminNode()],
   ["review-console-list", new AdminNode()],
   ["review-console-note", new AdminNode()],
 ]);
+const downloadedCsvFiles = [];
+let adminJsonApiResponses = {};
 const adminContext = {
   console,
+  Blob: class {
+    constructor(parts, options = {}) {
+      this.parts = parts;
+      this.type = options.type || "";
+    }
+  },
   document: {
-    createElement: (tagName) => new AdminNode(tagName),
+    createElement: (tagName) => {
+      const node = new AdminNode(tagName);
+      if (tagName === "a") {
+        node.click = () => downloadedCsvFiles.push(node.download);
+      }
+      return node;
+    },
     createTextNode: (text) => {
       const node = new AdminNode("#text");
       node.textContent = text;
@@ -989,7 +1008,7 @@ const adminContext = {
   errorStatusLabel: (status) => status,
   roleLabel: (role) => role,
   api: async () => ({}),
-  jsonApi: async () => ({}),
+  jsonApi: async (path) => adminJsonApiResponses[path] || {},
   clearAuthToken() {},
   storeCsrfFromPayload() {},
   alert() {},
@@ -998,10 +1017,17 @@ const adminContext = {
   setTimeout: (handler) => handler(),
   clearTimeout() {},
   location: { href: "" },
+  URL: {
+    createObjectURL(blob) {
+      downloadedCsvFiles.push(blob.parts.join(""));
+      return `blob:unit-${downloadedCsvFiles.length}`;
+    },
+    revokeObjectURL() {},
+  },
 };
 vm.createContext(adminContext);
 vm.runInContext(
-  `${adminBody}\nthis.__adminTest = { state, renderReviewConsole };`,
+  `${adminBody}\nthis.__adminTest = { state, renderReviewConsole, reviewExportFiles, buildCsv, downloadCsv };`,
   adminContext,
 );
 adminContext.__adminTest.state.me = { role: "admin" };
@@ -1028,6 +1054,125 @@ adminContext.__adminTest.renderReviewConsole();
 const holdListText = textOfAdminNode(adminElements.get("review-console-list"));
 assert.match(holdListText, /Candidate Hold/);
 assert.doesNotMatch(holdListText, /Imported Hidden/);
+
+adminContext.__adminTest.state.submissions = [
+  {
+    id: "submission-1",
+    user_id: "user-1",
+    username: "coffee-user",
+    name: "Submitted Cafe",
+    address: "Seoul",
+    desc: "Coffee",
+    reason: "good",
+    signature: ["espresso"],
+    beanShop: "",
+    instagram: "",
+    category: ["espresso"],
+    status: "pending",
+    oakerman_pick: false,
+    manager_pick: true,
+    created_at: "2026-05-06T00:00:00.000Z",
+  },
+];
+adminContext.__adminTest.state.cafes = [
+  {
+    id: "candidate-1",
+    name: "Candidate Cafe",
+    address: "Seoul",
+    desc: "Coffee",
+    lat: 37.5,
+    lng: 127,
+    signature: ["drip"],
+    beanShop: "",
+    instagram: "",
+    category: ["drip"],
+    status: "candidate",
+    deleted_at: null,
+    updated_at: "2026-05-06T00:00:00.000Z",
+  },
+  {
+    id: "hold-1",
+    name: "Hold Cafe",
+    address: "Busan",
+    desc: "Coffee",
+    signature: ["espresso"],
+    category: ["espresso"],
+    status: "hidden",
+    hidden_at: "2026-05-06T01:00:00.000Z",
+    deleted_at: null,
+  },
+  {
+    id: "legacy-hidden",
+    name: "Legacy Hidden",
+    address: "Busan",
+    desc: "Coffee",
+    status: "hidden",
+    hidden_at: null,
+    deleted_at: null,
+  },
+  {
+    id: "approved-1",
+    name: "Approved Cafe",
+    address: "Jeju",
+    desc: "Coffee",
+    status: "approved",
+    deleted_at: null,
+  },
+  {
+    id: "deleted-candidate",
+    name: "Deleted Candidate",
+    address: "Seoul",
+    desc: "Coffee",
+    status: "candidate",
+    deleted_at: "2026-05-06T02:00:00.000Z",
+  },
+];
+const reviewFiles = adminContext.__adminTest.reviewExportFiles();
+assert.deepEqual(
+  Array.from(reviewFiles, (file) => file.filename),
+  [
+    "submissions_review_export.csv",
+    "candidate_review_export.csv",
+    "hold_review_export.csv",
+    "approved_review_export.csv",
+  ],
+);
+assert.equal(reviewFiles[0].rows.length, 1);
+assert.equal(reviewFiles[1].rows.length, 1);
+assert.equal(reviewFiles[2].rows.length, 1);
+assert.equal(reviewFiles[3].rows.length, 1);
+assert.match(
+  adminContext.__adminTest.buildCsv(
+    reviewFiles[2].headers,
+    reviewFiles[2].rows,
+  ),
+  /Hold Cafe/,
+);
+assert.doesNotMatch(
+  adminContext.__adminTest.buildCsv(
+    reviewFiles[2].headers,
+    reviewFiles[2].rows,
+  ),
+  /Legacy Hidden/,
+);
+adminJsonApiResponses = {
+  "/cafes?lifecycle=active": adminContext.__adminTest.state.cafes,
+  "/submissions?status=pending": {
+    items: adminContext.__adminTest.state.submissions,
+  },
+};
+await adminContext.__adminTest.downloadCsv();
+assert.deepEqual(
+  Array.from(
+    downloadedCsvFiles.filter((item) => item.endsWith("_review_export.csv")),
+  ),
+  [
+    "submissions_review_export.csv",
+    "candidate_review_export.csv",
+    "hold_review_export.csv",
+    "approved_review_export.csv",
+  ],
+);
 
 function createApproveSubmissionTestEnv(role = "manager") {
   const statements = [];
