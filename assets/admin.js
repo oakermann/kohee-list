@@ -1054,7 +1054,7 @@ function reviewExportFiles(
 
 async function downloadCsv() {
   try {
-    $("csv-msg").textContent = "CSV ?ㅼ슫濡쒕뱶 以?..";
+    $("csv-msg").textContent = "CSV 다운로드 중...";
     const [cafes, submissionData] = await Promise.all([
       jsonApi("/cafes?lifecycle=active"),
       jsonApi("/submissions?status=pending"),
@@ -1064,7 +1064,7 @@ async function downloadCsv() {
       submissionData.items || [],
     );
     if (!files.some((file) => file.rows.length)) {
-      alert("?ㅼ슫濡쒕뱶???곗씠?곌? ?놁뒿?덈떎.");
+      alert("다운로드할 데이터가 없습니다.");
       $("csv-msg").textContent = "";
       return;
     }
@@ -1073,9 +1073,9 @@ async function downloadCsv() {
       downloadCsvFile(file.filename, buildCsv(file.headers, file.rows)),
     );
     $("csv-msg").textContent =
-      `CSV ?ㅼ슫濡쒕뱶 ?꾨즺: ${files.map((file) => file.filename).join(", ")}`;
+      `CSV 다운로드 완료: ${files.map((file) => file.filename).join(", ")}`;
   } catch (error) {
-    $("csv-msg").textContent = `CSV ?ㅼ슫濡쒕뱶 ?ㅽ뙣: ${error.message}`;
+    $("csv-msg").textContent = `CSV 다운로드 실패: ${error.message}`;
     alert(error.message);
   }
 }

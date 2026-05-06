@@ -1162,6 +1162,7 @@ adminJsonApiResponses = {
   },
 };
 await adminContext.__adminTest.downloadCsv();
+assert.match(adminElements.get("csv-msg").textContent, /^CSV 다운로드 완료:/);
 assert.deepEqual(
   Array.from(
     downloadedCsvFiles.filter((item) => item.endsWith("_review_export.csv")),
