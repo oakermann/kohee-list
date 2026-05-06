@@ -1172,8 +1172,9 @@ assert.match(
   /WHERE\s+status = 'approved'\s+AND deleted_at IS NULL/i,
 );
 
-function createResetCsvTestEnv(role = "admin") {
+function createResetCsvTestEnv(role = "admin", options = {}) {
   const statements = [];
+  let failedApply = false;
   return {
     statements,
     env: {
@@ -1206,12 +1207,43 @@ function createResetCsvTestEnv(role = "admin") {
                   manager_pick: 0,
                   status: "candidate",
                   deleted_at: "2026-04-28T00:00:00.000Z",
+                  deleted_by: "previous-admin",
+                  delete_reason: "previous reset",
                 };
               }
               if (sql.includes("COUNT(*) AS c FROM cafes")) return { c: 2 };
               return null;
             },
-            run: async () => ({ success: true }),
+            all: async () => {
+              if (
+                sql.includes("SELECT id, status, deleted_at, deleted_by") &&
+                sql.includes("WHERE deleted_at IS NULL")
+              ) {
+                return {
+                  results: [
+                    {
+                      id: "active-1",
+                      status: "approved",
+                      deleted_at: null,
+                      deleted_by: null,
+                      delete_reason: null,
+                    },
+                  ],
+                };
+              }
+              return { results: [] };
+            },
+            run: async () => {
+              if (
+                options.failApplyAfterSoftDelete &&
+                !failedApply &&
+                /UPDATE\s+cafes\s+SET\s+name\s*=\s*\?/i.test(sql)
+              ) {
+                failedApply = true;
+                throw new Error("D1 raw reset apply detail");
+              }
+              return { success: true };
+            },
           };
         },
       },
@@ -1222,8 +1254,9 @@ function createResetCsvTestEnv(role = "admin") {
 async function requestResetCsv(
   role = "admin",
   body = "name,address,desc,category\nImported Cafe,Seoul,Coffee,espresso",
+  options = {},
 ) {
-  const { env, statements } = createResetCsvTestEnv(role);
+  const { env, statements } = createResetCsvTestEnv(role, options);
   const response = await resetCsv(
     new Request("https://kohee.test/reset-csv", {
       method: "POST",
@@ -1308,6 +1341,53 @@ assert.ok(resetApprovedUpdate);
 assert.equal(resetApprovedUpdate.bindings[11], "candidate");
 assert.equal(resetApprovedUpdate.bindings[12], null);
 assert.equal(resetApprovedUpdate.bindings[13], null);
+
+const failingReset = await requestResetCsv(
+  "admin",
+  "name,address,desc,category\nImported Cafe,Seoul,Coffee,espresso",
+  { failApplyAfterSoftDelete: true },
+);
+assert.equal(failingReset.response.status, 500);
+assert.deepEqual(await failingReset.response.json(), {
+  ok: false,
+  error: "CSV reset failed",
+  code: "SERVER_ERROR",
+});
+assert.ok(
+  failingReset.statements.some((statement) =>
+    /UPDATE\s+cafes\s+SET\s+deleted_at\s*=\s*\?/i.test(statement.sql),
+  ),
+);
+const rollbackStatements = failingReset.statements.filter((statement) =>
+  /UPDATE\s+cafes\s+SET\s+status\s*=\s*\?,\s+deleted_at\s*=\s*\?/i.test(
+    statement.sql,
+  ),
+);
+assert.equal(rollbackStatements.length, 2);
+assert.ok(
+  rollbackStatements.some(
+    (statement) =>
+      statement.bindings[0] === "approved" &&
+      statement.bindings[1] === null &&
+      statement.bindings[5] === "active-1",
+  ),
+);
+assert.ok(
+  rollbackStatements.some(
+    (statement) =>
+      statement.bindings[0] === "candidate" &&
+      statement.bindings[1] === "2026-04-28T00:00:00.000Z" &&
+      statement.bindings[2] === "previous-admin" &&
+      statement.bindings[3] === "previous reset" &&
+      statement.bindings[5] === "cafe-1",
+  ),
+);
+assert.equal(
+  failingReset.statements.some((statement) =>
+    /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+  ),
+  false,
+);
 
 const unauthorizedReset = await requestResetCsv("manager");
 assert.equal(unauthorizedReset.response.status, 403);

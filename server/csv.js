@@ -162,7 +162,7 @@ function validateRowBody(body) {
 
 async function findDuplicateCafe(env, name, address) {
   return env.DB.prepare(
-    `SELECT id, name, oakerman_pick, manager_pick, status, deleted_at
+    `SELECT id, name, oakerman_pick, manager_pick, status, deleted_at, deleted_by, delete_reason
      FROM cafes
      WHERE lower(trim(name)) = lower(trim(?)) AND lower(trim(address)) = lower(trim(?))
      LIMIT 1`,
@@ -290,6 +290,7 @@ async function applyCsvRows(env, user, rows) {
 
   for (const row of rows) {
     const id = row.existing?.id || row.givenId || crypto.randomUUID();
+    row.appliedId = id;
     const timestamp = nowIso();
 
     if (row.action === "add") {
@@ -366,6 +367,73 @@ async function applyCsvRowsOrThrow(env, user, rows) {
   }
 }
 
+function resetSnapshotFromCafe(row) {
+  if (!row?.id) return null;
+  return {
+    id: row.id,
+    status: row.status || DEFAULT_IMPORTED_CAFE_STATUS,
+    deleted_at: row.deleted_at || null,
+    deleted_by: row.deleted_by || null,
+    delete_reason: row.delete_reason || null,
+  };
+}
+
+async function snapshotActiveCafeResetState(env) {
+  const rows = await env.DB.prepare(
+    `SELECT id, status, deleted_at, deleted_by, delete_reason
+     FROM cafes
+     WHERE deleted_at IS NULL`,
+  ).all();
+  return (rows.results || []).map(resetSnapshotFromCafe).filter(Boolean);
+}
+
+function resetRollbackSnapshots(activeSnapshots, rows) {
+  const snapshots = new Map();
+  for (const snapshot of activeSnapshots) snapshots.set(snapshot.id, snapshot);
+  for (const row of rows) {
+    const snapshot = resetSnapshotFromCafe(row.existing);
+    if (snapshot) snapshots.set(snapshot.id, snapshot);
+  }
+  return [...snapshots.values()];
+}
+
+async function rollbackResetCsv(env, user, rows, snapshots) {
+  const rolledBackAt = nowIso();
+  for (const snapshot of snapshots) {
+    await env.DB.prepare(
+      `UPDATE cafes
+       SET status = ?, deleted_at = ?, deleted_by = ?, delete_reason = ?, updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(
+        snapshot.status,
+        snapshot.deleted_at,
+        snapshot.deleted_by,
+        snapshot.delete_reason,
+        rolledBackAt,
+        snapshot.id,
+      )
+      .run();
+  }
+
+  for (const row of rows) {
+    if (row.action !== "add" || !row.appliedId) continue;
+    await env.DB.prepare(
+      `UPDATE cafes
+       SET deleted_at = ?, deleted_by = ?, updated_at = ?
+       WHERE id = ? AND created_by = ?`,
+    )
+      .bind(
+        rolledBackAt,
+        user.user_id,
+        rolledBackAt,
+        row.appliedId,
+        user.user_id,
+      )
+      .run();
+  }
+}
+
 export async function importCsv(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
@@ -421,7 +489,14 @@ export async function resetCsv(req, env) {
     let deleted = 0;
     let deletedAt = "";
     let applied = { added: 0, updated: 0, duplicated: 0 };
+    let rollbackSnapshots = [];
     try {
+      const activeSnapshots = await snapshotActiveCafeResetState(env);
+      rollbackSnapshots = resetRollbackSnapshots(
+        activeSnapshots,
+        analysis.rows,
+      );
+
       const countRow = await env.DB.prepare(
         "SELECT COUNT(*) AS c FROM cafes WHERE deleted_at IS NULL",
       ).first();
@@ -437,9 +512,18 @@ export async function resetCsv(req, env) {
         .run();
 
       applied = await applyCsvRowsOrThrow(env, user, analysis.rows);
-    } catch (error) {
-      if (error instanceof HttpError) throw error;
-      throw new HttpError(500, "CSV reset failed", "SERVER_ERROR");
+    } catch {
+      try {
+        if (rollbackSnapshots.length) {
+          await rollbackResetCsv(env, user, analysis.rows, rollbackSnapshots);
+        }
+      } catch {}
+      return json(
+        { ok: false, error: "CSV reset failed", code: "SERVER_ERROR" },
+        500,
+        req,
+        env,
+      );
     }
     await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
