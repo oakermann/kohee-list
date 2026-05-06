@@ -98,9 +98,9 @@
 
 유지 원칙:
 
-- 신규 row는 CSV에 `status`가 없으면 `candidate`로 저장한다.
-- CSV가 기존 row를 update할 때 `status`가 없으면 기존 status를 유지한다.
-- CSV에서 `status = 'approved'`가 명시된 경우에만 approved로 반영한다.
+- 신규 row는 CSV에 `status`가 없거나 `status = 'approved'`가 명시되어도 `candidate`로 저장한다.
+- CSV가 기존 row를 update할 때도 기본 `candidate`로 되돌려 public 직접 공개를 막는다.
+- CSV에서 `status = 'hidden'`이 명시된 경우에만 `hidden_at`을 기록한 후보 보류 row로 반영한다.
 - CSV에서 누락된 기존 cafe를 유지할지 숨길지 정책이 없다.
 - category allowlist, lat/lng range, invalid URL 실패 처리와 연결된 lifecycle 정책이 부족하다.
 
@@ -414,8 +414,9 @@ restore 기능은 필요하다.
 권장 기본값:
 
 - CSV에 `status`가 없으면 신규 row는 `candidate`
-- CSV가 기존 row를 update하면 기존 `status` 유지
-- CSV에서 `status = 'approved'`가 명시된 경우에만 approved로 반영
+- CSV가 기존 row를 update해도 기본 `candidate`
+- CSV에서 `status = 'approved'`가 명시되어도 `candidate`로 반영
+- CSV에서 `status = 'hidden'`이 명시된 경우에만 `hidden_at`을 기록한 보류 후보로 반영
 
 안전 기본안:
 
@@ -424,10 +425,10 @@ restore 기능은 필요하다.
 현재 구현 기준:
 
 - `/add`로 생성되는 신규 cafe는 `candidate`로 저장한다.
-- 신규 CSV row는 `status`가 비어 있으면 `candidate`로 저장한다.
-- 기존 CSV duplicate/update row는 `status`가 비어 있으면 기존 row의 `status`를 유지한다.
-- resetCsv에서 기존 row를 재활성화할 때도 `status`를 무조건 `approved`로 바꾸지 않는다.
-- CSV로 공개 상태를 만들려면 `status` 컬럼에 `approved`가 명시되어 있어야 한다.
+- 신규 CSV row는 `status`가 비어 있거나 `approved`여도 `candidate`로 저장한다.
+- 기존 CSV duplicate/update row도 기본 `candidate`로 저장한다.
+- resetCsv에서 기존 row를 재활성화할 때도 `approved`로 바꾸지 않는다.
+- CSV로 공개 상태를 만들 수 없으며, 공개 전환은 기존 `/approve-cafe`를 사용한다.
 - admin만 `/approve-cafe`로 candidate cafe를 `approved`로 승격할 수 있다.
 - admin만 `/hold-cafe`와 `/unhold-cafe`로 active cafe의 `candidate`와 `hidden` 상태를 오갈 수 있다.
 - manager/user는 cafe를 public 노출 상태로 승인할 수 없다.

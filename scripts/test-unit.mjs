@@ -1291,7 +1291,23 @@ const resetImportUpdate = resetResult.statements.find((statement) =>
 assert.ok(resetImportUpdate);
 assert.match(resetImportUpdate.sql, /status\s*=\s*\?/i);
 assert.equal(resetImportUpdate.bindings[11], "candidate");
+assert.match(resetImportUpdate.sql, /hidden_at\s*=\s*\?/i);
+assert.equal(resetImportUpdate.bindings[12], null);
+assert.equal(resetImportUpdate.bindings[13], null);
 assert.match(resetImportUpdate.sql, /deleted_at\s*=\s*NULL/i);
+
+const resetApprovedResult = await requestResetCsv(
+  "admin",
+  "name,address,desc,status\nApproved Reset,Seoul,Coffee,approved",
+);
+assert.equal(resetApprovedResult.response.status, 200);
+const resetApprovedUpdate = resetApprovedResult.statements.find((statement) =>
+  /UPDATE\s+cafes\s+SET\s+name\s*=\s*\?/i.test(statement.sql),
+);
+assert.ok(resetApprovedUpdate);
+assert.equal(resetApprovedUpdate.bindings[11], "candidate");
+assert.equal(resetApprovedUpdate.bindings[12], null);
+assert.equal(resetApprovedUpdate.bindings[13], null);
 
 const unauthorizedReset = await requestResetCsv("manager");
 assert.equal(unauthorizedReset.response.status, 403);
@@ -1398,6 +1414,9 @@ const importUpdate = importStatements.find((statement) =>
 assert.ok(importUpdate);
 assert.match(importUpdate.sql, /status\s*=\s*\?/i);
 assert.equal(importUpdate.bindings[11], "candidate");
+assert.match(importUpdate.sql, /hidden_at\s*=\s*\?/i);
+assert.equal(importUpdate.bindings[12], null);
+assert.equal(importUpdate.bindings[13], null);
 assert.match(importUpdate.sql, /deleted_at\s*=\s*NULL/i);
 assert.match(importUpdate.sql, /deleted_by\s*=\s*NULL/i);
 assert.match(importUpdate.sql, /delete_reason\s*=\s*NULL/i);
@@ -1415,6 +1434,8 @@ const importNewInsert = importNewStatements.find((statement) =>
 assert.ok(importNewInsert);
 assert.match(importNewInsert.sql, /status/i);
 assert.equal(importNewInsert.bindings[12], "candidate");
+assert.equal(importNewInsert.bindings[13], null);
+assert.equal(importNewInsert.bindings[14], null);
 
 const {
   response: importApprovedResponse,
@@ -1428,7 +1449,45 @@ assert.equal(importApprovedResponse.status, 200);
 const importApprovedInsert = importApprovedStatements.find((statement) =>
   /INSERT\s+INTO\s+cafes/i.test(statement.sql),
 );
-assert.equal(importApprovedInsert.bindings[12], "approved");
+assert.equal(importApprovedInsert.bindings[12], "candidate");
+assert.equal(importApprovedInsert.bindings[13], null);
+assert.equal(importApprovedInsert.bindings[14], null);
+assert.match(
+  capturedPublicCafeSql,
+  /WHERE\s+status = 'approved'\s+AND deleted_at IS NULL/i,
+);
+
+const { response: importHiddenResponse, statements: importHiddenStatements } =
+  await requestImportCsv(
+    "admin",
+    "name,address,desc,status\nHidden CSV,Seoul,Coffee,hidden",
+    false,
+  );
+assert.equal(importHiddenResponse.status, 200);
+const importHiddenInsert = importHiddenStatements.find((statement) =>
+  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+);
+assert.ok(importHiddenInsert);
+assert.equal(importHiddenInsert.bindings[12], "hidden");
+assert.match(importHiddenInsert.bindings[13], /^\d{4}-\d{2}-\d{2}T/);
+assert.equal(importHiddenInsert.bindings[14], "admin-user");
+
+const {
+  response: importHiddenUpdateResponse,
+  statements: hiddenUpdateStatements,
+} = await requestImportCsv(
+  "admin",
+  "name,address,desc,status\nImported Cafe,Seoul,Coffee,hidden",
+  true,
+);
+assert.equal(importHiddenUpdateResponse.status, 200);
+const importHiddenUpdate = hiddenUpdateStatements.find((statement) =>
+  /UPDATE\s+cafes\s+SET/i.test(statement.sql),
+);
+assert.ok(importHiddenUpdate);
+assert.equal(importHiddenUpdate.bindings[11], "hidden");
+assert.match(importHiddenUpdate.bindings[12], /^\d{4}-\d{2}-\d{2}T/);
+assert.equal(importHiddenUpdate.bindings[13], "admin-user");
 
 const invalidImport = await requestImportCsv(
   "admin",

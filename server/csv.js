@@ -171,10 +171,15 @@ async function findDuplicateCafe(env, name, address) {
     .first();
 }
 
-function resolveCsvCafeStatus(csvStatus, existing) {
-  if (csvStatus) return csvStatus;
-  if (existing) return existing.status || "approved";
+function resolveCsvCafeStatus(csvStatus) {
+  if (csvStatus === "hidden") return "hidden";
   return DEFAULT_IMPORTED_CAFE_STATUS;
+}
+
+function csvHoldFields(status, timestamp, user) {
+  return status === "hidden"
+    ? { hidden_at: timestamp, hidden_by: user.user_id }
+    : { hidden_at: null, hidden_by: null };
 }
 
 async function analyzeCsv(raw, env, user) {
@@ -223,7 +228,7 @@ async function analyzeCsv(raw, env, user) {
       if (!payload.name || !payload.address || !payload.desc) {
         throw new Error("name/address/desc required");
       }
-      const status = resolveCsvCafeStatus(body.status, existing);
+      const status = resolveCsvCafeStatus(body.status);
 
       if (action === "add") stats.wouldAdd += 1;
       if (action === "update") stats.wouldUpdate += 1;
@@ -288,11 +293,12 @@ async function applyCsvRows(env, user, rows) {
     const timestamp = nowIso();
 
     if (row.action === "add") {
+      const holdFields = csvHoldFields(row.status, timestamp, user);
       await env.DB.prepare(
         `INSERT INTO cafes(
           id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-          oakerman_pick, manager_pick, status, created_by, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          oakerman_pick, manager_pick, status, hidden_at, hidden_by, created_by, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           id,
@@ -308,6 +314,8 @@ async function applyCsvRows(env, user, rows) {
           row.payload.oakerman_pick,
           row.payload.manager_pick,
           row.status,
+          holdFields.hidden_at,
+          holdFields.hidden_by,
           user.user_id,
           timestamp,
         )
@@ -316,10 +324,11 @@ async function applyCsvRows(env, user, rows) {
       continue;
     }
 
+    const holdFields = csvHoldFields(row.status, timestamp, user);
     await env.DB.prepare(
       `UPDATE cafes SET
         name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, manager_pick = ?, status = ?,
+        oakerman_pick = ?, manager_pick = ?, status = ?, hidden_at = ?, hidden_by = ?,
         deleted_at = NULL, deleted_by = NULL, delete_reason = NULL, updated_at = ?
        WHERE id = ?`,
     )
@@ -336,6 +345,8 @@ async function applyCsvRows(env, user, rows) {
         row.payload.oakerman_pick,
         row.payload.manager_pick,
         row.status,
+        holdFields.hidden_at,
+        holdFields.hidden_by,
         timestamp,
         id,
       )
