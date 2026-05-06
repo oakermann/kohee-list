@@ -37,6 +37,8 @@ const ALLOWED_CAFE_STATUSES = new Set([
   "rejected",
 ]);
 const DEFAULT_IMPORTED_CAFE_STATUS = "candidate";
+const RESET_ROLLBACK_CAFE_COLUMNS =
+  "id, name, address, desc, lat, lng, signature, beanShop, instagram, category, oakerman_pick, manager_pick, status, hidden_at, hidden_by, deleted_at, deleted_by, delete_reason, updated_at";
 
 export function parseCsvLine(line) {
   const out = [];
@@ -162,7 +164,7 @@ function validateRowBody(body) {
 
 async function findDuplicateCafe(env, name, address) {
   return env.DB.prepare(
-    `SELECT *
+    `SELECT ${RESET_ROLLBACK_CAFE_COLUMNS}
      FROM cafes
      WHERE lower(trim(name)) = lower(trim(?)) AND lower(trim(address)) = lower(trim(?))
      LIMIT 1`,
@@ -371,31 +373,30 @@ function resetSnapshotFromCafe(row) {
   if (!row?.id) return null;
   return {
     id: row.id,
-    name: row.name || "",
-    address: row.address || "",
-    desc: row.desc || "",
-    lat: row.lat ?? 0,
-    lng: row.lng ?? 0,
-    signature: row.signature || "[]",
-    beanShop: row.beanShop || "",
-    instagram: row.instagram || "",
-    category: row.category || "[]",
-    oakerman_pick: row.oakerman_pick ?? 0,
-    manager_pick: row.manager_pick ?? 0,
-    status: row.status || DEFAULT_IMPORTED_CAFE_STATUS,
-    hidden_at: row.hidden_at || null,
-    hidden_by: row.hidden_by || null,
-    deleted_at: row.deleted_at || null,
-    deleted_by: row.deleted_by || null,
-    delete_reason: row.delete_reason || null,
-    updated_at: row.updated_at || null,
+    name: row.name,
+    address: row.address,
+    desc: row.desc,
+    lat: row.lat,
+    lng: row.lng,
+    signature: row.signature,
+    beanShop: row.beanShop,
+    instagram: row.instagram,
+    category: row.category,
+    oakerman_pick: row.oakerman_pick,
+    manager_pick: row.manager_pick,
+    status: row.status,
+    hidden_at: row.hidden_at,
+    hidden_by: row.hidden_by,
+    deleted_at: row.deleted_at,
+    deleted_by: row.deleted_by,
+    delete_reason: row.delete_reason,
+    updated_at: row.updated_at,
   };
 }
 
 async function snapshotActiveCafeResetState(env) {
   const rows = await env.DB.prepare(
-    `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-      oakerman_pick, manager_pick, status, hidden_at, hidden_by, deleted_at, deleted_by, delete_reason, updated_at
+    `SELECT ${RESET_ROLLBACK_CAFE_COLUMNS}
      FROM cafes
      WHERE deleted_at IS NULL`,
   ).all();
@@ -440,7 +441,7 @@ async function rollbackResetCsv(env, user, rows, snapshots) {
         snapshot.deleted_at,
         snapshot.deleted_by,
         snapshot.delete_reason,
-        snapshot.updated_at || rolledBackAt,
+        snapshot.updated_at,
         snapshot.id,
       )
       .run();

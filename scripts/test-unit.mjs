@@ -1205,14 +1205,14 @@ function createResetCsvTestEnv(role = "admin", options = {}) {
                   name: "Imported Cafe",
                   address: "Seoul",
                   desc: "Original coffee",
-                  lat: 37.5,
-                  lng: 127,
-                  signature: '["drip"]',
-                  beanShop: "https://beans.example",
-                  instagram: "https://instagram.example/imported",
-                  category: '["drip"]',
-                  oakerman_pick: 1,
-                  manager_pick: 0,
+                  lat: null,
+                  lng: null,
+                  signature: null,
+                  beanShop: null,
+                  instagram: "",
+                  category: null,
+                  oakerman_pick: null,
+                  manager_pick: null,
                   status: "candidate",
                   hidden_at: null,
                   hidden_by: null,
@@ -1237,14 +1237,14 @@ function createResetCsvTestEnv(role = "admin", options = {}) {
                       name: "Active Cafe",
                       address: "Busan",
                       desc: "Active original",
-                      lat: 35.1,
-                      lng: 129.1,
-                      signature: '["espresso"]',
-                      beanShop: "",
+                      lat: null,
+                      lng: null,
+                      signature: null,
+                      beanShop: null,
                       instagram: "",
-                      category: '["espresso"]',
-                      oakerman_pick: 0,
-                      manager_pick: 1,
+                      category: null,
+                      oakerman_pick: null,
+                      manager_pick: null,
                       status: "approved",
                       hidden_at: null,
                       hidden_by: null,
@@ -1397,6 +1397,13 @@ assert.ok(
     (statement) =>
       statement.bindings[0] === "Active Cafe" &&
       statement.bindings[1] === "Busan" &&
+      statement.bindings[3] === null &&
+      statement.bindings[4] === null &&
+      statement.bindings[5] === null &&
+      statement.bindings[6] === null &&
+      statement.bindings[8] === null &&
+      statement.bindings[9] === null &&
+      statement.bindings[10] === null &&
       statement.bindings[11] === "approved" &&
       statement.bindings[14] === null &&
       statement.bindings[18] === "active-1",
@@ -1407,6 +1414,13 @@ assert.ok(
     (statement) =>
       statement.bindings[0] === "Imported Cafe" &&
       statement.bindings[2] === "Original coffee" &&
+      statement.bindings[3] === null &&
+      statement.bindings[4] === null &&
+      statement.bindings[5] === null &&
+      statement.bindings[6] === null &&
+      statement.bindings[8] === null &&
+      statement.bindings[9] === null &&
+      statement.bindings[10] === null &&
       statement.bindings[11] === "candidate" &&
       statement.bindings[14] === "2026-04-28T00:00:00.000Z" &&
       statement.bindings[15] === "previous-admin" &&
