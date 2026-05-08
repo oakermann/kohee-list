@@ -611,3 +611,57 @@ Risks:
 - Manager is legacy; do not add or expand manager-specific features.
 - The final authorization model is admin/user.
 - This contract is documentation/coordination only; it does not change runtime behavior.
+
+## 27. Codex Factory Operating Model (GitHub-centered)
+
+This repository uses GitHub as the control center.
+
+- Codex Pro roles: Builder, Auditor, Test Writer, Reviewer, Fixer, Release Sentinel.
+- GitHub Actions handles automatic QA and validation gates.
+- Codex GitHub Review should be configured manually for PR auto-review.
+- No extra OpenAI API keys, Codex SDK, MCP, Linear, Codex GitHub Action, or external automation services are required for this model.
+
+### Lane-based planning requirements
+
+- Every task must declare a single lane and risk level.
+- Every task must include exact file/function allowlists.
+- One lane, one task, one commit.
+- Automation-foundation tasks must not change runtime behavior.
+
+### HIGH areas requiring special caution
+
+- `server/csv.js`, `server/cafes.js`
+- auth/session/security shared logic
+- public API and lifecycle gates
+- D1 schema/migrations
+- deploy workflows
+
+### PR-preferred governance rule
+
+For `.github/workflows/**`, `.github/CODEOWNERS`, branch-protection-related docs/rules:
+
+- Prefer branch + PR flow over direct `main` changes when possible.
+- Never auto-deploy from validation workflows.
+- Never auto-apply D1 migrations.
+
+### Codex report contract
+
+Use this format:
+
+```text
+Risk / Lane / Commit or PR / Changed files / Changed functions / Tests / Remaining risks
+```
+
+### D1 and role model constraints
+
+- D1 schema/migration changes require manual review and must block automatic deploy execution.
+- Manager is legacy; do not expand manager-specific behavior.
+- Final authorization target remains admin/user.
+
+### Future automation sequence
+
+1. `audit:kohee`
+2. PR validation workflow
+3. Branch protection and required checks (manual GitHub setup)
+4. Codex GitHub auto-review (manual setup)
+5. LOW-only auto-merge only after stability is proven (not now)

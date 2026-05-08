@@ -1,0 +1,19 @@
+# CODEOWNERS for KOHEE high-risk files. Keep owner entries current before enabling required CODEOWNERS review.
+/server/csv.js @oakermann
+/server/cafes.js @oakermann
+/server/shared.js @oakermann
+/server/auth.js @oakermann
+/server/security.js @oakermann
+/server/routes.js @oakermann
+/server/users.js @oakermann
+/server/submissions.js @oakermann
+/server/favorites.js @oakermann
+/schema.sql @oakermann
+/migrations/** @oakermann
+/wrangler.toml @oakermann
+/.github/workflows/** @oakermann
+/scripts/** @oakermann
+/package.json @oakermann
+/AGENTS.md @oakermann
+/kohee.contract.json @oakermann
+/docs/CODEX_WORKFLOW.md @oakermann
