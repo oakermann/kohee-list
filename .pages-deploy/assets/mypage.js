@@ -10,6 +10,7 @@ import {
   jsonApi,
   openNaverMapForCafe,
   roleLabel,
+  safeHttpUrl,
   setStorageValue,
   shareCafe,
   statusLabel,
@@ -152,19 +153,21 @@ function openModal(cafeId) {
     }
   };
 
-  if (cafe.instagram) {
+  const instagramUrl = safeHttpUrl(cafe.instagram);
+  if (instagramUrl) {
     $("btn-insta").classList.remove("is-hidden");
     $("btn-insta").onclick = () =>
-      window.open(cafe.instagram, "_blank", "noopener");
+      window.open(instagramUrl, "_blank", "noopener");
   } else {
     $("btn-insta").classList.add("is-hidden");
     $("btn-insta").onclick = null;
   }
 
-  if (cafe.beanShop) {
+  const beanShopUrl = safeHttpUrl(cafe.beanShop);
+  if (beanShopUrl) {
     $("btn-bean").classList.remove("is-hidden");
     $("btn-bean").onclick = () =>
-      window.open(cafe.beanShop, "_blank", "noopener");
+      window.open(beanShopUrl, "_blank", "noopener");
   } else {
     $("btn-bean").classList.add("is-hidden");
     $("btn-bean").onclick = null;
@@ -187,18 +190,30 @@ function setupModalOverlay() {
 }
 
 function renderMenu(user) {
-  const roleButton =
-    user.role === "admin"
-      ? `<a class="mini-btn primary" href="admin.html">관리자 페이지</a>`
-      : user.role === "manager"
-        ? `<a class="mini-btn primary" href="admin.html">매니저 페이지</a>`
-        : "";
+  const menu = $("menu");
+  const mainLink = document.createElement("a");
+  mainLink.className = "mini-btn";
+  mainLink.href = "index.html";
+  mainLink.textContent = "메인";
 
-  $("menu").innerHTML = `
-    <a class="mini-btn" href="index.html">메인</a>
-    ${roleButton}
-    <button id="logout-btn" class="mini-btn" type="button">로그아웃</button>
-  `;
+  const nodes = [mainLink];
+  if (user.role === "admin" || user.role === "manager") {
+    const roleLink = document.createElement("a");
+    roleLink.className = "mini-btn primary";
+    roleLink.href = "admin.html";
+    roleLink.textContent =
+      user.role === "admin" ? "관리자 페이지" : "매니저 페이지";
+    nodes.push(roleLink);
+  }
+
+  const logoutButton = document.createElement("button");
+  logoutButton.id = "logout-btn";
+  logoutButton.className = "mini-btn";
+  logoutButton.type = "button";
+  logoutButton.textContent = "로그아웃";
+  nodes.push(logoutButton);
+
+  menu.replaceChildren(...nodes);
 
   $("logout-btn").addEventListener("click", async () => {
     await jsonApi("/logout", { method: "POST" }).catch(() => {});
