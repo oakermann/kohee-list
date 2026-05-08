@@ -12,7 +12,8 @@
     "smoke:check": "node scripts/smoke-check.mjs",
     "test:unit": "node scripts/test-unit.mjs",
     "verify:release": "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify-release.ps1",
-    "audit:kohee": "node scripts/audit-kohee.mjs"
+    "audit:kohee": "node scripts/audit-kohee.mjs",
+    "audit:kohee:strict": "node scripts/audit-kohee.mjs --strict"
   },
   "devDependencies": {
     "prettier": "^3.8.3"
