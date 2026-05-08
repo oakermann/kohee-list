@@ -25,6 +25,16 @@ function fail(msg) {
   console.log(`FAIL: ${msg}`);
 }
 
+function mustMatch(content, regex, failMsg, okMsg) {
+  if (regex.test(content)) ok(okMsg);
+  else fail(failMsg);
+}
+
+function mustInclude(content, needle, failMsg, okMsg) {
+  if (content.includes(needle)) ok(okMsg);
+  else fail(failMsg);
+}
+
 const contractRaw = read("kohee.contract.json");
 if (!contractRaw) fail("kohee.contract.json missing");
 let contract = null;
@@ -50,6 +60,12 @@ if (contract) {
     if (Object.hasOwn(contract, key)) ok(`contract key present: ${key}`);
     else fail(`contract key missing: ${key}`);
   }
+
+  const deployLane = contract?.lanes?.DEPLOY_SAFETY;
+  if (deployLane?.files?.includes("scripts"))
+    ok("DEPLOY_SAFETY lane includes scripts");
+  else fail("DEPLOY_SAFETY lane file allowlist missing scripts");
+
   const inv = contract.invariants || {};
   const requiredInv = {
     publicCafeWhere: "status = 'approved' AND deleted_at IS NULL",
@@ -68,30 +84,70 @@ if (contract) {
 }
 
 const cafes = read("server/cafes.js");
-if (/status\s*=\s*'approved'[\s\S]*deleted_at\s+IS\s+NULL/.test(cafes))
-  ok("server/cafes.js public filtering appears safe");
-else warn("server/cafes.js approved/deleted filter not confidently detected");
+mustMatch(
+  cafes,
+  /status\s*=\s*'approved'[\s\S]*deleted_at\s+IS\s+NULL/,
+  "server/cafes.js public approved+non-deleted invariant missing",
+  "server/cafes.js public filtering appears safe",
+);
 
 const fav = read("server/favorites.js");
-if (/status\s*=\s*'approved'[\s\S]*deleted_at\s+IS\s+NULL/.test(fav))
+if (/status\s*=\s*'approved'[\s\S]*deleted_at\s+IS\s+NULL/.test(fav)) {
   ok("server/favorites.js favorite filtering appears safe");
-else
+} else {
   warn(
-    "server/favorites.js approved/deleted filter not detected (existing debt possible)",
+    "server/favorites.js approved/deleted filter not detected (possible pre-existing debt)",
   );
+}
+
+for (const file of ["assets/index.js", "assets/mypage.js"]) {
+  const content = read(file);
+  if (!content) continue;
+  if (
+    /\b(status|candidate|hidden|rejected|deleted_at|deleted)\b/i.test(content)
+  ) {
+    warn(
+      `${file} contains lifecycle/status terms; review public exposure paths manually`,
+    );
+  } else {
+    ok(`${file} has no obvious lifecycle keyword leak markers`);
+  }
+}
 
 const csv = read("server/csv.js");
-if (/DEFAULT_IMPORTED_CAFE_STATUS\s*=\s*"candidate"/.test(csv))
+if (/DEFAULT_IMPORTED_CAFE_STATUS\s*=\s*"candidate"/.test(csv)) {
   ok("CSV approved stages as candidate appears enforced");
-else warn("CSV candidate staging not confidently detected");
-if (csv.includes("CSV reset failed"))
-  ok("CSV reset safe error message present");
-else fail("CSV reset safe error message missing");
+} else {
+  fail(
+    "CSV approved publishing risk: DEFAULT_IMPORTED_CAFE_STATUS is not candidate",
+  );
+}
+mustInclude(
+  csv,
+  "CSV reset failed",
+  "CSV reset safe error message missing",
+  "CSV reset safe error message present",
+);
 
 const submissions = read("server/submissions.js");
-if (/INSERT INTO cafes[\s\S]*"candidate"/.test(submissions))
+if (/INSERT INTO cafes[\s\S]*"candidate"/.test(submissions)) {
   ok("approveSubmission appears to create candidate cafes");
-else warn("approveSubmission candidate creation not confidently detected");
+} else {
+  fail("submission approval may create non-candidate cafes");
+}
+
+if (/status\s*=\s*'hidden'[\s\S]*hidden_at\s+IS\s+NOT\s+NULL/.test(cafes)) {
+  ok("hold semantics (hidden + hidden_at) pattern detected");
+} else {
+  warn("hold semantics pattern not confidently detected in server/cafes.js");
+}
+if (/status\s*=\s*'hidden'[\s\S]*hidden_at\s+IS\s+NULL/.test(cafes)) {
+  ok("legacy hidden semantics (hidden + hidden_at NULL) pattern detected");
+} else {
+  warn(
+    "legacy hidden semantics pattern not confidently detected in server/cafes.js",
+  );
+}
 
 const workflows =
   read(".github/workflows/deploy.yml") +
@@ -99,12 +155,21 @@ const workflows =
   read(".github/workflows/validate.yml") +
   "\n" +
   read(".github/workflows/pr-validate.yml");
-if (
-  /d1 migration/i.test(workflows) &&
-  /wrangler d1 migrations apply/i.test(workflows)
-)
-  warn("Potential D1 auto-apply signal found in workflows");
-else ok("No obvious D1 auto-apply command detected in workflows");
+const routes = read("server/routes.js");
+const scriptSources = [
+  "scripts/verify-release.ps1",
+  "scripts/check-repo-safety.mjs",
+  "scripts/check-syntax.ps1",
+  "scripts/check-deploy-sync.mjs",
+]
+  .map((p) => read(p))
+  .join("\n");
+const d1Sources = `${workflows}\n${routes}\n${scriptSources}`;
+if (/wrangler\s+d1\s+migrations\s+apply/i.test(d1Sources)) {
+  fail("Potential D1 migration auto-apply command detected");
+} else {
+  ok("No obvious D1 auto-apply command detected in workflows/routes/scripts");
+}
 
 for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
   const content = read(file);
@@ -120,12 +185,7 @@ for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
   });
 }
 
-const mojibakeTargets = [
-  "assets/index.js",
-  "assets/mypage.js",
-  "assets/admin.js",
-];
-for (const file of mojibakeTargets) {
+for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
   const content = read(file);
   for (const marker of ["?ㅼ", "?꾨", "?놁", "?ㅽ"]) {
     if (content.includes(marker))
@@ -133,12 +193,14 @@ for (const file of mojibakeTargets) {
   }
 }
 
-const touched =
+const refs =
   read("AGENTS.md") +
   read("docs/CODEX_WORKFLOW.md") +
-  read(".github/pull_request_template.md");
-if (/\baaaa\b|\baaa\b/.test(touched))
-  warn("Possible aaa/aaaa reference introduced in edited files");
+  read(".github/pull_request_template.md") +
+  read("package.json") +
+  read("scripts/audit-kohee.mjs");
+if (/\baaaa\b|\baaa\b/.test(refs)) warn("Possible aaa/aaaa reference found");
+else ok("No obvious aaa/aaaa references detected");
 
 if (errors.length || (strict && warnings.length)) {
   console.log(
