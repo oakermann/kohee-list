@@ -449,3 +449,16 @@ input[type="file"]::file-selector-button {
 .admin-small {
   font-size: 0.72rem;
 }
+
+.admin-legacy-toggle-wrap {
+  margin-bottom: 6px;
+}
+#legacy-review-toggle {
+  width: 100%;
+}
+.legacy-heading {
+  font-size: 0.75rem;
+  font-weight: 900;
+  margin: 2px 0 6px;
+  text-align: center;
+}
