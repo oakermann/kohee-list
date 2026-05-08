@@ -665,3 +665,291 @@ Risk / Lane / Commit or PR / Changed files / Changed functions / Tests / Remaini
 3. Branch protection and required checks (manual GitHub setup)
 4. Codex GitHub auto-review (manual setup)
 5. LOW-only auto-merge only after stability is proven (not now)
+
+## KOHEE GitHub Command Bridge Workflow
+
+This section defines KOHEE GitHub Command Bridge v1. It is governance only and does not change runtime application behavior.
+
+### Primary Rule
+
+GitHub evidence wins. Codex self-reports are useful status notes, but they are never final truth.
+
+Before ChatGPT reports task completion to the user, ChatGPT must verify actual GitHub state:
+
+- PR state.
+- Head SHA.
+- Changed files.
+- Actual diff.
+- GitHub checks.
+- Codex review P1/P2.
+- Unresolved review threads.
+- Root/.pages-deploy sync.
+- Asset cache-bust when assets changed.
+- HIGH-risk paths/topics.
+- Deploy status when applicable.
+- Smoke/health when applicable.
+
+If Codex status conflicts with actual GitHub state, actual GitHub state wins. If verification was not performed, report `UNVERIFIED`, not complete. If evidence conflicts, report `CONFLICTED` and `HOLD` or request follow-up.
+
+### Roles
+
+- User: talks only to ChatGPT, and approves HIGH-risk work, HOLD release, and product direction only.
+- ChatGPT: planner, command writer, verifier, and user-facing reporter. ChatGPT writes `KOHEE_COMMAND`, calls `@codex`, verifies GitHub evidence, and reports concise status.
+- Codex: executor and reworker. Codex reads `AGENTS.md`, `kohee.contract.json`, and this workflow before planning; implements, tests, opens PRs, fixes safe LOW/MEDIUM failures, and updates `KOHEE_STATUS`.
+- GitHub: command bridge, evidence store, task ledger, CI/review/deploy gate, and source of truth.
+
+### Bootstrap and Governance
+
+The initial bridge task bootstraps the `GOVERNANCE` lane. Until `kohee.contract.json` contains `GOVERNANCE`, the explicit task allowlist is the controlling scope.
+
+`kohee.contract.json` changes for bridge governance are limited to adding the `GOVERNANCE` lane and governance allowlist entries. Do not alter existing lane meanings, invariants, forbidden rules, or verification requirements except where strictly necessary to recognize `GOVERNANCE`.
+
+`KOHEE_COMMAND.allowed_files` may override lane defaults only when explicitly recorded in GitHub. File override can permit editing files, but it cannot waive HIGH-risk approval/HOLD requirements. HIGH-risk paths/topics cannot be auto-cleared by override.
+
+### Core States
+
+- `QUEUED`: `KOHEE_COMMAND` exists; Codex has not started.
+- `QUEUED_STALE`: `KOHEE_COMMAND` exists but there is no `KOHEE_STATUS` update, no PR activity, and no acknowledgement evidence.
+- `WORKING`: Codex is implementing or investigating.
+- `PR_OPEN`: PR exists and awaits checks/review/update.
+- `REVIEWING`: checks/reviews/ChatGPT verification are being evaluated.
+- `FIXING`: Codex is addressing failed checks, review comments, or safe LOW/MEDIUM issues.
+- `DEPLOYING`: merge/deploy verification is in progress.
+- `MERGED_AND_DEPLOYED`: terminal; PR merged and required deploy/smoke evidence verified.
+- `DONE_NO_DEPLOY`: terminal; task completed/merged and deploy was verified as not required.
+- `HOLD`: terminal until user/permission/product/HIGH-risk blocker is resolved.
+
+Terminal states are `MERGED_AND_DEPLOYED`, `DONE_NO_DEPLOY`, and `HOLD`.
+
+Reporting verification status values are:
+
+- `VERIFIED`: ChatGPT checked actual GitHub evidence.
+- `UNVERIFIED`: required GitHub evidence was not checked or unavailable.
+- `CONFLICTED`: Codex status conflicts with actual GitHub evidence.
+
+### Completion Rules
+
+`MERGED_AND_DEPLOYED` is valid only when all applicable evidence is confirmed:
+
+- PR merged.
+- Merged commit or head SHA is traceable.
+- Required checks succeeded.
+- No unresolved Codex review P1/P2.
+- No unresolved review threads.
+- Changed files are within allowed scope.
+- No unexpected HIGH-risk paths/topics touched.
+- Root/.pages-deploy sync confirmed when frontend assets/pages changed.
+- Asset cache-bust confirmed when immutable assets changed.
+- Deploy success confirmed when deploy is required.
+- Smoke/health confirmed when applicable.
+
+`DONE_NO_DEPLOY` is valid only when:
+
+- Task is completed and, if a PR was required, PR is merged.
+- Checks succeeded or were explicitly not applicable.
+- Deploy was verified as not required.
+- Changed files are docs/tooling/governance/test-only or otherwise non-runtime.
+- No unresolved P1/P2 or review threads remain.
+- ChatGPT verification status is `VERIFIED`.
+- It may apply to issue-only documentation/audit tasks when no PR was required, but ChatGPT must verify no repo change was expected.
+
+For manual-review governance PRs, Codex should open the PR, run required verification, update `KOHEE_STATUS`, and stop at `PR_OPEN` / user review required. Codex must not mark `DONE_NO_DEPLOY` before ChatGPT verifies the PR is merged and no runtime deploy is required.
+
+### Deploy Verification
+
+- If deploy is required but still running or not visible yet, use `state: DEPLOYING` and `deploy_status: pending`.
+- If deploy evidence remains unavailable after timeout or repeated checks, use `state: HOLD` and `blocker: HOLD_DEPLOY_BLOCKED`.
+- If deploy failed due to safe LOW/MEDIUM frontend/sync/cache issue, use `state: FIXING`.
+- If deploy failed due to secret/permission/token, use `state: HOLD` and `blocker: HOLD_SECRET_OR_PERMISSION`.
+
+### HOLD Blockers
+
+`HOLD` is required when HIGH-risk approval is needed, actual diff touches unexpected HIGH-risk paths/topics, user product direction is needed, GitHub/Cloudflare permission/token/secret blocks progress, deploy verification is required but cannot be completed after timeout/repeated checks, Codex report conflicts with GitHub evidence, repeated failure threshold is reached, scope exceeds `KOHEE_COMMAND.allowed_files` or explicit user direction, or `@codex` does not acknowledge after retry and the task cannot be safely verified.
+
+Allowed blocker values:
+
+- `HOLD_HIGH_RISK`
+- `HOLD_USER_APPROVAL`
+- `HOLD_DEPLOY_BLOCKED`
+- `HOLD_SECRET_OR_PERMISSION`
+- `HOLD_PRODUCT_DIRECTION`
+- `HOLD_SCOPE_CONFLICT`
+- `HOLD_VERIFICATION_CONFLICT`
+- `HOLD_REPEATED_FAILURE`
+- `HOLD_CODEX_NO_RESPONSE`
+
+### KOHEE_COMMAND
+
+```yaml
+KOHEE_COMMAND:
+  command_id:
+  state: QUEUED
+  risk: LOW | MEDIUM | HIGH
+  lane: GOVERNANCE | DEPLOY_SAFETY | PUBLIC_EXPOSURE | AUTH_ROLE | LIFECYCLE | CSV_PIPELINE | FRONTEND_RENDERING
+  source: ChatGPT
+  owner: codex
+  terminal_state: MERGED_AND_DEPLOYED | DONE_NO_DEPLOY | HOLD
+  user_action_required: false
+  task:
+  acceptance_criteria:
+  allowed_files:
+  denied_files:
+  runtime_change_allowed: false
+  do_not_change:
+  high_risk_hold:
+  created_at:
+  last_updated_at:
+```
+
+### KOHEE_STATUS
+
+```yaml
+KOHEE_STATUS:
+  command_id:
+  state: QUEUED | QUEUED_STALE | WORKING | PR_OPEN | REVIEWING | FIXING | DEPLOYING | MERGED_AND_DEPLOYED | DONE_NO_DEPLOY | HOLD
+  risk:
+  lane:
+  active_pr:
+  head_sha:
+  owner: codex
+  retry:
+    failure_signature:
+    count_for_signature:
+    last_failed_run:
+    last_attempt_at:
+  blocker:
+  next_action:
+  user_action_required:
+  deploy_check_required:
+  deploy_status:
+  verification:
+    status: VERIFIED | UNVERIFIED | CONFLICTED
+    last_verified_at:
+    changed_files_checked:
+    diff_checked:
+    checks_checked:
+    codex_review_checked:
+    unresolved_threads_checked:
+    pages_deploy_sync_checked:
+    asset_cache_bust_checked:
+    high_risk_paths_checked:
+    deploy_checked:
+  evidence:
+    checks_url:
+    pr_url:
+    deploy_url:
+    review_url:
+    notes:
+```
+
+PR bodies may contain a compact `KOHEE_STATUS` summary. The full mutable `KOHEE_STATUS` may live in the task issue or PR comment. Do not paste long status history into the PR body.
+
+### KOHEE_RECOVERY_TASK
+
+```yaml
+KOHEE_RECOVERY_TASK:
+  source_task:
+  source_pr:
+  failure_signature:
+  failure_count:
+  last_failed_run:
+  suspected_area:
+  required_analysis:
+  do_not_retry_blindly: true
+  risk: LOW | MEDIUM
+  lane:
+  owner: codex
+  user_action_required:
+```
+
+### User Commands
+
+`코히리스트 작업: ...`
+
+- ChatGPT creates or updates a `KOHEE_TASK` issue.
+- ChatGPT writes `KOHEE_COMMAND`.
+- ChatGPT calls `@codex`.
+- Codex executes and maintains `KOHEE_STATUS`.
+
+`코히리스트 확인해`
+
+- ChatGPT reads GitHub only by default.
+- ChatGPT must inspect `KOHEE_TASK` issues, `KOHEE_STATUS` blocks, open PRs, actual diff, changed files, checks, Codex review P1/P2, unresolved review threads, recent merged PRs, deploy status when applicable, and findings.
+- ChatGPT reports concise user status with `VERIFIED` / `UNVERIFIED` / `CONFLICTED`.
+- No GitHub write action should occur unless the user explicitly asks for follow-up action.
+
+`코히리스트 점검해`
+
+- ChatGPT reads first.
+- ChatGPT checks stale `KOHEE_TASK` issues, stale PRs, failed checks, unresolved P1/P2, repeated failures, HOLD items, deploy failures, and findings document bloat.
+- ChatGPT may write `KOHEE_RECOVERY_TASK` only when the issue is LOW/MEDIUM, the repeated failure threshold is reached, no HIGH-risk scope is involved, and recovery action is clearly safe.
+- HIGH remains `HOLD`.
+
+`코히리스트 승인해`
+
+- ChatGPT records approval in GitHub and calls `@codex`.
+- Approval does not waive GitHub evidence verification.
+- Approval does not waive unexpected HIGH-risk `HOLD` if actual diff exceeds approved scope.
+
+`코히리스트 보류해`
+
+- ChatGPT records `HOLD` in GitHub.
+- Codex must stop active work for that task.
+
+`코히리스트 수정해: ...`
+
+- ChatGPT writes follow-up command into the active issue or PR.
+- ChatGPT calls `@codex`.
+- Codex updates the same branch/PR unless scope requires a new task.
+
+### Codex No-Response Fallback
+
+Do not infer `QUEUED_STALE` from elapsed time alone. `QUEUED_STALE` requires no `KOHEE_STATUS` update, no PR activity, and no acknowledgement evidence.
+
+If `@codex` does not acknowledge or update `KOHEE_STATUS`, ChatGPT should retry once with a shorter command. The retry must reuse the same `command_id` and issue/PR thread. Do not create duplicate tasks unless the user explicitly asks.
+
+If still no response, ChatGPT reports `UNVERIFIED` / `QUEUED_STALE`. ChatGPT may ask the user whether to start the task manually in Codex only after the retry fails. Do not claim Codex is working unless GitHub evidence shows acknowledgement, PR activity, or `KOHEE_STATUS` update.
+
+### Recovery Rule
+
+When the user says `코히리스트 점검해`, ChatGPT should detect stale `KOHEE_TASK` issues, stale PRs, failed checks, unresolved P1/P2, repeated `failure_signature`, HOLD items, deploy failures, and findings document bloat.
+
+If the same LOW/MEDIUM `failure_signature` repeats 3 times:
+
+- ChatGPT creates or updates `KOHEE_RECOVERY_TASK`.
+- ChatGPT calls `@codex`.
+- Codex must perform root-cause analysis.
+- Blind retry is forbidden.
+- HIGH-risk issues remain `HOLD`.
+
+### HIGH-Risk Topics Requiring HOLD
+
+- Server behavior changes.
+- Public API changes.
+- Public `/data` exposure.
+- Auth/session/security.
+- D1/schema/migration.
+- CSV import/reset semantics.
+- Cafe lifecycle semantics.
+- Role/permission policy.
+- Submission-to-public policy.
+- Deploy workflow behavior.
+- Cloudflare secret/token/permission blockers.
+
+### Document Hygiene
+
+- User-facing reports are summarized by ChatGPT, not copied from Codex.
+- Codex must not paste huge logs into PR bodies.
+- PR body must remain compact and status-oriented.
+- Use one mutable `KOHEE_STATUS` block when possible.
+- If editing an existing `KOHEE_STATUS` comment is not possible, post a new status and mark the old one superseded.
+- Long logs should be linked through GitHub Actions/check URLs.
+- `docs/audits/KOHEE_FINDINGS.md` keeps only active OPEN/HOLD/recent fixed items.
+- Old/completed findings should be archived or compacted if docs grow too large.
+- Runtime code must not change during document compaction.
+
+### Audit and Auto-Merge Rules
+
+`audit:kohee` cache-bust enforcement is governance validation tooling. It must not modify deploy workflow behavior.
+
+Do not add or modify safe-auto-merge workflows in bridge governance PRs. Future LOW/MEDIUM auto-merge can only be considered after stability is proven. Auto-merge is never eligible with HIGH-risk paths, unresolved P1/P2, failed checks, unresolved review threads, unverified deploy state, or `CONFLICTED` verification.
