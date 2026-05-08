@@ -1,5 +1,4 @@
-# TODO: Replace @REPO_OWNER with your GitHub username or org/team before enabling required CODEOWNERS review.
-
+# CODEOWNERS for KOHEE high-risk files. Keep owner entries current before enabling required CODEOWNERS review.
 /server/csv.js @oakermann
 /server/cafes.js @oakermann
 /server/shared.js @oakermann
