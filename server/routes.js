@@ -30,7 +30,13 @@ import {
 } from "./errorReports.js";
 import { getFavorites, toggleFavorite } from "./favorites.js";
 import { getUsers, setRole } from "./users.js";
-import { importCsv, resetCsv } from "./csv.js";
+import {
+  exportApprovedReviewCsv,
+  exportCandidatesReviewCsv,
+  exportHoldReviewCsv,
+  importCsv,
+  resetCsv,
+} from "./csv.js";
 
 export const AUTH_ROUTES = [
   ["POST", "/signup", signup],
@@ -77,6 +83,9 @@ export const ADMIN_ROUTES = [
   ["POST", "/set-role", setRole],
   ["POST", "/notice", setNotice],
   ["POST", "/reset-csv", resetCsv],
+  ["GET", "/export-csv/candidates-review", exportCandidatesReviewCsv],
+  ["GET", "/export-csv/hold-review", exportHoldReviewCsv],
+  ["GET", "/export-csv/approved-review", exportApprovedReviewCsv],
   ["POST", "/approve-cafe", approveCafe],
   ["POST", "/hold-cafe", holdCafe],
   ["POST", "/unhold-cafe", unholdCafe],
