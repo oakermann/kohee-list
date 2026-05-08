@@ -551,6 +551,18 @@ function reviewConsoleCafeItem(cafe) {
   return item;
 }
 
+
+function toggleLegacyReviewPanel() {
+  const panel = $("legacy-review-panel");
+  const button = $("legacy-review-toggle");
+  if (!panel || !button) return;
+  const nextHidden = !panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", nextHidden);
+  button.textContent = nextHidden
+    ? "기존 검수/CSV 패널 보기"
+    : "기존 검수/CSV 패널 숨기기";
+}
+
 function renderReviewConsole() {
   const list = $("review-console-list");
   const note = $("review-console-note");
@@ -1404,6 +1416,7 @@ async function init() {
     await loadCafes();
   });
   $("cafe-search").addEventListener("input", renderCafeList);
+  $("legacy-review-toggle").addEventListener("click", toggleLegacyReviewPanel);
   $("new-cafe-btn").addEventListener("click", prepareNewCafe);
   $("save-cafe-btn").addEventListener("click", () =>
     saveCafe().catch((error) => alert(error.message)),

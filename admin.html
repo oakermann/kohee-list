@@ -48,11 +48,17 @@
         <div id="review-console-note" class="meta admin-section-label">
           기존 제보/카페 데이터를 한곳에서 확인합니다.
         </div>
+        <div class="btns admin-legacy-toggle-wrap">
+          <button id="legacy-review-toggle" type="button">기존 검수/CSV 패널 보기</button>
+        </div>
         <div id="review-console-list" class="list"></div>
       </section>
 
-      <section class="panel">
-        <h2>2) 제보 검토 / 카페 관리</h2>
+      <section id="legacy-review-panel" class="panel hidden">
+        <h2>기존 검수/CSV 패널 (fallback)</h2>
+        <div class="meta admin-section-label">필요 시 기존 검수/CSV 흐름을 그대로 사용할 수 있습니다.</div>
+
+        <h3 class="legacy-heading">2) 제보 검토 / 카페 관리</h3>
         <div class="meta admin-section-label">검토 대기 제보</div>
         <div id="sub-list" class="list"></div>
 
@@ -129,10 +135,8 @@
             <button id="delete-btn" class="warn" type="button">닫기</button>
           </div>
         </div>
-      </section>
 
-      <section class="panel">
-        <h2>3) CSV 운영 (보조)</h2>
+        <h3 class="legacy-heading">3) CSV 운영 (보조)</h3>
         <div class="file-pick">
           <label for="csv-file" class="btn file-trigger">파일 선택</label>
           <div id="csv-file-name" class="file-name">선택된 파일 없음</div>
