@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
 const strict = process.argv.includes("--strict");
@@ -35,6 +36,128 @@ function mustInclude(content, needle, failMsg, okMsg) {
   else fail(failMsg);
 }
 
+function git(args) {
+  try {
+    return execFileSync("git", args, { encoding: "utf8", stdio: "pipe" }).trim();
+  } catch {
+    return "";
+  }
+}
+
+function gitFile(ref, path) {
+  if (!ref) return "";
+  try {
+    return execFileSync("git", ["show", `${ref}:${path}`], {
+      encoding: "utf8",
+      stdio: "pipe",
+    });
+  } catch {
+    return "";
+  }
+}
+
+function firstUsableBaseRef() {
+  const candidates = [
+    process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "",
+    "origin/main",
+    "HEAD^1",
+    "HEAD~1",
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (git(["rev-parse", "--verify", candidate])) return candidate;
+  }
+  return "";
+}
+
+function changedFilesFromGit() {
+  const files = new Set();
+  const baseRef = firstUsableBaseRef();
+  const diffRanges = [
+    baseRef ? `${baseRef}...HEAD` : "",
+    "HEAD",
+    "--cached",
+  ].filter(Boolean);
+
+  for (const range of diffRanges) {
+    const output =
+      range === "--cached"
+        ? git(["diff", "--name-only", "--cached"])
+        : git(["diff", "--name-only", range]);
+    for (const file of output.split(/\r?\n/).filter(Boolean)) files.add(file);
+  }
+
+  const untracked = git(["ls-files", "--others", "--exclude-standard"]);
+  for (const file of untracked.split(/\r?\n/).filter(Boolean)) files.add(file);
+
+  return { baseRef, files };
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function assetVersion(html, assetPath) {
+  const escaped = escapeRegex(assetPath);
+  const match = html.match(new RegExp(`${escaped}\\?v=([^"'>\\s]+)`));
+  return match?.[1] || "";
+}
+
+function checkAdminAssetVersion(assetPath) {
+  const rootHtml = read("admin.html");
+  const deployHtml = read(".pages-deploy/admin.html");
+  const rootVersion = assetVersion(rootHtml, assetPath);
+  const deployVersion = assetVersion(deployHtml, assetPath);
+  const label = assetPath.replace("./assets/", "");
+
+  if (!rootVersion) {
+    fail(`admin.html missing cache-busted ${assetPath}?v=... reference`);
+    return;
+  }
+  if (!deployVersion) {
+    fail(`.pages-deploy/admin.html missing cache-busted ${assetPath}?v=... reference`);
+    return;
+  }
+  if (rootVersion !== deployVersion) {
+    fail(
+      `admin ${label} cache-bust mismatch: root=${rootVersion}, .pages-deploy=${deployVersion}`,
+    );
+  } else {
+    ok(`admin ${label} cache-bust versions match (${rootVersion})`);
+  }
+}
+
+function checkAdminAssetBump({ assetFile, assetPath, htmlFile, baseRef }) {
+  if (!baseRef) {
+    warn(
+      `${assetFile} changed but no base ref was available to confirm ${htmlFile} version bump`,
+    );
+    return;
+  }
+
+  const currentVersion = assetVersion(read(htmlFile), assetPath);
+  const previousVersion = assetVersion(gitFile(baseRef, htmlFile), assetPath);
+
+  if (!currentVersion) {
+    fail(`${htmlFile} missing cache-busted ${assetPath}?v=... reference`);
+    return;
+  }
+  if (!previousVersion) {
+    warn(
+      `${assetFile} changed but ${htmlFile} had no comparable base ${assetPath}?v=... reference`,
+    );
+    return;
+  }
+  if (currentVersion === previousVersion) {
+    fail(
+      `${assetFile} changed but ${htmlFile} did not bump ${assetPath} version (${currentVersion})`,
+    );
+  } else {
+    ok(
+      `${assetFile} changed and ${htmlFile} bumped ${assetPath} version (${previousVersion} -> ${currentVersion})`,
+    );
+  }
+}
+
 const contractRaw = read("kohee.contract.json");
 if (!contractRaw) fail("kohee.contract.json missing");
 let contract = null;
@@ -65,6 +188,14 @@ if (contract) {
   if (deployLane?.files?.includes("scripts"))
     ok("DEPLOY_SAFETY lane includes scripts");
   else fail("DEPLOY_SAFETY lane file allowlist missing scripts");
+
+  const governanceLane = contract?.lanes?.GOVERNANCE;
+  if (governanceLane?.files?.includes("AGENTS.md"))
+    ok("GOVERNANCE lane includes AGENTS.md");
+  else fail("GOVERNANCE lane file allowlist missing AGENTS.md");
+  if (governanceLane?.files?.includes("docs/CODEX_WORKFLOW.md"))
+    ok("GOVERNANCE lane includes docs/CODEX_WORKFLOW.md");
+  else fail("GOVERNANCE lane file allowlist missing docs/CODEX_WORKFLOW.md");
 
   const inv = contract.invariants || {};
   const requiredInv = {
@@ -169,6 +300,37 @@ if (/wrangler\s+d1\s+migrations\s+apply/i.test(d1Sources)) {
   fail("Potential D1 migration auto-apply command detected");
 } else {
   ok("No obvious D1 auto-apply command detected in workflows/routes/scripts");
+}
+
+const changed = changedFilesFromGit();
+checkAdminAssetVersion("./assets/admin.js");
+checkAdminAssetVersion("./assets/admin.css");
+
+const adminAssetChecks = [
+  { assetFile: "assets/admin.js", assetPath: "./assets/admin.js" },
+  {
+    assetFile: ".pages-deploy/assets/admin.js",
+    assetPath: "./assets/admin.js",
+  },
+  { assetFile: "assets/admin.css", assetPath: "./assets/admin.css" },
+  {
+    assetFile: ".pages-deploy/assets/admin.css",
+    assetPath: "./assets/admin.css",
+  },
+];
+
+for (const check of adminAssetChecks) {
+  if (!changed.files.has(check.assetFile)) continue;
+  checkAdminAssetBump({
+    ...check,
+    htmlFile: "admin.html",
+    baseRef: changed.baseRef,
+  });
+  checkAdminAssetBump({
+    ...check,
+    htmlFile: ".pages-deploy/admin.html",
+    baseRef: changed.baseRef,
+  });
 }
 
 for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {

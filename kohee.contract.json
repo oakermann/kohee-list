@@ -83,6 +83,19 @@
         ".pages-deploy/_headers",
         "wrangler.toml"
       ]
+    },
+    "GOVERNANCE": {
+      "purpose": "Repository governance, agent contracts, GitHub command bridge templates, findings ledger, and governance validation tooling.",
+      "files": [
+        "AGENTS.md",
+        "kohee.contract.json",
+        "docs/CODEX_WORKFLOW.md",
+        "docs/audits/KOHEE_FINDINGS.md",
+        ".github/pull_request_template.md",
+        ".github/ISSUE_TEMPLATE",
+        "scripts/audit-kohee.mjs",
+        "package.json"
+      ]
     }
   },
   "verify": {
