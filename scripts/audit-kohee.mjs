@@ -44,6 +44,23 @@ function git(args) {
   }
 }
 
+function ensureRemoteRef(branch) {
+  if (!branch) return "";
+  const remoteRef = `origin/${branch}`;
+  if (git(["rev-parse", "--verify", remoteRef])) return remoteRef;
+
+  git([
+    "fetch",
+    "--no-tags",
+    "--depth=1",
+    "origin",
+    `${branch}:refs/remotes/origin/${branch}`,
+  ]);
+
+  if (git(["rev-parse", "--verify", remoteRef])) return remoteRef;
+  return "";
+}
+
 function gitFile(ref, path) {
   if (!ref) return "";
   try {
@@ -57,8 +74,12 @@ function gitFile(ref, path) {
 }
 
 function firstUsableBaseRef() {
+  const fetchedBaseRef = ensureRemoteRef(process.env.GITHUB_BASE_REF);
+  const fetchedMainRef = fetchedBaseRef ? "" : ensureRemoteRef("main");
   const candidates = [
+    fetchedBaseRef,
     process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "",
+    fetchedMainRef,
     "origin/main",
     "HEAD^1",
     "HEAD~1",
