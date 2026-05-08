@@ -1,0 +1,20 @@
+# TODO: Replace @REPO_OWNER with your GitHub username or org/team before enabling required CODEOWNERS review.
+
+/server/csv.js @REPO_OWNER
+/server/cafes.js @REPO_OWNER
+/server/shared.js @REPO_OWNER
+/server/auth.js @REPO_OWNER
+/server/security.js @REPO_OWNER
+/server/routes.js @REPO_OWNER
+/server/users.js @REPO_OWNER
+/server/submissions.js @REPO_OWNER
+/server/favorites.js @REPO_OWNER
+/schema.sql @REPO_OWNER
+/migrations/** @REPO_OWNER
+/wrangler.toml @REPO_OWNER
+/.github/workflows/** @REPO_OWNER
+/scripts/** @REPO_OWNER
+/package.json @REPO_OWNER
+/AGENTS.md @REPO_OWNER
+/kohee.contract.json @REPO_OWNER
+/docs/CODEX_WORKFLOW.md @REPO_OWNER

@@ -1,0 +1,39 @@
+name: PR Validate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pr-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Check deploy sync
+        run: npm run check:deploy-sync
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: KOHEE audit
+        run: npm run audit:kohee
+
+      - name: Git diff check
+        run: git diff --check

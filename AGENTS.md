@@ -18,8 +18,10 @@ No `aaa/aaaa`.
 
 No deploy unless explicitly requested.
 
-Report format must be:
+Do not apply D1 migrations.
+
+Report format must include:
 
 ```text
-Risk / Lane / Commit / Changed files / Changed functions / Tests / Remaining risks
+Risk / Lane / Commit or PR / Changed files / Changed functions / Tests / Remaining risks
 ```
