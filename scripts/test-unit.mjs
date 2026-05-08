@@ -14,7 +14,14 @@ import {
   unholdCafe,
   toCafeResponse,
 } from "../server/cafes.js";
-import { importCsv, parseCsvLine, resetCsv } from "../server/csv.js";
+import {
+  exportApprovedReviewCsv,
+  exportCandidatesReviewCsv,
+  exportHoldReviewCsv,
+  importCsv,
+  parseCsvLine,
+  resetCsv,
+} from "../server/csv.js";
 import { approveSubmission } from "../server/submissions.js";
 import {
   cleanUrl,
@@ -1612,6 +1619,148 @@ for (const invalidCsv of [
     false,
   );
 }
+
+function createExportReviewCsvEnv(role = null) {
+  const statements = [];
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      DB: {
+        prepare(sql) {
+          const statement = { sql, bindings: [] };
+          statements.push(statement);
+          return {
+            bind(...values) {
+              statement.bindings = values;
+              return this;
+            },
+            first: async () => {
+              if (sql.includes("FROM sessions")) {
+                if (!role) return null;
+                return {
+                  session_id: "session-1",
+                  user_id: `${role}-user`,
+                  username: role,
+                  role,
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                };
+              }
+              return null;
+            },
+            all: async () => ({
+              results: [
+                {
+                  id: "candidate-1",
+                  name: 'Comma, "Quote" Cafe',
+                  address: "Line\nBreak Address",
+                  desc: "Desc, with comma",
+                  lat: 37.5,
+                  lng: 127.1,
+                  category: '["espresso"]',
+                  signature: '["house"]',
+                  beanShop: "https://bean.example",
+                  instagram: "https://instagram.com/cafe",
+                  oakerman_pick: 1,
+                  manager_pick: 0,
+                  status: "candidate",
+                  updated_at: "2026-05-08T00:00:00.000Z",
+                  hidden_at: "2026-05-07T00:00:00.000Z",
+                  hidden_by: "admin-user",
+                },
+              ],
+            }),
+          };
+        },
+      },
+    },
+  };
+}
+
+async function requestReviewExport(
+  handler,
+  role = null,
+  path = "candidates-review",
+) {
+  const { env, statements } = createExportReviewCsvEnv(role);
+  const response = await handler(
+    new Request(`https://kohee.test/export-csv/${path}`, {
+      method: "GET",
+      headers: role ? { authorization: "Bearer unit-token" } : {},
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+const unauthExport = await requestReviewExport(exportCandidatesReviewCsv, null);
+assert.equal(unauthExport.response.status, 401);
+
+const managerExport = await requestReviewExport(
+  exportCandidatesReviewCsv,
+  "manager",
+);
+assert.equal(managerExport.response.status, 403);
+
+const candidateExport = await requestReviewExport(
+  exportCandidatesReviewCsv,
+  "admin",
+);
+assert.equal(candidateExport.response.status, 200);
+assert.equal(
+  candidateExport.response.headers.get("content-type"),
+  "text/csv; charset=utf-8",
+);
+const candidateCsv = await candidateExport.response.text();
+assert.ok(
+  candidateCsv.startsWith(
+    "cafe_id,name,address,desc,lat,lng,category,signature,beanShop,instagram,oakerman_pick,manager_pick,status,updated_at\n",
+  ),
+);
+assert.match(candidateCsv, /^candidate-1,/m);
+assert.match(candidateCsv, /"Comma, ""Quote"" Cafe"/);
+assert.match(candidateCsv, /"Line\nBreak Address"/);
+assert.equal(
+  candidateExport.statements.some((statement) =>
+    /status = 'candidate' AND deleted_at IS NULL/i.test(statement.sql),
+  ),
+  true,
+);
+
+const holdExport = await requestReviewExport(
+  exportHoldReviewCsv,
+  "admin",
+  "hold-review",
+);
+assert.equal(holdExport.response.status, 200);
+const holdCsv = await holdExport.response.text();
+assert.ok(
+  holdCsv.startsWith(
+    "cafe_id,name,address,desc,lat,lng,category,signature,beanShop,instagram,oakerman_pick,manager_pick,status,updated_at,hidden_at,hidden_by\n",
+  ),
+);
+assert.equal(
+  holdExport.statements.some((statement) =>
+    /status = 'hidden' AND deleted_at IS NULL AND hidden_at IS NOT NULL/i.test(
+      statement.sql,
+    ),
+  ),
+  true,
+);
+
+const approvedExport = await requestReviewExport(
+  exportApprovedReviewCsv,
+  "admin",
+  "approved-review",
+);
+assert.equal(approvedExport.response.status, 200);
+assert.equal(
+  approvedExport.statements.some((statement) =>
+    /status = 'approved' AND deleted_at IS NULL/i.test(statement.sql),
+  ),
+  true,
+);
 
 function createImportCsvTestEnv(role = "admin", existingCafe = true) {
   const statements = [];

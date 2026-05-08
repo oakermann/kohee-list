@@ -3,6 +3,7 @@ import {
   cleanText,
   json,
   nowIso,
+  responseHeaders,
   requireAuth,
   requireRole,
   withGuard,
@@ -465,6 +466,117 @@ async function rollbackResetCsv(env, user, rows, snapshots) {
   }
 }
 
+const REVIEW_EXPORT_COLUMNS = [
+  "cafe_id",
+  "name",
+  "address",
+  "desc",
+  "lat",
+  "lng",
+  "category",
+  "signature",
+  "beanShop",
+  "instagram",
+  "oakerman_pick",
+  "manager_pick",
+  "status",
+  "updated_at",
+];
+
+const HOLD_REVIEW_EXPORT_COLUMNS = [
+  ...REVIEW_EXPORT_COLUMNS,
+  "hidden_at",
+  "hidden_by",
+];
+
+function csvEscape(value) {
+  const textValue = String(value ?? "");
+  if (!/[",\n\r]/.test(textValue)) return textValue;
+  return `"${textValue.replace(/"/g, '""')}"`;
+}
+
+function toCsvBody(columns, rows) {
+  const lines = [columns.join(",")];
+  for (const row of rows) {
+    lines.push(columns.map((column) => csvEscape(row[column])).join(","));
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+function csvResponse(req, env, filename, body) {
+  return new Response(body, {
+    status: 200,
+    headers: responseHeaders(req, env, {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${filename}"`,
+    }),
+  });
+}
+
+async function exportReviewCsv(req, env, options) {
+  const user = await requireAuth(req, env);
+  requireRole(user, ["admin"]);
+
+  const rowsResult = await env.DB.prepare(options.sql).all();
+  const rows = (rowsResult?.results || []).map((row) => ({
+    ...row,
+    cafe_id: row.id || "",
+    category: row.category || "",
+    signature: row.signature || "",
+  }));
+
+  return csvResponse(
+    req,
+    env,
+    options.filename,
+    toCsvBody(options.columns, rows),
+  );
+}
+
+export async function exportCandidatesReviewCsv(req, env) {
+  return withGuard(req, env, async () =>
+    exportReviewCsv(req, env, {
+      filename: "candidates-review.csv",
+      columns: REVIEW_EXPORT_COLUMNS,
+      sql: `SELECT
+              id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
+              oakerman_pick, manager_pick, status, updated_at
+            FROM cafes
+            WHERE status = 'candidate' AND deleted_at IS NULL
+            ORDER BY updated_at DESC, id ASC`,
+    }),
+  );
+}
+
+export async function exportHoldReviewCsv(req, env) {
+  return withGuard(req, env, async () =>
+    exportReviewCsv(req, env, {
+      filename: "hold-review.csv",
+      columns: HOLD_REVIEW_EXPORT_COLUMNS,
+      sql: `SELECT
+              id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
+              oakerman_pick, manager_pick, status, updated_at, hidden_at, hidden_by
+            FROM cafes
+            WHERE status = 'hidden' AND deleted_at IS NULL AND hidden_at IS NOT NULL
+            ORDER BY hidden_at DESC, updated_at DESC, id ASC`,
+    }),
+  );
+}
+
+export async function exportApprovedReviewCsv(req, env) {
+  return withGuard(req, env, async () =>
+    exportReviewCsv(req, env, {
+      filename: "approved-review.csv",
+      columns: REVIEW_EXPORT_COLUMNS,
+      sql: `SELECT
+              id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
+              oakerman_pick, manager_pick, status, updated_at
+            FROM cafes
+            WHERE status = 'approved' AND deleted_at IS NULL
+            ORDER BY updated_at DESC, id ASC`,
+    }),
+  );
+}
 export async function importCsv(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
