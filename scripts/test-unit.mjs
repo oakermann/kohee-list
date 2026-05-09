@@ -297,7 +297,10 @@ assert.equal(publicCafeBody[0].deleted_by, undefined);
 assert.equal(publicCafeBody[0].delete_reason, undefined);
 assert.equal(publicCafeBody[0].approved_by, undefined);
 
-function createFavoriteTestEnv({ cafe = { id: "cafe-1" }, exists = null } = {}) {
+function createFavoriteTestEnv({
+  cafe = { id: "cafe-1" },
+  exists = null,
+} = {}) {
   const statements = [];
   return {
     statements,
@@ -1090,6 +1093,7 @@ const adminBody = adminSource
   .replace(/init\(\)\.catch[\s\S]*$/, "");
 const adminElements = new Map([
   ["csv-msg", new AdminNode()],
+  ["review-console-export", new AdminNode("button")],
   ["review-console-list", new AdminNode()],
   ["review-console-note", new AdminNode()],
 ]);
@@ -1148,7 +1152,7 @@ const adminContext = {
 };
 vm.createContext(adminContext);
 vm.runInContext(
-  `${adminBody}\nthis.__adminTest = { state, renderReviewConsole, reviewExportFiles, buildCsv, downloadCsv };`,
+  `${adminBody}\nthis.__adminTest = { state, renderReviewConsole, reviewExportFiles, buildCsv, downloadCsv, downloadReviewConsoleCsv };`,
   adminContext,
 );
 adminContext.__adminTest.state.me = { role: "admin" };
@@ -1175,6 +1179,10 @@ adminContext.__adminTest.renderReviewConsole();
 const holdListText = textOfAdminNode(adminElements.get("review-console-list"));
 assert.match(holdListText, /Candidate Hold/);
 assert.doesNotMatch(holdListText, /Imported Hidden/);
+assert.equal(
+  adminElements.get("review-console-export").textContent,
+  "보류 CSV",
+);
 
 adminContext.__adminTest.state.submissions = [
   {
@@ -1297,15 +1305,29 @@ adminApiResponses = {
 await adminContext.__adminTest.downloadCsv();
 assert.match(adminElements.get("csv-msg").textContent, /^CSV 다운로드 완료:/);
 assert.deepEqual(
-  Array.from(
-    downloadedCsvFiles.filter((item) => item.endsWith("-review.csv")),
-  ),
+  Array.from(downloadedCsvFiles.filter((item) => item.endsWith("-review.csv"))),
   [
     "submissions-review.csv",
     "candidates-review.csv",
     "hold-review.csv",
     "approved-review.csv",
   ],
+);
+downloadedCsvFiles.length = 0;
+adminContext.__adminTest.state.reviewConsoleTab = "submissions";
+adminContext.__adminTest.renderReviewConsole();
+assert.equal(
+  adminElements.get("review-console-export").textContent,
+  "제보 CSV",
+);
+await adminContext.__adminTest.downloadReviewConsoleCsv();
+assert.match(
+  adminElements.get("csv-msg").textContent,
+  /^제보 CSV 다운로드 완료:/,
+);
+assert.deepEqual(
+  downloadedCsvFiles.filter((item) => item.endsWith("-review.csv")),
+  ["submissions-review.csv"],
 );
 
 function createApproveSubmissionTestEnv(role = "manager") {

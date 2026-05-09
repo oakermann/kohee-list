@@ -551,7 +551,6 @@ function reviewConsoleCafeItem(cafe) {
   return item;
 }
 
-
 function toggleLegacyReviewPanel() {
   const panel = $("legacy-review-panel");
   const button = $("legacy-review-toggle");
@@ -567,6 +566,7 @@ function renderReviewConsole() {
   const list = $("review-console-list");
   const note = $("review-console-note");
   if (!list || !note) return;
+  renderReviewConsoleExportAction();
 
   if (state.reviewConsoleTab === "submissions") {
     note.textContent = "검토 대기 제보를 기존 제보 목록과 함께 확인합니다.";
@@ -1068,38 +1068,77 @@ const REVIEW_EXPORT_ENDPOINTS = [
   {
     path: "/export-csv/submissions-review",
     filename: "submissions-review.csv",
+    label: "제보 CSV",
   },
   {
     path: "/export-csv/candidates-review",
     filename: "candidates-review.csv",
+    label: "후보 CSV",
   },
   {
     path: "/export-csv/hold-review",
     filename: "hold-review.csv",
+    label: "보류 CSV",
   },
   {
     path: "/export-csv/approved-review",
     filename: "approved-review.csv",
+    label: "공개 CSV",
   },
 ];
+
+const REVIEW_CONSOLE_EXPORTS = {
+  submissions: REVIEW_EXPORT_ENDPOINTS[0],
+  candidates: REVIEW_EXPORT_ENDPOINTS[1],
+  hold: REVIEW_EXPORT_ENDPOINTS[2],
+  approved: REVIEW_EXPORT_ENDPOINTS[3],
+};
+
+async function downloadExportEndpoint(endpoint) {
+  const res = await api(endpoint.path);
+  const csv = await res.text();
+  if (!res.ok) {
+    throw new Error(csv || `${endpoint.filename} export failed`);
+  }
+  downloadCsvFile(endpoint.filename, csv);
+}
+
+function renderReviewConsoleExportAction() {
+  const button = $("review-console-export");
+  if (!button) return;
+
+  const endpoint = REVIEW_CONSOLE_EXPORTS[state.reviewConsoleTab];
+  button.textContent = endpoint?.label || "CSV";
+  button.disabled = !isAdmin() || !endpoint;
+  button.classList.toggle("hidden", !endpoint);
+}
+
+async function downloadReviewConsoleCsv() {
+  const endpoint = REVIEW_CONSOLE_EXPORTS[state.reviewConsoleTab];
+  if (!endpoint) return;
+  if (!isAdmin()) {
+    alert("CSV 다운로드는 admin만 가능합니다.");
+    return;
+  }
+
+  try {
+    $("csv-msg").textContent = `${endpoint.label} 다운로드 중...`;
+    await downloadExportEndpoint(endpoint);
+    $("csv-msg").textContent =
+      `${endpoint.label} 다운로드 완료: ${endpoint.filename}`;
+  } catch (error) {
+    $("csv-msg").textContent =
+      `${endpoint.label} 다운로드 실패: ${error.message}`;
+    alert(error.message);
+  }
+}
 
 async function downloadCsv() {
   try {
     $("csv-msg").textContent = "CSV 다운로드 중...";
-    const files = await Promise.all(
-      REVIEW_EXPORT_ENDPOINTS.map(async (endpoint) => {
-        const res = await api(endpoint.path);
-        const csv = await res.text();
-        if (!res.ok) {
-          throw new Error(csv || `${endpoint.filename} export failed`);
-        }
-        return { filename: endpoint.filename, csv };
-      }),
-    );
-
-    files.forEach((file) => downloadCsvFile(file.filename, file.csv));
+    await Promise.all(REVIEW_EXPORT_ENDPOINTS.map(downloadExportEndpoint));
     $("csv-msg").textContent =
-      `CSV 다운로드 완료: ${files.map((file) => file.filename).join(", ")}`;
+      `CSV 다운로드 완료: ${REVIEW_EXPORT_ENDPOINTS.map((endpoint) => endpoint.filename).join(", ")}`;
   } catch (error) {
     $("csv-msg").textContent = `CSV 다운로드 실패: ${error.message}`;
     alert(error.message);
@@ -1431,6 +1470,9 @@ async function init() {
   });
   $("cafe-search").addEventListener("input", renderCafeList);
   $("legacy-review-toggle").addEventListener("click", toggleLegacyReviewPanel);
+  $("review-console-export").addEventListener("click", () =>
+    downloadReviewConsoleCsv().catch((error) => alert(error.message)),
+  );
   $("new-cafe-btn").addEventListener("click", prepareNewCafe);
   $("save-cafe-btn").addEventListener("click", () =>
     saveCafe().catch((error) => alert(error.message)),

@@ -443,6 +443,15 @@ input[type="file"]::file-selector-button {
   padding-left: 5px;
   padding-right: 5px;
 }
+.review-console-actions {
+  margin: 0 0 6px;
+}
+.review-console-actions button {
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 8px;
+  font-size: 0.7rem;
+}
 .admin-status-msg {
   margin-top: 6px;
 }
