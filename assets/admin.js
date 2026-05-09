@@ -1067,7 +1067,7 @@ function reviewExportFiles(
 const REVIEW_EXPORT_ENDPOINTS = [
   {
     path: "/export-csv/submissions-review",
-    filename: "submissions-review.csv",
+    filename: "user_submissions_review_export.csv",
     label: "제보 CSV",
   },
   {

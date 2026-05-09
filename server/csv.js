@@ -491,31 +491,89 @@ const HOLD_REVIEW_EXPORT_COLUMNS = [
 
 const SUBMISSION_REVIEW_EXPORT_COLUMNS = [
   "submission_id",
-  "user_id",
-  "username",
-  "name",
-  "address",
-  "desc",
-  "reason",
-  "category",
-  "signature",
-  "beanShop",
-  "instagram",
-  "oakerman_pick",
-  "manager_pick",
-  "status",
-  "created_at",
-  "reviewed_at",
-  "reviewed_by",
-  "reviewed_by_username",
-  "reject_reason",
+  "submitted_at",
+  "submitter_name",
+  "submitter_contact",
+  "submitted_cafe_name",
+  "submitted_address",
+  "submitted_naver_map_url",
+  "submitted_reason",
+  "submitted_recommended_menu",
+  "submitted_tags",
+  "submission_status",
   "linked_cafe_id",
+  "converted_status",
+  "admin_reply_status",
+  "admin_reply_message",
+  "internal_note",
+  "review_decision",
+  "recommended_status",
+  "review_memo",
+  "hold_reason",
+  "admin_check_required",
+  "duplicate_status",
+  "duplicate_with",
+  "duplicate_reason",
+  "normalized_name_suggested",
+  "normalized_address_suggested",
+  "normalized_naver_map_url_suggested",
+  "tags_suggested",
+  "recommended_menu_suggested",
+  "description_suggested",
+  "conversion_recommendation",
+  "public_leak_risk",
 ];
 
 function csvEscape(value) {
   const textValue = String(value ?? "");
   if (!/[",\n\r]/.test(textValue)) return textValue;
   return `"${textValue.replace(/"/g, '""')}"`;
+}
+
+function csvReviewCell(value) {
+  const textValue = String(value ?? "");
+  return /^[=+\-@]/.test(textValue) ? `'${textValue}` : textValue;
+}
+
+function toSubmissionReviewRow(row) {
+  const submittedTags = [row.category, row.signature]
+    .filter(Boolean)
+    .join(" | ");
+
+  return {
+    submission_id: row.id || "",
+    submitted_at: row.created_at || "",
+    submitter_name: row.username || "",
+    submitter_contact: "",
+    submitted_cafe_name: csvReviewCell(row.name),
+    submitted_address: csvReviewCell(row.address),
+    submitted_naver_map_url: "",
+    submitted_reason: csvReviewCell(row.reason),
+    submitted_recommended_menu: "",
+    submitted_tags: csvReviewCell(submittedTags),
+    submission_status: row.status || "",
+    linked_cafe_id: row.linked_cafe_id || "",
+    converted_status: row.linked_cafe_id ? "linked" : "",
+    admin_reply_status: row.reviewed_at ? "reviewed" : "pending",
+    admin_reply_message: csvReviewCell(row.reject_reason),
+    internal_note: "",
+    review_decision: "",
+    recommended_status: "",
+    review_memo: "",
+    hold_reason: "",
+    admin_check_required: "yes",
+    duplicate_status: "",
+    duplicate_with: "",
+    duplicate_reason: "",
+    normalized_name_suggested: "",
+    normalized_address_suggested: "",
+    normalized_naver_map_url_suggested: "",
+    tags_suggested: "",
+    recommended_menu_suggested: "",
+    description_suggested: csvReviewCell(row.desc),
+    conversion_recommendation: "",
+    public_leak_risk: "admin_review_required",
+  };
 }
 
 function toCsvBody(columns, rows) {
@@ -541,13 +599,16 @@ async function exportReviewCsv(req, env, options) {
   requireRole(user, ["admin"]);
 
   const rowsResult = await env.DB.prepare(options.sql).all();
-  const rows = (rowsResult?.results || []).map((row) => ({
-    ...row,
-    cafe_id: row.id || "",
-    submission_id: row.id || "",
-    category: row.category || "",
-    signature: row.signature || "",
-  }));
+  const rows = (rowsResult?.results || []).map((row) => {
+    if (options.mapRow) return options.mapRow(row);
+    return {
+      ...row,
+      cafe_id: row.id || "",
+      submission_id: row.id || "",
+      category: row.category || "",
+      signature: row.signature || "",
+    };
+  });
 
   return csvResponse(
     req,
@@ -605,8 +666,9 @@ export async function exportApprovedReviewCsv(req, env) {
 export async function exportSubmissionsReviewCsv(req, env) {
   return withGuard(req, env, async () =>
     exportReviewCsv(req, env, {
-      filename: "submissions-review.csv",
+      filename: "user_submissions_review_export.csv",
       columns: SUBMISSION_REVIEW_EXPORT_COLUMNS,
+      mapRow: toSubmissionReviewRow,
       sql: `SELECT
               s.id, s.user_id, u.username, s.name, s.address, s.desc, s.reason,
               s.category, s.signature, s.beanShop, s.instagram,
@@ -616,7 +678,8 @@ export async function exportSubmissionsReviewCsv(req, env) {
             FROM submissions s
             JOIN users u ON u.id = s.user_id
             LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
-            ORDER BY COALESCE(s.reviewed_at, s.created_at) DESC, s.id ASC`,
+            WHERE s.status = 'pending'
+            ORDER BY s.created_at DESC, s.id ASC`,
     }),
   );
 }
