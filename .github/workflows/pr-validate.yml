@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   pr-validate:
@@ -34,6 +35,11 @@ jobs:
 
       - name: KOHEE audit
         run: npm run audit:kohee
+
+      - name: KOHEE PR evidence check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/kohee-evidence-check.mjs
 
       - name: Git diff check
         run: git diff --check
