@@ -21,23 +21,40 @@ function compact(text, max = 140) {
   return normalized.length > max ? `${normalized.slice(0, max - 1)}…` : normalized;
 }
 
-function bodyState(body) {
-  const text = String(body || "");
-  const match = text.match(/^\s*state\s*:\s*([A-Z_]+)/im);
+function sectionState(body, sectionName) {
+  const escaped = sectionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `^\\s*${escaped}\\s*:\\s*[\\s\\S]*?^\\s*state\\s*:\\s*([A-Z_]+)`,
+    "im",
+  );
+  const match = String(body || "").match(pattern);
   return match ? match[1].toUpperCase() : "";
 }
 
+function koheeStatusState(body) {
+  return sectionState(body, "KOHEE_STATUS");
+}
+
+function commandState(body) {
+  return (
+    sectionState(body, "KOHEE_PARALLEL_MAINTENANCE") ||
+    sectionState(body, "KOHEE_CLOUD_MAINTENANCE") ||
+    sectionState(body, "KOHEE_RECOVERY_TASK") ||
+    sectionState(body, "KOHEE_COMMAND")
+  );
+}
+
 function hasTerminalStatus(body) {
-  const state = bodyState(body);
+  const state = koheeStatusState(body) || commandState(body);
   return ["MERGED_AND_DEPLOYED", "DONE_NO_DEPLOY", "HOLD", "HOLD_CLOSED"].includes(state);
 }
 
 function isLongLivedActive(body) {
-  return bodyState(body) === "ACTIVE";
+  return commandState(body) === "ACTIVE";
 }
 
 function isQueued(body) {
-  const state = bodyState(body);
+  const state = commandState(body);
   return !state || state === "QUEUED";
 }
 
@@ -97,7 +114,7 @@ function classifyIssue(issue) {
     reasons.push("state: ACTIVE long-lived automation issue");
   } else if (terminal) {
     state = "TERMINAL";
-    reasons.push(`terminal state detected: ${bodyState(body)}`);
+    reasons.push(`terminal state detected: ${koheeStatusState(body) || commandState(body)}`);
   } else if (queued && updatedAge !== null && updatedAge >= STALE_HOURS) {
     state = "STALE_QUEUED";
     reasons.push(`queued without terminal status for ${updatedAge.toFixed(1)}h`);
