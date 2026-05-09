@@ -1,0 +1,147 @@
+name: KOHEE Command Dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Task description for KOHEE_COMMAND"
+        required: true
+        type: string
+      risk:
+        description: "Risk level"
+        required: true
+        type: choice
+        options:
+          - LOW
+          - MEDIUM
+          - HIGH
+      lane:
+        description: "Lane"
+        required: true
+        type: choice
+        options:
+          - GOVERNANCE
+          - DEPLOY_SAFETY
+          - PUBLIC_EXPOSURE
+          - AUTH_ROLE
+          - LIFECYCLE
+          - CSV_PIPELINE
+          - FRONTEND_RENDERING
+      allowed_files:
+        description: "Newline-delimited allowlist paths"
+        required: true
+        type: string
+      denied_files:
+        description: "Newline-delimited denylist paths"
+        required: false
+        type: string
+      runtime_change_allowed:
+        description: "Allow runtime behavior change"
+        required: true
+        default: false
+        type: boolean
+      user_approval_required:
+        description: "User approval required before completion"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update KOHEE command issue
+        id: upsert
+        uses: actions/github-script@v7
+        env:
+          INPUT_TASK: ${{ inputs.task }}
+          INPUT_RISK: ${{ inputs.risk }}
+          INPUT_LANE: ${{ inputs.lane }}
+          INPUT_ALLOWED_FILES: ${{ inputs.allowed_files }}
+          INPUT_DENIED_FILES: ${{ inputs.denied_files }}
+          INPUT_RUNTIME_CHANGE_ALLOWED: ${{ inputs.runtime_change_allowed }}
+          INPUT_USER_APPROVAL_REQUIRED: ${{ inputs.user_approval_required }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const now = new Date().toISOString();
+            const commandId = `kohee-${Date.now()}`;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const labels = ["kohee-command", "codex"];
+
+            const toYamlList = (raw) => {
+              const lines = (raw || "")
+                .split(/\r?\n/)
+                .map((v) => v.trim())
+                .filter(Boolean);
+              return lines.length ? lines.map((v) => `    - ${v}`).join("\n") : "    - (none)";
+            };
+
+            const issueTitle = `[KOHEE_COMMAND] ${process.env.INPUT_LANE} / ${process.env.INPUT_RISK} / ${process.env.INPUT_TASK.slice(0, 80)}`;
+            const dispatchMarker = "<!-- kohee-command-dispatch:v1 -->";
+
+            const issueBody = `${dispatchMarker}\n\n## Lane\n${process.env.INPUT_LANE}\n\n## Risk\n${process.env.INPUT_RISK}\n\n## Scope / allowlist (files + functions)\n- Allowed files:\n${toYamlList(process.env.INPUT_ALLOWED_FILES)}\n- Denied files:\n${toYamlList(process.env.INPUT_DENIED_FILES)}\n\n## KOHEE_COMMAND\n\n\`\`\`yaml\nKOHEE_COMMAND:\n  command_id: ${commandId}\n  state: QUEUED\n  risk: ${process.env.INPUT_RISK}\n  lane: ${process.env.INPUT_LANE}\n  source: GitHub Actions workflow_dispatch\n  owner: codex\n  terminal_state: MERGED_AND_DEPLOYED | DONE_NO_DEPLOY | HOLD\n  user_action_required: ${process.env.INPUT_USER_APPROVAL_REQUIRED}\n  task: ${process.env.INPUT_TASK}\n  acceptance_criteria:\n    - Implement only allowed scope\n    - Run required verification commands\n    - Keep runtime change policy\n  allowed_files:\n${toYamlList(process.env.INPUT_ALLOWED_FILES)}\n  denied_files:\n${toYamlList(process.env.INPUT_DENIED_FILES)}\n  runtime_change_allowed: ${process.env.INPUT_RUNTIME_CHANGE_ALLOWED}\n  do_not_change:\n    - server/**\n    - assets/**\n    - .pages-deploy/**\n    - migrations/**\n    - schema.sql\n  high_risk_hold: HOLD_HIGH_RISK\n  created_at: ${now}\n  last_updated_at: ${now}\n\`\`\`\n\n## PR evidence guard\n\n- Actual GitHub PR URL is required for \`PR_OPEN\`.\n- Commit hash or make_pr metadata without real PR URL is \`UNVERIFIED\`.\n- If PR publishing is blocked, use \`HOLD_CODEX_PR_PUBLISHING\`.\n\n## Dispatch evidence\n- workflow_run: ${runUrl}\n`;
+
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              labels: labels.join(","),
+              per_page: 100
+            });
+
+            const matched = openIssues
+              .filter((i) => i.title.startsWith(`[KOHEE_COMMAND] ${process.env.INPUT_LANE} / ${process.env.INPUT_RISK}`))
+              .find((i) => (i.body || "").includes(dispatchMarker));
+
+            let issue;
+            if (matched) {
+              const updated = await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: matched.number,
+                title: issueTitle,
+                body: issueBody,
+                labels
+              });
+              issue = updated.data;
+            } else {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title: issueTitle,
+                body: issueBody,
+                labels
+              });
+              issue = created.data;
+            }
+
+            const commentBody = `@codex\n\nPlease execute this KOHEE_COMMAND from the issue body.\n\nPR evidence guard (mandatory):\n- \`PR_OPEN\` is valid only with a real GitHub PR URL.\n- Without a PR URL, status is \`UNVERIFIED\`.\n- If PR publishing fails, set \`state: HOLD\` and \`blocker: HOLD_CODEX_PR_PUBLISHING\`.`;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issue.number,
+              body: commentBody
+            });
+
+            core.setOutput("issue_number", String(issue.number));
+            core.setOutput("issue_url", issue.html_url);
+
+      - name: Write workflow summary
+        run: |
+          {
+            echo "## KOHEE command dispatch result"
+            echo ""
+            echo "- Issue: ${{ steps.upsert.outputs.issue_url }}"
+            echo "- Issue number: #${{ steps.upsert.outputs.issue_number }}"
+            echo "- Lane: ${{ inputs.lane }}"
+            echo "- Risk: ${{ inputs.risk }}"
+            echo "- Runtime change allowed: ${{ inputs.runtime_change_allowed }}"
+            echo "- User approval required: ${{ inputs.user_approval_required }}"
+          } >> "$GITHUB_STEP_SUMMARY"
