@@ -72,7 +72,7 @@ jobs:
             const now = new Date().toISOString();
             const commandId = `kohee-${Date.now()}`;
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
-            const labels = ["kohee-command", "codex"];
+            const labels = ["kohee-task", "codex"];
 
             const toYamlList = (raw) => {
               const lines = (raw || "")
@@ -91,7 +91,7 @@ jobs:
               owner,
               repo,
               state: "open",
-              labels: labels.join(","),
+              labels: "codex",
               per_page: 100
             });
 
