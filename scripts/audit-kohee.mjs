@@ -377,11 +377,10 @@ for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
 }
 
 const refs =
-  read("AGENTS.md") +
-  read("docs/CODEX_WORKFLOW.md") +
-  read(".github/pull_request_template.md") +
+  read("README.md") +
+  read(".prettierignore") +
   read("package.json") +
-  read("scripts/audit-kohee.mjs");
+  read("sync-pages.ps1");
 if (/\baaaa\b|\baaa\b/.test(refs)) warn("Possible aaa/aaaa reference found");
 else ok("No obvious aaa/aaaa references detected");
 
