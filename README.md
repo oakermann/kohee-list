@@ -30,8 +30,6 @@ into a cleaner, contract-preserving structure.
   - Synced local mirror of `.pages-deploy/assets/` for direct file testing
 - Root HTML files (`index.html`, `login.html`, `submit.html`, `mypage.html`, `admin.html`)
   - Synced local mirrors of `.pages-deploy/*.html`
-- `aaaa/`
-  - Extra local synced mirror used during manual UI checks
 - `scripts/`
   - Validation, deployment, smoke-test, and CSV backup scripts
 - `schema.sql`
@@ -41,7 +39,7 @@ into a cleaner, contract-preserving structure.
 
 There is currently no separate `public/` directory in this repository.
 For Pages deploys, treat `.pages-deploy/` as the authoritative frontend source.
-Root HTML/assets and `aaaa/` are mirrors kept for local testing and manual checks.
+Root HTML/assets are synced mirrors kept for local testing and manual checks.
 
 ## Current Auth Model
 
@@ -348,7 +346,7 @@ What they do:
 ## Frontend Notes
 
 - Main source for Pages deploy is `.pages-deploy/`
-- Root HTML/assets and `aaaa/` are synced mirrors for local checks
+- Root HTML/assets are synced mirrors for local checks
 - Shared frontend logic lives in `.pages-deploy/assets/common.js`
 - Page-specific logic is split by screen instead of keeping giant inline scripts
 
@@ -359,7 +357,7 @@ What they do:
   - route table: `server/routes.js`
 - Pages frontend:
   - source of truth: `.pages-deploy/`
-  - synced mirrors: root HTML/assets, `aaaa/`
+  - synced mirror: root HTML/assets
 - Database:
   - base schema: `schema.sql`
   - migration history: `migrations/*.sql`

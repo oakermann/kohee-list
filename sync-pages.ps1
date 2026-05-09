@@ -1,6 +1,6 @@
 param(
   [string]$Source = ".pages-deploy",
-  [string[]]$Targets = @(".", "aaaa")
+  [string[]]$Targets = @(".")
 )
 
 $ErrorActionPreference = "Stop"
