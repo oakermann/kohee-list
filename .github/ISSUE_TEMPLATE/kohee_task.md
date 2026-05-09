@@ -48,7 +48,7 @@ KOHEE_STATUS:
     count_for_signature:
     last_failed_run:
     last_attempt_at:
-  blocker:
+  blocker: HOLD_HIGH_RISK | HOLD_USER_APPROVAL | HOLD_DEPLOY_BLOCKED | HOLD_SECRET_OR_PERMISSION | HOLD_PRODUCT_DIRECTION | HOLD_SCOPE_CONFLICT | HOLD_VERIFICATION_CONFLICT | HOLD_REPEATED_FAILURE | HOLD_CODEX_NO_RESPONSE | HOLD_CODEX_PR_PUBLISHING
   next_action:
   user_action_required:
   deploy_check_required:
@@ -98,3 +98,9 @@ KOHEE_RECOVERY_TASK:
 ## Touches D1/schema/auth/public API/CSV/deploy? (yes/no + details)
 
 ## Remaining risks
+
+## PR evidence guard
+
+- Actual GitHub PR URL is required for `PR_OPEN`.
+- Commit hash or make_pr metadata without real PR URL is `UNVERIFIED`.
+- If PR publishing is blocked, use `HOLD_CODEX_PR_PUBLISHING`.

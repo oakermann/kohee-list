@@ -674,6 +674,8 @@ This section defines KOHEE GitHub Command Bridge v1. It is governance only and d
 
 GitHub evidence wins. Codex self-reports are useful status notes, but they are never final truth.
 
+PR_OPEN requires an actual GitHub PR URL. A commit hash or make_pr-only note without a GitHub PR URL is UNVERIFIED.
+
 Before ChatGPT reports task completion to the user, ChatGPT must verify actual GitHub state:
 
 - PR state.
@@ -777,6 +779,7 @@ Allowed blocker values:
 - `HOLD_VERIFICATION_CONFLICT`
 - `HOLD_REPEATED_FAILURE`
 - `HOLD_CODEX_NO_RESPONSE`
+- `HOLD_CODEX_PR_PUBLISHING`
 
 ### KOHEE_COMMAND
 

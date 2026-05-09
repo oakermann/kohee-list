@@ -4,10 +4,16 @@ Lane:
 
 KOHEE_STATUS:
 
+PR evidence rule:
+
+- PR_OPEN is valid only when `active_pr` and `evidence.pr_url` contain a real GitHub PR URL.
+- A commit hash, branch name, patch note, or make_pr metadata without a real GitHub PR URL is `UNVERIFIED`.
+- If PR publishing fails, set `state: HOLD`, `blocker: HOLD_CODEX_PR_PUBLISHING`, `verification.status: UNVERIFIED`, and `user_action_required: true`.
+
 ```yaml
 KOHEE_STATUS:
   command_id:
-  state: PR_OPEN
+  state: WORKING | PR_OPEN | HOLD
   risk:
   lane:
   active_pr:
@@ -24,7 +30,7 @@ KOHEE_STATUS:
   deploy_check_required:
   deploy_status:
   verification:
-    status: UNVERIFIED
+    status: VERIFIED | UNVERIFIED | CONFLICTED
     last_verified_at:
     changed_files_checked:
     diff_checked:
