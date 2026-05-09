@@ -489,6 +489,29 @@ const HOLD_REVIEW_EXPORT_COLUMNS = [
   "hidden_by",
 ];
 
+const SUBMISSION_REVIEW_EXPORT_COLUMNS = [
+  "submission_id",
+  "user_id",
+  "username",
+  "name",
+  "address",
+  "desc",
+  "reason",
+  "category",
+  "signature",
+  "beanShop",
+  "instagram",
+  "oakerman_pick",
+  "manager_pick",
+  "status",
+  "created_at",
+  "reviewed_at",
+  "reviewed_by",
+  "reviewed_by_username",
+  "reject_reason",
+  "linked_cafe_id",
+];
+
 function csvEscape(value) {
   const textValue = String(value ?? "");
   if (!/[",\n\r]/.test(textValue)) return textValue;
@@ -521,6 +544,7 @@ async function exportReviewCsv(req, env, options) {
   const rows = (rowsResult?.results || []).map((row) => ({
     ...row,
     cafe_id: row.id || "",
+    submission_id: row.id || "",
     category: row.category || "",
     signature: row.signature || "",
   }));
@@ -577,6 +601,26 @@ export async function exportApprovedReviewCsv(req, env) {
     }),
   );
 }
+
+export async function exportSubmissionsReviewCsv(req, env) {
+  return withGuard(req, env, async () =>
+    exportReviewCsv(req, env, {
+      filename: "submissions-review.csv",
+      columns: SUBMISSION_REVIEW_EXPORT_COLUMNS,
+      sql: `SELECT
+              s.id, s.user_id, u.username, s.name, s.address, s.desc, s.reason,
+              s.category, s.signature, s.beanShop, s.instagram,
+              s.oakerman_pick, s.manager_pick, s.status, s.created_at,
+              s.reviewed_at, s.reviewed_by, reviewer.username AS reviewed_by_username,
+              s.reject_reason, s.linked_cafe_id
+            FROM submissions s
+            JOIN users u ON u.id = s.user_id
+            LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
+            ORDER BY COALESCE(s.reviewed_at, s.created_at) DESC, s.id ASC`,
+    }),
+  );
+}
+
 export async function importCsv(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);

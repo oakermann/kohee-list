@@ -1064,26 +1064,40 @@ function reviewExportFiles(
   ];
 }
 
+const REVIEW_EXPORT_ENDPOINTS = [
+  {
+    path: "/export-csv/submissions-review",
+    filename: "submissions-review.csv",
+  },
+  {
+    path: "/export-csv/candidates-review",
+    filename: "candidates-review.csv",
+  },
+  {
+    path: "/export-csv/hold-review",
+    filename: "hold-review.csv",
+  },
+  {
+    path: "/export-csv/approved-review",
+    filename: "approved-review.csv",
+  },
+];
+
 async function downloadCsv() {
   try {
     $("csv-msg").textContent = "CSV 다운로드 중...";
-    const [cafes, submissionData] = await Promise.all([
-      jsonApi("/cafes?lifecycle=active"),
-      jsonApi("/submissions?status=pending"),
-    ]);
-    const files = reviewExportFiles(
-      Array.isArray(cafes) ? cafes : [],
-      submissionData.items || [],
+    const files = await Promise.all(
+      REVIEW_EXPORT_ENDPOINTS.map(async (endpoint) => {
+        const res = await api(endpoint.path);
+        const csv = await res.text();
+        if (!res.ok) {
+          throw new Error(csv || `${endpoint.filename} export failed`);
+        }
+        return { filename: endpoint.filename, csv };
+      }),
     );
-    if (!files.some((file) => file.rows.length)) {
-      alert("다운로드할 데이터가 없습니다.");
-      $("csv-msg").textContent = "";
-      return;
-    }
 
-    files.forEach((file) =>
-      downloadCsvFile(file.filename, buildCsv(file.headers, file.rows)),
-    );
+    files.forEach((file) => downloadCsvFile(file.filename, file.csv));
     $("csv-msg").textContent =
       `CSV 다운로드 완료: ${files.map((file) => file.filename).join(", ")}`;
   } catch (error) {

@@ -18,6 +18,7 @@ import {
   exportApprovedReviewCsv,
   exportCandidatesReviewCsv,
   exportHoldReviewCsv,
+  exportSubmissionsReviewCsv,
   importCsv,
   parseCsvLine,
   resetCsv,
@@ -1093,6 +1094,7 @@ const adminElements = new Map([
   ["review-console-note", new AdminNode()],
 ]);
 const downloadedCsvFiles = [];
+let adminApiResponses = {};
 let adminJsonApiResponses = {};
 const adminContext = {
   console,
@@ -1122,7 +1124,11 @@ const adminContext = {
   formatDate: (value) => String(value || ""),
   errorStatusLabel: (status) => status,
   roleLabel: (role) => role,
-  api: async () => ({}),
+  api: async (path) =>
+    adminApiResponses[path] || {
+      ok: false,
+      text: async () => `Missing admin API fixture for ${path}`,
+    },
   jsonApi: async (path) => adminJsonApiResponses[path] || {},
   clearAuthToken() {},
   storeCsrfFromPayload() {},
@@ -1270,23 +1276,35 @@ assert.doesNotMatch(
   ),
   /Legacy Hidden/,
 );
-adminJsonApiResponses = {
-  "/cafes?lifecycle=active": adminContext.__adminTest.state.cafes,
-  "/submissions?status=pending": {
-    items: adminContext.__adminTest.state.submissions,
+adminApiResponses = {
+  "/export-csv/submissions-review": {
+    ok: true,
+    text: async () => "submission_id,name\nsubmission-1,Submitted Cafe\n",
+  },
+  "/export-csv/candidates-review": {
+    ok: true,
+    text: async () => "cafe_id,name\ncandidate-1,Candidate Cafe\n",
+  },
+  "/export-csv/hold-review": {
+    ok: true,
+    text: async () => "cafe_id,name\nhold-1,Hold Cafe\n",
+  },
+  "/export-csv/approved-review": {
+    ok: true,
+    text: async () => "cafe_id,name\napproved-1,Approved Cafe\n",
   },
 };
 await adminContext.__adminTest.downloadCsv();
 assert.match(adminElements.get("csv-msg").textContent, /^CSV 다운로드 완료:/);
 assert.deepEqual(
   Array.from(
-    downloadedCsvFiles.filter((item) => item.endsWith("_review_export.csv")),
+    downloadedCsvFiles.filter((item) => item.endsWith("-review.csv")),
   ),
   [
-    "submissions_review_export.csv",
-    "candidate_review_export.csv",
-    "hold_review_export.csv",
-    "approved_review_export.csv",
+    "submissions-review.csv",
+    "candidates-review.csv",
+    "hold-review.csv",
+    "approved-review.csv",
   ],
 );
 
@@ -1776,6 +1794,15 @@ function createExportReviewCsvEnv(role = null) {
                   updated_at: "2026-05-08T00:00:00.000Z",
                   hidden_at: "2026-05-07T00:00:00.000Z",
                   hidden_by: "admin-user",
+                  user_id: "user-1",
+                  username: "coffee-user",
+                  reason: "Needs review",
+                  created_at: "2026-05-06T00:00:00.000Z",
+                  reviewed_at: "2026-05-08T00:00:00.000Z",
+                  reviewed_by: "admin-user",
+                  reviewed_by_username: "admin",
+                  reject_reason: "",
+                  linked_cafe_id: "cafe-1",
                 },
               ],
             }),
@@ -1866,6 +1893,32 @@ assert.equal(approvedExport.response.status, 200);
 assert.equal(
   approvedExport.statements.some((statement) =>
     /status = 'approved' AND deleted_at IS NULL/i.test(statement.sql),
+  ),
+  true,
+);
+
+const submissionsExport = await requestReviewExport(
+  exportSubmissionsReviewCsv,
+  "admin",
+  "submissions-review",
+);
+assert.equal(submissionsExport.response.status, 200);
+const submissionsCsv = await submissionsExport.response.text();
+assert.ok(
+  submissionsCsv.startsWith(
+    "submission_id,user_id,username,name,address,desc,reason,category,signature,beanShop,instagram,oakerman_pick,manager_pick,status,created_at,reviewed_at,reviewed_by,reviewed_by_username,reject_reason,linked_cafe_id\n",
+  ),
+);
+assert.match(submissionsCsv, /^candidate-1,user-1,coffee-user,/m);
+assert.equal(
+  submissionsExport.statements.some((statement) =>
+    /FROM\s+submissions\s+s/i.test(statement.sql),
+  ),
+  true,
+);
+assert.equal(
+  submissionsExport.statements.some((statement) =>
+    /LEFT\s+JOIN\s+users\s+reviewer/i.test(statement.sql),
   ),
   true,
 );
