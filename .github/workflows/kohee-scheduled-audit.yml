@@ -1,0 +1,144 @@
+name: KOHEE Scheduled Audit Bridge
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 09:00 KST
+    - cron: "0 0 * * *"
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: kohee-scheduled-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check deploy sync
+        run: npm run check:deploy-sync
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: KOHEE audit
+        run: npm run audit:kohee
+
+      - name: Git diff check
+        run: git diff --check
+
+      - name: Live smoke check
+        run: npm run smoke:check
+
+      - name: Write status summary
+        if: always()
+        run: |
+          {
+            echo "## KOHEE_STATUS"
+            echo ""
+            echo "- state: ${{ job.status }}"
+            echo "- risk: MEDIUM"
+            echo "- lane: DEPLOY_SAFETY"
+            echo "- owner: github-actions"
+            echo "- deploy_check_required: false"
+            echo "- deploy_status: not_applicable"
+            echo "- checks_checked: true"
+            echo "- smoke_checked: true"
+            echo "- run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update Codex Cloud recovery task
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const title = "KOHEE_RECOVERY_TASK: Scheduled audit failure";
+            const now = new Date().toISOString();
+            const commandId = `scheduled-audit-${context.runId}`;
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open"
+            });
+            const existing = issues.find((issue) => issue.title === title && !issue.pull_request);
+            const failureCount = existing ? existing.comments + 1 : 1;
+            const body = [
+              "KOHEE_RECOVERY_TASK:",
+              `  source_task: ${commandId}`,
+              "  source_pr:",
+              "  failure_signature: scheduled-audit-bridge",
+              `  failure_count: ${failureCount}`,
+              `  last_failed_run: ${runUrl}`,
+              "  suspected_area: deploy-sync/unit/audit/diff/smoke",
+              "  required_analysis: Inspect the failed scheduled audit, classify findings, patch only safe LOW/MEDIUM issues, and mark HIGH-risk or permission/secret/deploy blockers as HOLD.",
+              "  do_not_retry_blindly: true",
+              "  risk: MEDIUM",
+              "  lane: DEPLOY_SAFETY",
+              "  owner: codex",
+              "  user_action_required: false",
+              "",
+              "KOHEE_STATUS:",
+              "  state: QUEUED",
+              "  risk: MEDIUM",
+              "  lane: DEPLOY_SAFETY",
+              "  active_pr:",
+              `  head_sha: ${context.sha}`,
+              "  owner: codex",
+              "  blocker:",
+              "  next_action: Codex Cloud should investigate this failed scheduled audit and open a safe scoped PR if a LOW/MEDIUM fix is available.",
+              "  user_action_required: false",
+              "  deploy_check_required: false",
+              "  deploy_status: not_applicable",
+              "  verification:",
+              "    status: UNVERIFIED",
+              "    checks_checked: true",
+              "    audit_checked: true",
+              "    smoke_checked: true",
+              "    high_risk_paths_checked: false",
+              "  evidence:",
+              `    checks_url: ${runUrl}`,
+              "    deploy_url:",
+              "    notes: Scheduled GitHub Actions audit failed. Logs are linked above; do not paste large logs into this issue.",
+              "",
+              "@codex",
+              "",
+              `Created/updated at: ${now}`
+            ].join("\n");
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body
+              });
+            }
