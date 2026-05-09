@@ -21,6 +21,27 @@ function compact(text, max = 140) {
   return normalized.length > max ? `${normalized.slice(0, max - 1)}…` : normalized;
 }
 
+function bodyState(body) {
+  const text = String(body || "");
+  const match = text.match(/^\s*state\s*:\s*([A-Z_]+)/im);
+  return match ? match[1].toUpperCase() : "";
+}
+
+function hasTerminalStatus(body) {
+  return /\b(MERGED_AND_DEPLOYED|DONE_NO_DEPLOY|HOLD|HOLD_CLOSED|VERIFIED)\b/.test(
+    String(body || ""),
+  );
+}
+
+function isLongLivedActive(body) {
+  return bodyState(body) === "ACTIVE";
+}
+
+function isQueued(body) {
+  const state = bodyState(body);
+  return !state || state === "QUEUED";
+}
+
 async function githubFetch(url, token) {
   const response = await fetch(url, {
     headers: {
@@ -51,19 +72,36 @@ function classifyIssue(issue) {
 
   const isKoheeCommand = title.includes("[KOHEE_COMMAND]") || body.includes("KOHEE_COMMAND:");
   const isParallel = title.includes("KOHEE_PARALLEL_MAINTENANCE") || body.includes("KOHEE_PARALLEL_MAINTENANCE:");
-  const hasCodexStatus = body.includes("KOHEE_STATUS:") || /DONE_NO_DEPLOY|HOLD|PR_OPEN|VERIFIED/.test(body);
+  const isRecovery = title.includes("KOHEE_RECOVERY_TASK") || body.includes("KOHEE_RECOVERY_TASK:");
+  const isAutomationIssue = isKoheeCommand || isParallel || isRecovery;
+  const activeState = isLongLivedActive(body);
+  const terminal = hasTerminalStatus(body);
+  const queued = isQueued(body);
 
   let state = "OBSERVE";
   const reasons = [];
 
-  if ((isKoheeCommand || isParallel) && updatedAge !== null && updatedAge >= STALE_HOURS) {
-    state = "STALE";
-    reasons.push(`updated ${updatedAge.toFixed(1)}h ago`);
+  if (!isAutomationIssue) {
+    return {
+      number: issue.number,
+      title,
+      url: issue.html_url,
+      labels,
+      updatedAge,
+      state,
+      reasons,
+    };
   }
 
-  if ((isKoheeCommand || isParallel) && !hasCodexStatus && updatedAge !== null && updatedAge >= STALE_HOURS) {
-    state = "STALE_NO_STATUS";
-    reasons.push("no obvious KOHEE_STATUS terminal marker in body");
+  if (activeState) {
+    state = "ACTIVE";
+    reasons.push("state: ACTIVE long-lived automation issue");
+  } else if (terminal) {
+    state = "TERMINAL";
+    reasons.push("terminal KOHEE status detected");
+  } else if (queued && updatedAge !== null && updatedAge >= STALE_HOURS) {
+    state = "STALE_QUEUED";
+    reasons.push(`queued without terminal status for ${updatedAge.toFixed(1)}h`);
   }
 
   return {
@@ -119,15 +157,20 @@ async function main() {
     if (issue.reasons.length) console.log(`  reasons: ${issue.reasons.join("; ")}`);
   }
 
-  const stale = classified.filter((issue) => issue.state !== "OBSERVE");
+  const stale = classified.filter((issue) => issue.state === "STALE_QUEUED");
+  const active = classified.filter((issue) => issue.state === "ACTIVE");
+  const terminal = classified.filter((issue) => issue.state === "TERMINAL");
+
   header("summary");
   console.log(`total=${classified.length}`);
-  console.log(`stale=${stale.length}`);
+  console.log(`active=${active.length}`);
+  console.log(`terminal=${terminal.length}`);
+  console.log(`stale_queued=${stale.length}`);
 
   if (stale.length) {
-    console.warn("WARN: stale KOHEE automation issues detected. This watchdog is read-only and did not modify issues.");
+    console.warn("WARN: stale queued KOHEE automation issues detected. This watchdog is read-only and did not modify issues.");
   } else {
-    console.log("No stale KOHEE automation issues detected.");
+    console.log("No stale queued KOHEE automation issues detected.");
   }
 }
 
