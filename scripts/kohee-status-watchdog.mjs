@@ -117,8 +117,9 @@ function classifyIssue(issue, comments = []) {
 
   const isKoheeCommand = title.includes("[KOHEE_COMMAND]") || body.includes("KOHEE_COMMAND:");
   const isParallel = title.includes("KOHEE_PARALLEL_MAINTENANCE") || body.includes("KOHEE_PARALLEL_MAINTENANCE:");
+  const isCloud = title.includes("KOHEE_CLOUD_MAINTENANCE") || body.includes("KOHEE_CLOUD_MAINTENANCE:");
   const isRecovery = title.includes("KOHEE_RECOVERY_TASK") || body.includes("KOHEE_RECOVERY_TASK:");
-  const isAutomationIssue = isKoheeCommand || isParallel || isRecovery;
+  const isAutomationIssue = isKoheeCommand || isParallel || isCloud || isRecovery;
   const activeState = isLongLivedActive(body);
   const terminal = hasTerminalStatus(body, statusText);
   const queued = isQueued(body);
@@ -175,6 +176,7 @@ async function main() {
 
   const queries = [
     'is:issue is:open "KOHEE_COMMAND"',
+    'is:issue is:open "KOHEE_CLOUD_MAINTENANCE"',
     'is:issue is:open "KOHEE_PARALLEL_MAINTENANCE"',
     'is:issue is:open "KOHEE_RECOVERY_TASK"',
   ];
