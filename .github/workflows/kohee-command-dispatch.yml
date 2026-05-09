@@ -10,32 +10,32 @@ on:
       preset:
         description: "Preset profile for lane/risk/scope defaults"
         required: false
-        default: ""
+        default: custom
         type: choice
         options:
-          - ""
+          - custom
           - smoke-ack
           - governance-readonly
           - frontend-admin
           - csv-export
           - audit-only
       risk:
-        description: "Risk level (optional override)"
+        description: "Risk level override"
         required: false
-        default: ""
+        default: auto
         type: choice
         options:
-          - ""
+          - auto
           - LOW
           - MEDIUM
           - HIGH
       lane:
-        description: "Lane (optional override)"
+        description: "Lane override"
         required: false
-        default: ""
+        default: auto
         type: choice
         options:
-          - ""
+          - auto
           - GOVERNANCE
           - DEPLOY_SAFETY
           - PUBLIC_EXPOSURE
@@ -44,31 +44,31 @@ on:
           - CSV_PIPELINE
           - FRONTEND_RENDERING
       allowed_files:
-        description: "Newline-delimited allowlist paths (optional override)"
+        description: "Newline-delimited allowlist override"
         required: false
         default: ""
         type: string
       denied_files:
-        description: "Newline-delimited denylist paths (optional override)"
+        description: "Newline-delimited denylist override"
         required: false
         default: ""
         type: string
       runtime_change_allowed:
-        description: "Allow runtime behavior change (optional override)"
+        description: "Runtime change override"
         required: false
-        default: ""
+        default: preset
         type: choice
         options:
-          - ""
+          - preset
           - "true"
           - "false"
       user_approval_required:
-        description: "User approval required before completion (optional override)"
+        description: "User approval override"
         required: false
-        default: ""
+        default: preset
         type: choice
         options:
-          - ""
+          - preset
           - "true"
           - "false"
 
@@ -100,258 +100,53 @@ jobs:
             const commandId = `kohee-${Date.now()}`;
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const labels = ["kohee-task", "codex"];
-
             const presets = {
-              "smoke-ack": {
-                risk: "LOW",
-                lane: "GOVERNANCE",
-                allowed_files: "read-only",
-                denied_files: "*",
-                runtime_change_allowed: false,
-                user_approval_required: false,
-                taskPrefix: "Acknowledge only / no edit / no branch / no PR."
-              },
-              "governance-readonly": {
-                risk: "LOW",
-                lane: "GOVERNANCE",
-                allowed_files: "AGENTS.md\nkohee.contract.json\ndocs/CODEX_WORKFLOW.md\ndocs/audits/KOHEE_FINDINGS.md\n.github/pull_request_template.md\n.github/ISSUE_TEMPLATE/**\nscripts/audit-kohee.mjs\npackage.json",
-                denied_files: "server/**\nassets/**\n.pages-deploy/**\nmigrations/**\nschema.sql",
-                runtime_change_allowed: false,
-                user_approval_required: false
-              },
-              "frontend-admin": {
-                risk: "MEDIUM",
-                lane: "FRONTEND_RENDERING",
-                allowed_files: "admin.html\n.pages-deploy/admin.html\nassets/admin.js\n.pages-deploy/assets/admin.js\nassets/admin.css\n.pages-deploy/assets/admin.css\nassets/common.js\n.pages-deploy/assets/common.js",
-                denied_files: "server/**\nmigrations/**\nschema.sql\nworker.js",
-                runtime_change_allowed: false,
-                user_approval_required: false
-              },
-              "csv-export": {
-                risk: "MEDIUM",
-                lane: "CSV_PIPELINE",
-                allowed_files: "server/csv.js\nserver/routes.js\nassets/admin.js\n.pages-deploy/assets/admin.js\nadmin.html\n.pages-deploy/admin.html\nscripts/test-unit.mjs",
-                denied_files: "migrations/**\nschema.sql\nworker.js\nCSV import/reset behavior\npublic /data behavior\nauth/session/security behavior",
-                runtime_change_allowed: false,
-                user_approval_required: true
-              },
-              "audit-only": {
-                risk: "LOW",
-                lane: "GOVERNANCE",
-                allowed_files: "docs/audits/KOHEE_FINDINGS.md\nscripts/audit-kohee.mjs\npackage.json",
-                denied_files: "server/**\nassets/**\n.pages-deploy/**\nmigrations/**\nschema.sql",
-                runtime_change_allowed: false,
-                user_approval_required: false
-              }
+              "smoke-ack": { risk: "LOW", lane: "GOVERNANCE", allowed_files: "read-only", denied_files: "*", runtime_change_allowed: false, user_approval_required: false, taskPrefix: "Acknowledge only / no edit / no branch / no PR." },
+              "governance-readonly": { risk: "LOW", lane: "GOVERNANCE", allowed_files: "AGENTS.md\nkohee.contract.json\ndocs/CODEX_WORKFLOW.md\ndocs/audits/KOHEE_FINDINGS.md\n.github/pull_request_template.md\n.github/ISSUE_TEMPLATE/**\nscripts/audit-kohee.mjs\npackage.json", denied_files: "server/**\nassets/**\n.pages-deploy/**\nmigrations/**\nschema.sql", runtime_change_allowed: false, user_approval_required: false },
+              "frontend-admin": { risk: "MEDIUM", lane: "FRONTEND_RENDERING", allowed_files: "admin.html\n.pages-deploy/admin.html\nassets/admin.js\n.pages-deploy/assets/admin.js\nassets/admin.css\n.pages-deploy/assets/admin.css\nassets/common.js\n.pages-deploy/assets/common.js", denied_files: "server/**\nmigrations/**\nschema.sql\nworker.js", runtime_change_allowed: false, user_approval_required: false },
+              "csv-export": { risk: "MEDIUM", lane: "CSV_PIPELINE", allowed_files: "server/csv.js\nserver/routes.js\nassets/admin.js\n.pages-deploy/assets/admin.js\nadmin.html\n.pages-deploy/admin.html\nscripts/test-unit.mjs", denied_files: "migrations/**\nschema.sql\nworker.js\nCSV import/reset behavior\npublic /data behavior\nauth/session/security behavior", runtime_change_allowed: false, user_approval_required: true },
+              "audit-only": { risk: "LOW", lane: "GOVERNANCE", allowed_files: "docs/audits/KOHEE_FINDINGS.md\nscripts/audit-kohee.mjs\npackage.json", denied_files: "server/**\nassets/**\n.pages-deploy/**\nmigrations/**\nschema.sql", runtime_change_allowed: false, user_approval_required: false }
             };
-
-            const selectedPreset = process.env.INPUT_PRESET || "";
-            const preset = presets[selectedPreset] || {};
-
-            const normalizeChoice = (value) => String(value || "").trim();
-
-            const normalizeMultiline = (value) =>
-              String(value || "")
-                .split(/\r?\n/)
-                .map((v) => v.trim())
-                .filter(Boolean)
-                .join("\n");
-
-            const parseOptionalBool = (value, fallback) => {
+            const cleanPreset = (v) => String(v || "").trim() === "custom" ? "" : String(v || "").trim();
+            const cleanChoice = (v) => String(v || "").trim() === "auto" ? "" : String(v || "").trim();
+            const lines = (v) => String(v || "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean).join("\n");
+            const boolValue = (value, fallback) => {
               const normalized = String(value || "").trim().toLowerCase();
-              if (!normalized) return fallback;
+              if (!normalized || normalized === "preset" || normalized === "auto") return fallback;
               if (normalized === "true") return true;
               if (normalized === "false") return false;
               return fallback;
             };
-
-            const effectiveRisk =
-              normalizeChoice(process.env.INPUT_RISK) || preset.risk || "LOW";
-            const effectiveLane =
-              normalizeChoice(process.env.INPUT_LANE) || preset.lane || "GOVERNANCE";
-
-            const overrideAllowedFiles = normalizeMultiline(
-              process.env.INPUT_ALLOWED_FILES
-            );
-            const overrideDeniedFiles = normalizeMultiline(
-              process.env.INPUT_DENIED_FILES
-            );
-
-            const effectiveAllowedFiles =
-              overrideAllowedFiles || preset.allowed_files || "(none)";
-            const effectiveDeniedFiles =
-              overrideDeniedFiles || preset.denied_files || "(none)";
-
-            const effectiveRuntimeChangeAllowed = parseOptionalBool(
-              process.env.INPUT_RUNTIME_CHANGE_ALLOWED,
-              preset.runtime_change_allowed ?? false
-            );
-            const effectiveUserApprovalRequired = parseOptionalBool(
-              process.env.INPUT_USER_APPROVAL_REQUIRED,
-              preset.user_approval_required ?? false
-            );
-
-            const baseTask = String(process.env.INPUT_TASK || "").trim();
-            const effectiveTask = preset.taskPrefix
-              ? `${preset.taskPrefix} ${baseTask}`.trim()
-              : baseTask;
-
-            const toYamlList = (raw) => {
-              const lines = String(raw || "")
-                .split(/\r?\n/)
-                .map((v) => v.trim())
-                .filter(Boolean);
-              return lines.length
-                ? lines.map((v) => `    - ${v}`).join("\n")
-                : "    - (none)";
+            const selectedPreset = cleanPreset(process.env.INPUT_PRESET);
+            const preset = presets[selectedPreset] || {};
+            const risk = cleanChoice(process.env.INPUT_RISK) || preset.risk || "LOW";
+            const lane = cleanChoice(process.env.INPUT_LANE) || preset.lane || "GOVERNANCE";
+            const allowed = lines(process.env.INPUT_ALLOWED_FILES) || preset.allowed_files || "(none)";
+            const denied = lines(process.env.INPUT_DENIED_FILES) || preset.denied_files || "(none)";
+            const runtimeAllowed = boolValue(process.env.INPUT_RUNTIME_CHANGE_ALLOWED, preset.runtime_change_allowed ?? false);
+            const approvalRequired = boolValue(process.env.INPUT_USER_APPROVAL_REQUIRED, preset.user_approval_required ?? false);
+            const task = `${preset.taskPrefix ? `${preset.taskPrefix} ` : ""}${String(process.env.INPUT_TASK || "").trim()}`.trim();
+            const yamlList = (raw) => {
+              const items = String(raw || "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+              return items.length ? items.map((x) => `    - ${x}`).join("\n") : "    - (none)";
             };
-
-            const issueTitle = `[KOHEE_COMMAND] ${effectiveLane} / ${effectiveRisk} / ${effectiveTask.slice(0, 80)}`;
-            const dispatchMarker = "<!-- kohee-command-dispatch:v1 -->";
-
-            const manualCodexComment = `@codex
-
-Please execute this KOHEE_COMMAND from the issue body.
-
-Acknowledge with KOHEE_STATUS.
-Follow the PR evidence guard.
-If this task requires code changes, use the existing GitHub PR flow and include the actual PR URL.
-Do not claim PR_OPEN without an actual GitHub PR URL.`;
-
-            const issueBody = `${dispatchMarker}
-
-## Lane
-${effectiveLane}
-
-## Risk
-${effectiveRisk}
-
-## Preset
-${selectedPreset || "(none)"}
-
-## Scope / allowlist (files + functions)
-- Allowed files:
-${toYamlList(effectiveAllowedFiles)}
-- Denied files:
-${toYamlList(effectiveDeniedFiles)}
-
-## KOHEE_COMMAND
-
-\`\`\`yaml
-KOHEE_COMMAND:
-  command_id: ${commandId}
-  state: QUEUED
-  risk: ${effectiveRisk}
-  lane: ${effectiveLane}
-  source: GitHub Actions workflow_dispatch
-  owner: codex
-  terminal_state: MERGED_AND_DEPLOYED | DONE_NO_DEPLOY | HOLD
-  user_action_required: ${effectiveUserApprovalRequired}
-  task: ${effectiveTask}
-  acceptance_criteria:
-    - Implement only allowed scope
-    - Run required verification commands
-    - Keep runtime change policy
-  allowed_files:
-${toYamlList(effectiveAllowedFiles)}
-  denied_files:
-${toYamlList(effectiveDeniedFiles)}
-  runtime_change_allowed: ${effectiveRuntimeChangeAllowed}
-  do_not_change:
-${toYamlList(effectiveDeniedFiles)}
-  high_risk_hold:
-    - HOLD_HIGH_RISK
-    - HOLD_USER_APPROVAL
-    - HOLD_SCOPE_CONFLICT
-    - HOLD_CODEX_PR_PUBLISHING
-  created_at: ${now}
-  last_updated_at: ${now}
-\`\`\`
-
-## Manual Codex trigger required
-
-Codex Cloud auto-reaction is not guaranteed from bot comments.
-
-Post the following comment manually from a user account:
-
-\`\`\`text
-${manualCodexComment}
-\`\`\`
-
-## Optional bot comment
-
-The workflow may still post a bot comment with \`@codex\` as a convenience, but this does not guarantee automatic execution.
-
-## PR evidence guard
-
-- Actual GitHub PR URL is required for \`PR_OPEN\`.
-- Commit hash, branch name, local task output, make_pr metadata, or internal draft without a real PR URL is \`UNVERIFIED\`.
-- If PR publishing is blocked, use \`HOLD_CODEX_PR_PUBLISHING\`.
-- GitHub evidence wins over Codex self-reports.
-
-## Dispatch evidence
-
-- workflow_run: ${runUrl}
-`;
-
-            const { data: openIssues } = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              state: "open",
-              labels: "codex",
-              per_page: 100
-            });
-
-            const matched = openIssues
-              .filter((issue) =>
-                issue.title.startsWith(
-                  `[KOHEE_COMMAND] ${effectiveLane} / ${effectiveRisk}`
-                )
-              )
-              .find((issue) => (issue.body || "").includes(dispatchMarker));
-
-            let issue;
-            if (matched) {
-              const updated = await github.rest.issues.update({
-                owner,
-                repo,
-                issue_number: matched.number,
-                title: issueTitle,
-                body: issueBody,
-                labels
-              });
-              issue = updated.data;
-            } else {
-              const created = await github.rest.issues.create({
-                owner,
-                repo,
-                title: issueTitle,
-                body: issueBody,
-                labels
-              });
-              issue = created.data;
-            }
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issue.number,
-              body: manualCodexComment
-            });
-
+            const manualCodexComment = ["@" + "codex", "", "Please execute this KOHEE_COMMAND from the issue body.", "", "Acknowledge with KOHEE_STATUS.", "Follow the PR evidence guard.", "If this task requires code changes, use the existing GitHub PR flow and include the actual PR URL.", "Do not claim PR_OPEN without an actual GitHub PR URL."].join("\n");
+            const marker = "<!-- kohee-command-dispatch:v1 -->";
+            const title = `[KOHEE_COMMAND] ${lane} / ${risk} / ${task.slice(0, 80)}`;
+            const body = `${marker}\n\n## Lane\n${lane}\n\n## Risk\n${risk}\n\n## Preset\n${selectedPreset || "(none)"}\n\n## Scope / allowlist (files + functions)\n- Allowed files:\n${yamlList(allowed)}\n- Denied files:\n${yamlList(denied)}\n\n## KOHEE_COMMAND\n\n\`\`\`yaml\nKOHEE_COMMAND:\n  command_id: ${commandId}\n  state: QUEUED\n  risk: ${risk}\n  lane: ${lane}\n  source: GitHub Actions workflow_dispatch\n  owner: codex\n  terminal_state: MERGED_AND_DEPLOYED | DONE_NO_DEPLOY | HOLD\n  user_action_required: ${approvalRequired}\n  task: ${task}\n  acceptance_criteria:\n    - Implement only allowed scope\n    - Run required verification commands\n    - Keep runtime change policy\n  allowed_files:\n${yamlList(allowed)}\n  denied_files:\n${yamlList(denied)}\n  runtime_change_allowed: ${runtimeAllowed}\n  do_not_change:\n${yamlList(denied)}\n  high_risk_hold:\n    - HOLD_HIGH_RISK\n    - HOLD_USER_APPROVAL\n    - HOLD_SCOPE_CONFLICT\n    - HOLD_CODEX_PR_PUBLISHING\n  created_at: ${now}\n  last_updated_at: ${now}\n\`\`\`\n\n## Manual Codex trigger required\n\nCodex Cloud auto-reaction is not guaranteed from bot comments.\n\nPost the following comment manually from a user account:\n\n\`\`\`text\n${manualCodexComment}\n\`\`\`\n\n## Optional bot comment\n\nThe workflow may still post a bot comment with \`@codex\` as a convenience, but this does not guarantee automatic execution.\n\n## PR evidence guard\n\n- Actual GitHub PR URL is required for \`PR_OPEN\`.\n- Commit hash, branch name, local task output, make_pr metadata, or internal draft without a real PR URL is \`UNVERIFIED\`.\n- If PR publishing is blocked, use \`HOLD_CODEX_PR_PUBLISHING\`.\n- GitHub evidence wins over Codex self-reports.\n\n## Dispatch evidence\n\n- workflow_run: ${runUrl}\n`;
+            const { data: openIssues } = await github.rest.issues.listForRepo({ owner, repo, state: "open", labels: "codex", per_page: 100 });
+            const matched = openIssues.filter((issue) => issue.title.startsWith(`[KOHEE_COMMAND] ${lane} / ${risk}`)).find((issue) => (issue.body || "").includes(marker));
+            const issue = matched
+              ? (await github.rest.issues.update({ owner, repo, issue_number: matched.number, title, body, labels })).data
+              : (await github.rest.issues.create({ owner, repo, title, body, labels })).data;
+            await github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body: manualCodexComment });
             core.setOutput("issue_number", String(issue.number));
             core.setOutput("issue_url", issue.html_url);
             core.setOutput("effective_preset", selectedPreset || "(none)");
-            core.setOutput("effective_lane", effectiveLane);
-            core.setOutput("effective_risk", effectiveRisk);
-            core.setOutput(
-              "effective_runtime_change_allowed",
-              String(effectiveRuntimeChangeAllowed)
-            );
-            core.setOutput(
-              "effective_user_approval_required",
-              String(effectiveUserApprovalRequired)
-            );
+            core.setOutput("effective_lane", lane);
+            core.setOutput("effective_risk", risk);
+            core.setOutput("effective_runtime_change_allowed", String(runtimeAllowed));
+            core.setOutput("effective_user_approval_required", String(approvalRequired));
             core.setOutput("manual_codex_comment", manualCodexComment);
 
       - name: Write workflow summary
