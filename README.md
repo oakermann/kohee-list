@@ -27,9 +27,9 @@ into a cleaner, contract-preserving structure.
   - `common.js`: API/auth/share/map/date/common UI helpers
   - `index.js`, `login.js`, `submit.js`, `mypage.js`, `admin.js`
 - `assets/`
-  - Synced local mirror of `.pages-deploy/assets/` for direct file testing
+  - Repository mirror of `.pages-deploy/assets/` for sync verification
 - Root HTML files (`index.html`, `login.html`, `submit.html`, `mypage.html`, `admin.html`)
-  - Synced local mirrors of `.pages-deploy/*.html`
+  - Repository mirrors of `.pages-deploy/*.html` for sync verification
 - `scripts/`
   - Validation, deployment, smoke-test, and CSV backup scripts
 - `schema.sql`
@@ -39,7 +39,7 @@ into a cleaner, contract-preserving structure.
 
 There is currently no separate `public/` directory in this repository.
 For Pages deploys, treat `.pages-deploy/` as the authoritative frontend source.
-Root HTML/assets are synced mirrors kept for local testing and manual checks.
+Root HTML/assets are synced mirrors for repository validation only, not a separate operating surface.
 
 ## Current Auth Model
 
@@ -109,13 +109,15 @@ Multiple frontend origins are comma-separated:
 
 ## Daily Commands
 
-Sync local mirrors from `.pages-deploy`:
+Verify deploy-source sync:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\sync-pages.ps1
+npm run check:deploy-sync
 ```
 
-Deploy Worker:
+Cloud deployment is handled by GitHub Actions after changes land on `main`. The PowerShell deploy scripts are emergency/operator tools only, not the normal mobile/ChatGPT workflow.
+
+Emergency Worker deploy:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\deploy-worker.ps1
@@ -346,7 +348,7 @@ What they do:
 ## Frontend Notes
 
 - Main source for Pages deploy is `.pages-deploy/`
-- Root HTML/assets are synced mirrors for local checks
+- Root HTML/assets are synced mirrors for repository validation only
 - Shared frontend logic lives in `.pages-deploy/assets/common.js`
 - Page-specific logic is split by screen instead of keeping giant inline scripts
 
@@ -357,15 +359,16 @@ What they do:
   - route table: `server/routes.js`
 - Pages frontend:
   - source of truth: `.pages-deploy/`
-  - synced mirror: root HTML/assets
+  - synced mirror for validation: root HTML/assets
 - Database:
   - base schema: `schema.sql`
   - migration history: `migrations/*.sql`
 
-If you change frontend files for production deploy, update `.pages-deploy/` first and then run:
+If you change frontend files for production deploy, update `.pages-deploy/` first, sync root mirrors, and verify:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\sync-pages.ps1
+npm run check:deploy-sync
 ```
 
 ## Operational Notes
