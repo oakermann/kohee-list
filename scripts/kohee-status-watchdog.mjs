@@ -28,9 +28,8 @@ function bodyState(body) {
 }
 
 function hasTerminalStatus(body) {
-  return /\b(MERGED_AND_DEPLOYED|DONE_NO_DEPLOY|HOLD|HOLD_CLOSED|VERIFIED)\b/.test(
-    String(body || ""),
-  );
+  const state = bodyState(body);
+  return ["MERGED_AND_DEPLOYED", "DONE_NO_DEPLOY", "HOLD", "HOLD_CLOSED"].includes(state);
 }
 
 function isLongLivedActive(body) {
@@ -98,7 +97,7 @@ function classifyIssue(issue) {
     reasons.push("state: ACTIVE long-lived automation issue");
   } else if (terminal) {
     state = "TERMINAL";
-    reasons.push("terminal KOHEE status detected");
+    reasons.push(`terminal state detected: ${bodyState(body)}`);
   } else if (queued && updatedAge !== null && updatedAge >= STALE_HOURS) {
     state = "STALE_QUEUED";
     reasons.push(`queued without terminal status for ${updatedAge.toFixed(1)}h`);
