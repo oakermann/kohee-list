@@ -34,6 +34,7 @@ import {
   exportApprovedReviewCsv,
   exportCandidatesReviewCsv,
   exportHoldReviewCsv,
+  exportSubmissionsReviewCsv,
   importCsv,
   resetCsv,
 } from "./csv.js";
@@ -86,6 +87,7 @@ export const ADMIN_ROUTES = [
   ["GET", "/export-csv/candidates-review", exportCandidatesReviewCsv],
   ["GET", "/export-csv/hold-review", exportHoldReviewCsv],
   ["GET", "/export-csv/approved-review", exportApprovedReviewCsv],
+  ["GET", "/export-csv/submissions-review", exportSubmissionsReviewCsv],
   ["POST", "/approve-cafe", approveCafe],
   ["POST", "/hold-cafe", holdCafe],
   ["POST", "/unhold-cafe", unholdCafe],
