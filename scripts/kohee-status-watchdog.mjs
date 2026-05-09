@@ -4,6 +4,7 @@ import process from "node:process";
 
 const STALE_HOURS = Number(process.env.KOHEE_WATCHDOG_STALE_HOURS || 12);
 const MAX_ITEMS = Number(process.env.KOHEE_WATCHDOG_MAX_ITEMS || 30);
+const COMMENT_PAGES_TO_READ = Number(process.env.KOHEE_WATCHDOG_COMMENT_PAGES || 5);
 
 function header(title) {
   console.log(`\n[kohee-watchdog] ${title}`);
@@ -21,31 +22,35 @@ function compact(text, max = 140) {
   return normalized.length > max ? `${normalized.slice(0, max - 1)}…` : normalized;
 }
 
-function sectionState(body, sectionName) {
+function sectionStates(body, sectionName) {
   const escaped = sectionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(
     `^\\s*${escaped}\\s*:\\s*[\\s\\S]*?^\\s*state\\s*:\\s*([A-Z_]+)`,
-    "im",
+    "gim",
   );
-  const match = String(body || "").match(pattern);
-  return match ? match[1].toUpperCase() : "";
+  return [...String(body || "").matchAll(pattern)].map((match) => match[1].toUpperCase());
 }
 
-function koheeStatusState(body) {
-  return sectionState(body, "KOHEE_STATUS");
+function lastSectionState(body, sectionName) {
+  const states = sectionStates(body, sectionName);
+  return states.length ? states[states.length - 1] : "";
+}
+
+function koheeStatusState(text) {
+  return lastSectionState(text, "KOHEE_STATUS");
 }
 
 function commandState(body) {
   return (
-    sectionState(body, "KOHEE_PARALLEL_MAINTENANCE") ||
-    sectionState(body, "KOHEE_CLOUD_MAINTENANCE") ||
-    sectionState(body, "KOHEE_RECOVERY_TASK") ||
-    sectionState(body, "KOHEE_COMMAND")
+    lastSectionState(body, "KOHEE_PARALLEL_MAINTENANCE") ||
+    lastSectionState(body, "KOHEE_CLOUD_MAINTENANCE") ||
+    lastSectionState(body, "KOHEE_RECOVERY_TASK") ||
+    lastSectionState(body, "KOHEE_COMMAND")
   );
 }
 
-function hasTerminalStatus(body) {
-  const state = koheeStatusState(body) || commandState(body);
+function hasTerminalStatus(issueBody, statusText) {
+  const state = koheeStatusState(statusText) || commandState(issueBody);
   return ["MERGED_AND_DEPLOYED", "DONE_NO_DEPLOY", "HOLD", "HOLD_CLOSED"].includes(state);
 }
 
@@ -80,8 +85,32 @@ async function searchIssues(repository, token, query) {
   return data.items || [];
 }
 
-function classifyIssue(issue) {
+async function fetchIssueComments(repository, token, issue) {
+  const totalComments = Number(issue.comments || 0);
+  if (!totalComments) return [];
+
+  const totalPages = Math.max(1, Math.ceil(totalComments / 100));
+  const firstPage = Math.max(1, totalPages - COMMENT_PAGES_TO_READ + 1);
+  const comments = [];
+
+  for (let page = firstPage; page <= totalPages; page += 1) {
+    const data = await githubFetch(
+      `https://api.github.com/repos/${repository}/issues/${issue.number}/comments?per_page=100&page=${page}`,
+      token,
+    );
+    comments.push(...data);
+  }
+
+  return comments;
+}
+
+function commentsStatusText(comments) {
+  return comments.map((comment) => comment.body || "").join("\n\n");
+}
+
+function classifyIssue(issue, comments = []) {
   const body = issue.body || "";
+  const statusText = `${body}\n\n${commentsStatusText(comments)}`;
   const updatedAge = ageHours(issue.updated_at);
   const title = issue.title || "";
   const labels = (issue.labels || []).map((label) => label.name).join(", ");
@@ -91,7 +120,7 @@ function classifyIssue(issue) {
   const isRecovery = title.includes("KOHEE_RECOVERY_TASK") || body.includes("KOHEE_RECOVERY_TASK:");
   const isAutomationIssue = isKoheeCommand || isParallel || isRecovery;
   const activeState = isLongLivedActive(body);
-  const terminal = hasTerminalStatus(body);
+  const terminal = hasTerminalStatus(body, statusText);
   const queued = isQueued(body);
 
   let state = "OBSERVE";
@@ -114,7 +143,7 @@ function classifyIssue(issue) {
     reasons.push("state: ACTIVE long-lived automation issue");
   } else if (terminal) {
     state = "TERMINAL";
-    reasons.push(`terminal state detected: ${koheeStatusState(body) || commandState(body)}`);
+    reasons.push(`terminal state detected: ${koheeStatusState(statusText) || commandState(body)}`);
   } else if (queued && updatedAge !== null && updatedAge >= STALE_HOURS) {
     state = "STALE_QUEUED";
     reasons.push(`queued without terminal status for ${updatedAge.toFixed(1)}h`);
@@ -142,6 +171,7 @@ async function main() {
   console.log(`repository=${repository}`);
   console.log(`stale_hours=${STALE_HOURS}`);
   console.log(`max_items=${MAX_ITEMS}`);
+  console.log(`comment_pages=${COMMENT_PAGES_TO_READ}`);
 
   const queries = [
     'is:issue is:open "KOHEE_COMMAND"',
@@ -165,7 +195,12 @@ async function main() {
     return;
   }
 
-  const classified = issues.map(classifyIssue);
+  const classified = [];
+  for (const issue of issues) {
+    const comments = await fetchIssueComments(repository, token, issue);
+    classified.push(classifyIssue(issue, comments));
+  }
+
   for (const issue of classified) {
     const age = issue.updatedAge === null ? "unknown" : `${issue.updatedAge.toFixed(1)}h`;
     console.log(`#${issue.number} ${issue.state} age=${age} ${compact(issue.title)}`);
