@@ -1818,7 +1818,7 @@ function createExportReviewCsvEnv(role = null) {
                   hidden_at: "2026-05-07T00:00:00.000Z",
                   hidden_by: "admin-user",
                   user_id: "user-1",
-                  username: "coffee-user",
+                  username: "+coffee-user",
                   reason: "=Needs review",
                   created_at: "2026-05-06T00:00:00.000Z",
                   reviewed_at: "2026-05-08T00:00:00.000Z",
@@ -1938,7 +1938,7 @@ assert.ok(
 );
 assert.match(
   submissionsCsv,
-  /^candidate-1,2026-05-06T00:00:00.000Z,coffee-user,/m,
+  /^candidate-1,2026-05-06T00:00:00.000Z,'\+coffee-user,/m,
 );
 assert.match(submissionsCsv, /,'=Needs review,/);
 assert.equal(

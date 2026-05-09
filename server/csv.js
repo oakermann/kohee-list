@@ -543,7 +543,7 @@ function toSubmissionReviewRow(row) {
   return {
     submission_id: row.id || "",
     submitted_at: row.created_at || "",
-    submitter_name: row.username || "",
+    submitter_name: csvReviewCell(row.username),
     submitter_contact: "",
     submitted_cafe_name: csvReviewCell(row.name),
     submitted_address: csvReviewCell(row.address),
