@@ -19,6 +19,8 @@ export async function getFavorites(req, env) {
        FROM favorites f
        JOIN cafes c ON c.id = f.cafe_id
        WHERE f.user_id = ?
+        AND c.status = 'approved'
+        AND c.deleted_at IS NULL
        ORDER BY f.created_at DESC`,
     )
       .bind(user.user_id)
@@ -41,7 +43,13 @@ export async function toggleFavorite(req, env) {
     const cafeId = cleanText(body.cafe_id, 80);
     if (!cafeId) throw new HttpError(400, "cafe_id required");
 
-    const cafe = await env.DB.prepare("SELECT id FROM cafes WHERE id = ?")
+    const cafe = await env.DB.prepare(
+      `SELECT id
+       FROM cafes
+       WHERE id = ?
+        AND status = 'approved'
+        AND deleted_at IS NULL`,
+    )
       .bind(cafeId)
       .first();
     if (!cafe) throw new HttpError(404, "Cafe not found");
