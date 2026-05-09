@@ -1,0 +1,29 @@
+name: KOHEE Status Watchdog
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "25 0 * * *" # 09:25 KST
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Run KOHEE status watchdog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KOHEE_WATCHDOG_STALE_HOURS: "12"
+          KOHEE_WATCHDOG_MAX_ITEMS: "30"
+        run: node scripts/kohee-status-watchdog.mjs
