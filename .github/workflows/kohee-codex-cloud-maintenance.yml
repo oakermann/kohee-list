@@ -1,0 +1,144 @@
+name: KOHEE Codex Cloud Maintenance
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 09:10 KST. Codex Cloud is the worker; Actions is only the scheduler here.
+    - cron: "10 0 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: kohee-codex-cloud-maintenance
+  cancel-in-progress: false
+
+jobs:
+  request-maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Request Codex Cloud maintenance
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const title = "KOHEE_CLOUD_MAINTENANCE: Scheduled Codex maintenance";
+            const now = new Date().toISOString();
+            const commandId = `cloud-maintenance-${context.runId}`;
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open"
+            });
+            const existing = issues.find((issue) => issue.title === title && !issue.pull_request);
+
+            const issueBody = [
+              "KOHEE_CLOUD_MAINTENANCE:",
+              "  purpose: Codex Cloud is the primary worker for routine KOHEE code maintenance.",
+              "  state: ACTIVE",
+              "  risk: MEDIUM",
+              "  lane: DEPLOY_SAFETY",
+              "  owner: codex",
+              "  user_action_required: false",
+              "",
+              "Operating model:",
+              "- Codex Cloud inspects code, tests, audit output, and recent repository state.",
+              "- Codex Cloud patches safe LOW/MEDIUM issues in scoped PRs.",
+              "- GitHub Actions validates PRs and deploys only after clean main merges.",
+              "- HIGH-risk or permission/secret/scope issues remain HOLD.",
+              "",
+              `Last scheduler run: ${runUrl}`,
+              `Last updated: ${now}`
+            ].join("\n");
+
+            let issueNumber;
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: issueBody
+              });
+              issueNumber = existing.number;
+            } else {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body: issueBody
+              });
+              issueNumber = created.data.number;
+            }
+
+            const triggerBody = [
+              "@codex",
+              "",
+              "KOHEE_COMMAND:",
+              `  command_id: ${commandId}`,
+              "  state: QUEUED",
+              "  risk: MEDIUM",
+              "  lane: DEPLOY_SAFETY",
+              "  source: GitHub Actions scheduler",
+              "  owner: codex",
+              "  terminal_state: DONE_NO_DEPLOY | PR_OPEN | HOLD",
+              "  user_action_required: false",
+              "  runtime_change_allowed: false",
+              "  task: Routine KOHEE LIST cloud maintenance. Inspect code quality, cleanup opportunities, audit warnings, test failures, stale workflow issues, and safe bug fixes. Patch safe LOW/MEDIUM issues in scoped PRs without waiting for ChatGPT.",
+              "  acceptance_criteria:",
+              "    - Run or reason from relevant checks: npm run check:deploy-sync, npm run test:unit, npm run audit:kohee, git diff --check.",
+              "    - Open a scoped PR for safe LOW/MEDIUM fixes.",
+              "    - Keep runtime behavior unchanged unless the safe fix explicitly requires a narrow LOW/MEDIUM runtime patch.",
+              "    - Update this issue with KOHEE_STATUS and PR evidence.",
+              "    - If no issue is found, reply DONE_NO_DEPLOY / no changes needed.",
+              "  allowed_files:",
+              "    - AGENTS.md",
+              "    - kohee.contract.json",
+              "    - docs/**",
+              "    - scripts/**",
+              "    - .github/workflows/**",
+              "    - assets/** only for safe frontend cleanup with root/.pages-deploy sync",
+              "    - server/** only for safe LOW/MEDIUM bug fixes with tests",
+              "  denied_files:",
+              "    - migrations/**",
+              "    - schema.sql unless HOLD",
+              "  do_not_change:",
+              "    - D1/schema/migrations",
+              "    - CSV import/reset behavior",
+              "    - auth/session/security behavior",
+              "    - public /data behavior",
+              "    - deploy workflow behavior",
+              "    - manager role expansion",
+              "    - review-result CSV import/upload",
+              "  high_risk_hold:",
+              "    - server behavior changes beyond narrow safe LOW/MEDIUM fixes",
+              "    - public API exposure",
+              "    - auth/session/security",
+              "    - D1/schema/migration",
+              "    - CSV import/reset semantics",
+              "    - role/permission policy",
+              "    - Cloudflare secret/token/permission blockers",
+              `  created_at: ${now}`,
+              `  last_updated_at: ${now}`,
+              "",
+              "Codex Cloud is the primary executor. GitHub Actions is the validation/deploy gate."
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              body: triggerBody
+            });
+
+            core.summary
+              .addHeading("KOHEE Codex Cloud Maintenance")
+              .addRaw(`Requested Codex Cloud maintenance in issue #${issueNumber}.`)
+              .addBreak()
+              .addLink("Maintenance issue", `${context.serverUrl}/${owner}/${repo}/issues/${issueNumber}`)
+              .write();
