@@ -29,6 +29,8 @@ jobs:
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const now = new Date().toISOString();
             const runId = context.runId;
+            const eventName = context.eventName;
+            const forcePrSmoke = eventName === "workflow_dispatch";
 
             const tasks = [
               {
@@ -160,16 +162,18 @@ jobs:
                 terminal: "DONE_NO_DEPLOY | PR_OPEN | HOLD",
                 runtimeChangeAllowed: false,
                 task:
-                  "Verify Codex Cloud can publish a real GitHub PR when a safe docs-only change is needed. If no docs change is needed, reply DONE_NO_DEPLOY. If changing anything, only append or update a tiny timestamped smoke-test note in docs/audits/KOHEE_FINDINGS.md and open a real GitHub PR.",
+                  "Verify Codex Cloud can publish a real GitHub PR for a safe docs-only change. For workflow_dispatch/manual runs, make a tiny docs-only smoke note update in docs/audits/KOHEE_FINDINGS.md and open a real GitHub PR. For scheduled runs, do not create noise unless a safe docs-only maintenance patch is actually needed.",
                 acceptance: [
                   "Do not edit runtime files.",
-                  "If no safe docs-only change is needed, reply DONE_NO_DEPLOY / no changes needed.",
-                  "If a change is made, open a real GitHub PR and include the actual PR URL.",
-                  "A commit hash or make_pr note without a GitHub PR URL is not sufficient and must be reported as UNVERIFIED.",
+                  "If force_pr_smoke is true, make a tiny docs-only update to a single reusable PR publishing smoke-test note in docs/audits/KOHEE_FINDINGS.md.",
+                  "If force_pr_smoke is true, open a real GitHub PR and include the actual PR URL.",
+                  "If force_pr_smoke is false and no safe docs-only change is needed, reply DONE_NO_DEPLOY / no changes needed.",
+                  "Any report that mentions a commit, branch, patch, make_pr, or PR draft without an actual GitHub PR URL is UNVERIFIED and must not be reported as PR_OPEN or successful.",
                   "Run git diff --check and any lightweight relevant checks.",
                 ],
                 allowedFiles: ["docs/audits/KOHEE_FINDINGS.md"],
                 deniedFiles: ["server/**", "assets/**", ".github/workflows/**", "migrations/**", "schema.sql"],
+                extraFields: [`  force_pr_smoke: ${forcePrSmoke}`],
               },
             ];
 
@@ -197,6 +201,8 @@ jobs:
                 "- This issue is an independent Codex Cloud work slice.",
                 "- Respect allowed_files and denied_files to avoid parallel conflicts.",
                 "- If reporting PR_OPEN, include an actual GitHub PR URL. If there is no PR URL, status is UNVERIFIED, not PR_OPEN.",
+                "- If reporting a commit, branch, patch, make_pr call, or PR draft, include an actual GitHub PR URL or report UNVERIFIED.",
+                "- A commit hash, branch name, make_pr note, or internal draft is not GitHub evidence by itself.",
                 "- GitHub Actions validates PRs and deploys only after clean main merges.",
                 "- HIGH-risk or permission/secret/scope issues remain HOLD.",
                 "",
@@ -241,10 +247,12 @@ jobs:
                 "  acceptance_criteria:",
                 ...task.acceptance.map((item) => `    - ${item}`),
                 "    - If reporting PR_OPEN, include an actual GitHub PR URL. If there is no PR URL, report UNVERIFIED instead.",
+                "    - If reporting any commit, branch, patch, make_pr call, or PR draft, include an actual GitHub PR URL. Without that URL, report UNVERIFIED and do not claim the change landed.",
                 "  allowed_files:",
                 ...task.allowedFiles.map((item) => `    - ${item}`),
                 "  denied_files:",
                 ...task.deniedFiles.map((item) => `    - ${item}`),
+                ...(task.extraFields || []),
                 "  do_not_change:",
                 "    - D1/schema/migrations",
                 "    - CSV import/reset behavior",
