@@ -49,6 +49,19 @@ function hasOperationalMakePrClaim(body) {
   });
 }
 
+function hasOperationalPublishingHoldClaim(body) {
+  const text = String(body || "");
+  const patterns = [
+    /actual\s+GitHub\s+PR\s+URL\s*:\s*`?HOLD_CODEX_PR_PUBLISHING\b/i,
+    /actual\s+GitHub\s+PR\s+URL[^\n]*(could not|cannot|blocked|UNVERIFIED)/i,
+    /attempt\s+to\s+push\/create\s+an\s+actual\s+GitHub\s+PR\s+was\s+blocked/i,
+    /no\s+PR\s+URL\s+could\s+be\s+(published|produced)/i,
+    /cannot\s+create\s+or\s+verify\s+an\s+actual\s+GitHub\s+PR\s+URL/i,
+    /\bHOLD_CODEX_PR_PUBLISHING\b[^\n]*(no\s+PR\s+URL|UNVERIFIED|blocked|cannot|could\s+not)/i,
+  ];
+  return patterns.some((pattern) => pattern.test(text));
+}
+
 function findHeadShaClaims(body) {
   const text = String(body || "");
   const matches = [];
@@ -137,6 +150,12 @@ async function main() {
   if (hasOperationalPrOpenClaim(body) && !includesCurrentPrUrl(body, prUrl)) {
     errors.push(
       "Operational PR_OPEN is claimed in the PR body, but the body does not include the actual GitHub PR URL.",
+    );
+  }
+
+  if (hasOperationalPublishingHoldClaim(body)) {
+    errors.push(
+      "PR body contains an operational PR-publishing HOLD/UNVERIFIED claim even though this check is running on an actual GitHub PR. Remove the stale self-report or rewrite it as historical context with current PR evidence.",
     );
   }
 
