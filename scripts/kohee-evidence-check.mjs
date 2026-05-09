@@ -25,8 +25,28 @@ function includesCurrentPrUrl(body, prUrl) {
   return String(body || "").includes(prUrl);
 }
 
-function hasPrOpenClaim(body) {
-  return /\bPR_OPEN\b/.test(String(body || ""));
+function hasOperationalPrOpenClaim(body) {
+  const lines = String(body || "").split(/\r?\n/);
+  return lines.some((line) => {
+    const trimmed = line.trim();
+    return (
+      /^state\s*:\s*PR_OPEN\b/i.test(trimmed) ||
+      /^status\s*:\s*PR_OPEN\b/i.test(trimmed) ||
+      /^KOHEE_STATUS\s*:\s*PR_OPEN\b/i.test(trimmed) ||
+      /^KOHEE_STATUS\s*=\s*PR_OPEN\b/i.test(trimmed)
+    );
+  });
+}
+
+function hasOperationalMakePrClaim(body) {
+  const lines = String(body || "").split(/\r?\n/);
+  return lines.some((line) => {
+    const trimmed = line.trim();
+    return (
+      /^[-*]?\s*(Commit or PR|PR|Pull request)\s*:/i.test(trimmed) &&
+      /\bmake_pr\b/i.test(trimmed)
+    );
+  });
 }
 
 function findHeadShaClaims(body) {
@@ -35,7 +55,6 @@ function findHeadShaClaims(body) {
   const patterns = [
     /\bhead_sha\s*:\s*([0-9a-f]{7,40})\b/gi,
     /\bhead sha\s*[:=]\s*([0-9a-f]{7,40})\b/gi,
-    /\bhead\s*[:=]\s*([0-9a-f]{7,40})\b/gi,
   ];
   for (const pattern of patterns) {
     for (const match of text.matchAll(pattern)) matches.push(match[1]);
@@ -115,9 +134,9 @@ async function main() {
   console.log(`Head SHA: ${headSha}`);
   console.log(`Changed files: ${files.length}`);
 
-  if (hasPrOpenClaim(body) && !includesCurrentPrUrl(body, prUrl)) {
+  if (hasOperationalPrOpenClaim(body) && !includesCurrentPrUrl(body, prUrl)) {
     errors.push(
-      "PR_OPEN is claimed in the PR body, but the body does not include the actual GitHub PR URL.",
+      "Operational PR_OPEN is claimed in the PR body, but the body does not include the actual GitHub PR URL.",
     );
   }
 
@@ -130,9 +149,9 @@ async function main() {
     }
   }
 
-  if (/\bmake_pr\b/i.test(body) && !includesCurrentPrUrl(body, prUrl)) {
+  if (hasOperationalMakePrClaim(body) && !includesCurrentPrUrl(body, prUrl)) {
     warnings.push(
-      "PR body mentions make_pr metadata without also including the current actual PR URL.",
+      "PR body has an operational make_pr claim without also including the current actual PR URL.",
     );
   }
 
