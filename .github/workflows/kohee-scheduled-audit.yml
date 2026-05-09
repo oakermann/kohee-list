@@ -122,11 +122,10 @@ jobs:
               "    deploy_url:",
               "    notes: Scheduled GitHub Actions audit failed. Logs are linked above; do not paste large logs into this issue.",
               "",
-              "@codex",
-              "",
               `Created/updated at: ${now}`
             ].join("\n");
 
+            let issueNumber;
             if (existing) {
               await github.rest.issues.createComment({
                 owner,
@@ -134,11 +133,43 @@ jobs:
                 issue_number: existing.number,
                 body
               });
+              issueNumber = existing.number;
             } else {
-              await github.rest.issues.create({
+              const created = await github.rest.issues.create({
                 owner,
                 repo,
                 title,
                 body
               });
+              issueNumber = created.data.number;
             }
+
+            const triggerBody = [
+              "@codex",
+              "",
+              "KOHEE_RECOVERY_TASK active. You are the primary executor for KOHEE cloud maintenance.",
+              "",
+              `Failed run: ${runUrl}`,
+              `Head SHA: ${context.sha}`,
+              "",
+              "Task:",
+              "- Inspect the failed scheduled audit checks.",
+              "- Patch safe LOW/MEDIUM issues in a scoped PR without waiting for ChatGPT.",
+              "- Re-run relevant verification.",
+              "- Update this issue with KOHEE_STATUS and PR evidence.",
+              "",
+              "Hard stops:",
+              "- Do not modify D1/schema/migrations.",
+              "- Do not change CSV import/reset behavior.",
+              "- Do not change auth/session/security behavior.",
+              "- Do not change public /data behavior.",
+              "- Do not change deploy workflow behavior.",
+              "- Mark HIGH-risk, secret/permission, or unexpected scope issues as HOLD."
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              body: triggerBody
+            });
