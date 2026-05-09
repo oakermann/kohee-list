@@ -1287,7 +1287,8 @@ assert.doesNotMatch(
 adminApiResponses = {
   "/export-csv/submissions-review": {
     ok: true,
-    text: async () => "submission_id,name\nsubmission-1,Submitted Cafe\n",
+    text: async () =>
+      "submission_id,submitted_cafe_name\nsubmission-1,Submitted Cafe\n",
   },
   "/export-csv/candidates-review": {
     ok: true,
@@ -1305,9 +1306,9 @@ adminApiResponses = {
 await adminContext.__adminTest.downloadCsv();
 assert.match(adminElements.get("csv-msg").textContent, /^CSV 다운로드 완료:/);
 assert.deepEqual(
-  Array.from(downloadedCsvFiles.filter((item) => item.endsWith("-review.csv"))),
+  Array.from(downloadedCsvFiles.filter((item) => item.endsWith(".csv"))),
   [
-    "submissions-review.csv",
+    "user_submissions_review_export.csv",
     "candidates-review.csv",
     "hold-review.csv",
     "approved-review.csv",
@@ -1326,8 +1327,8 @@ assert.match(
   /^제보 CSV 다운로드 완료:/,
 );
 assert.deepEqual(
-  downloadedCsvFiles.filter((item) => item.endsWith("-review.csv")),
-  ["submissions-review.csv"],
+  downloadedCsvFiles.filter((item) => item.endsWith(".csv")),
+  ["user_submissions_review_export.csv"],
 );
 
 function createApproveSubmissionTestEnv(role = "manager") {
@@ -1817,8 +1818,8 @@ function createExportReviewCsvEnv(role = null) {
                   hidden_at: "2026-05-07T00:00:00.000Z",
                   hidden_by: "admin-user",
                   user_id: "user-1",
-                  username: "coffee-user",
-                  reason: "Needs review",
+                  username: "+coffee-user",
+                  reason: "=Needs review",
                   created_at: "2026-05-06T00:00:00.000Z",
                   reviewed_at: "2026-05-08T00:00:00.000Z",
                   reviewed_by: "admin-user",
@@ -1925,13 +1926,21 @@ const submissionsExport = await requestReviewExport(
   "submissions-review",
 );
 assert.equal(submissionsExport.response.status, 200);
+assert.equal(
+  submissionsExport.response.headers.get("content-disposition"),
+  'attachment; filename="user_submissions_review_export.csv"',
+);
 const submissionsCsv = await submissionsExport.response.text();
 assert.ok(
   submissionsCsv.startsWith(
-    "submission_id,user_id,username,name,address,desc,reason,category,signature,beanShop,instagram,oakerman_pick,manager_pick,status,created_at,reviewed_at,reviewed_by,reviewed_by_username,reject_reason,linked_cafe_id\n",
+    "submission_id,submitted_at,submitter_name,submitter_contact,submitted_cafe_name,submitted_address,submitted_naver_map_url,submitted_reason,submitted_recommended_menu,submitted_tags,submission_status,linked_cafe_id,converted_status,admin_reply_status,admin_reply_message,internal_note,review_decision,recommended_status,review_memo,hold_reason,admin_check_required,duplicate_status,duplicate_with,duplicate_reason,normalized_name_suggested,normalized_address_suggested,normalized_naver_map_url_suggested,tags_suggested,recommended_menu_suggested,description_suggested,conversion_recommendation,public_leak_risk\n",
   ),
 );
-assert.match(submissionsCsv, /^candidate-1,user-1,coffee-user,/m);
+assert.match(
+  submissionsCsv,
+  /^candidate-1,2026-05-06T00:00:00.000Z,'\+coffee-user,/m,
+);
+assert.match(submissionsCsv, /,'=Needs review,/);
 assert.equal(
   submissionsExport.statements.some((statement) =>
     /FROM\s+submissions\s+s/i.test(statement.sql),
@@ -1941,6 +1950,12 @@ assert.equal(
 assert.equal(
   submissionsExport.statements.some((statement) =>
     /LEFT\s+JOIN\s+users\s+reviewer/i.test(statement.sql),
+  ),
+  true,
+);
+assert.equal(
+  submissionsExport.statements.some((statement) =>
+    /WHERE\s+s\.status\s*=\s*'pending'/i.test(statement.sql),
   ),
   true,
 );
