@@ -22,6 +22,7 @@ import {
   parseCsvLine,
   resetCsv,
 } from "../server/csv.js";
+import { getFavorites, toggleFavorite } from "../server/favorites.js";
 import { approveSubmission } from "../server/submissions.js";
 import {
   cleanUrl,
@@ -294,6 +295,113 @@ assert.deepEqual(Object.keys(publicCafeBody[0]).sort(), [
 assert.equal(publicCafeBody[0].deleted_by, undefined);
 assert.equal(publicCafeBody[0].delete_reason, undefined);
 assert.equal(publicCafeBody[0].approved_by, undefined);
+
+function createFavoriteTestEnv({ cafe = { id: "cafe-1" }, exists = null } = {}) {
+  const statements = [];
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-secret",
+      DB: {
+        prepare(sql) {
+          const statement = {
+            sql,
+            bindings: [],
+            bind(...values) {
+              this.bindings = values;
+              statements.push(this);
+              return this;
+            },
+            first: async () => {
+              if (/FROM\s+sessions\s+s/i.test(sql)) {
+                return {
+                  session_id: "session-1",
+                  user_id: "user-1",
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                  username: "user",
+                  role: "user",
+                };
+              }
+              if (/FROM\s+cafes/i.test(sql)) return cafe;
+              if (/FROM\s+favorites/i.test(sql)) return exists;
+              return null;
+            },
+            all: async () => {
+              if (/FROM\s+favorites\s+f/i.test(sql)) {
+                return {
+                  results: [
+                    {
+                      favorite_id: "favorite-1",
+                      created_at: "2026-05-09T00:00:00.000Z",
+                      id: "cafe-1",
+                      name: "Approved Cafe",
+                      address: "Seoul",
+                      desc: "Coffee",
+                      lat: 37.5,
+                      lng: 127,
+                      signature: "[]",
+                      beanShop: "",
+                      instagram: "",
+                      category: "[]",
+                      oakerman_pick: 0,
+                      manager_pick: 0,
+                      updated_at: "2026-05-09T00:00:00.000Z",
+                    },
+                  ],
+                };
+              }
+              return { results: [] };
+            },
+            run: async () => ({ success: true }),
+          };
+          return statement;
+        },
+      },
+    },
+  };
+}
+
+const favoriteList = createFavoriteTestEnv();
+const favoriteListResponse = await getFavorites(
+  new Request("https://kohee.test/favorites", {
+    headers: { authorization: "Bearer unit-token" },
+  }),
+  favoriteList.env,
+);
+assert.equal(favoriteListResponse.status, 200);
+assert.match(
+  favoriteList.statements.find((statement) =>
+    /FROM\s+favorites\s+f/i.test(statement.sql),
+  ).sql,
+  /c\.status = 'approved'\s+AND c\.deleted_at IS NULL/i,
+);
+
+const rejectedFavorite = createFavoriteTestEnv({ cafe: null });
+const rejectedFavoriteResponse = await toggleFavorite(
+  new Request("https://kohee.test/favorites", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer unit-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ cafe_id: "candidate-1", action: "add" }),
+  }),
+  rejectedFavorite.env,
+);
+assert.equal(rejectedFavoriteResponse.status, 404);
+assert.match(
+  rejectedFavorite.statements.find((statement) =>
+    /FROM\s+cafes/i.test(statement.sql),
+  ).sql,
+  /status = 'approved'\s+AND deleted_at IS NULL/i,
+);
+assert.equal(
+  rejectedFavorite.statements.some((statement) =>
+    /INSERT\s+OR\s+IGNORE\s+INTO\s+favorites/i.test(statement.sql),
+  ),
+  false,
+);
 
 function createListCafesTestEnv(role = "manager") {
   const statements = [];
