@@ -4,6 +4,7 @@ import process from "node:process";
 
 const STALE_HOURS = Number(process.env.KOHEE_WATCHDOG_STALE_HOURS || 12);
 const MAX_ITEMS = Number(process.env.KOHEE_WATCHDOG_MAX_ITEMS || 30);
+const COMMENT_PAGES_TO_READ = Number(process.env.KOHEE_WATCHDOG_COMMENT_PAGES || 5);
 
 function header(title) {
   console.log(`\n[kohee-watchdog] ${title}`);
@@ -84,16 +85,22 @@ async function searchIssues(repository, token, query) {
   return data.items || [];
 }
 
-async function fetchIssueComments(repository, token, issueNumber) {
+async function fetchIssueComments(repository, token, issue) {
+  const totalComments = Number(issue.comments || 0);
+  if (!totalComments) return [];
+
+  const totalPages = Math.max(1, Math.ceil(totalComments / 100));
+  const firstPage = Math.max(1, totalPages - COMMENT_PAGES_TO_READ + 1);
   const comments = [];
-  for (let page = 1; page <= 5; page += 1) {
+
+  for (let page = firstPage; page <= totalPages; page += 1) {
     const data = await githubFetch(
-      `https://api.github.com/repos/${repository}/issues/${issueNumber}/comments?per_page=100&page=${page}`,
+      `https://api.github.com/repos/${repository}/issues/${issue.number}/comments?per_page=100&page=${page}`,
       token,
     );
     comments.push(...data);
-    if (data.length < 100) break;
   }
+
   return comments;
 }
 
@@ -164,6 +171,7 @@ async function main() {
   console.log(`repository=${repository}`);
   console.log(`stale_hours=${STALE_HOURS}`);
   console.log(`max_items=${MAX_ITEMS}`);
+  console.log(`comment_pages=${COMMENT_PAGES_TO_READ}`);
 
   const queries = [
     'is:issue is:open "KOHEE_COMMAND"',
@@ -189,7 +197,7 @@ async function main() {
 
   const classified = [];
   for (const issue of issues) {
-    const comments = await fetchIssueComments(repository, token, issue.number);
+    const comments = await fetchIssueComments(repository, token, issue);
     classified.push(classifyIssue(issue, comments));
   }
 
