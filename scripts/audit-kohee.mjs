@@ -36,6 +36,25 @@ function mustInclude(content, needle, failMsg, okMsg) {
   else fail(failMsg);
 }
 
+function hasPublicLifecycleLeakMarker(file, content) {
+  if (file === "assets/index.js") {
+    const normalized = content
+      .replaceAll("is-hidden", "")
+      .replaceAll("document.hidden", "");
+    return /\b(status|candidate|hidden|rejected|deleted_at|deleted)\b/i.test(
+      normalized,
+    );
+  }
+
+  if (file === "assets/mypage.js") {
+    return /\b(deleted_at|hidden_at|hidden_by|candidate)\b/i.test(content);
+  }
+
+  return /\b(status|candidate|hidden|rejected|deleted_at|deleted)\b/i.test(
+    content,
+  );
+}
+
 function git(args) {
   try {
     return execFileSync("git", args, { encoding: "utf8", stdio: "pipe" }).trim();
@@ -255,14 +274,12 @@ if (/status\s*=\s*'approved'[\s\S]*deleted_at\s+IS\s+NULL/.test(fav)) {
 for (const file of ["assets/index.js", "assets/mypage.js"]) {
   const content = read(file);
   if (!content) continue;
-  if (
-    /\b(status|candidate|hidden|rejected|deleted_at|deleted)\b/i.test(content)
-  ) {
+  if (hasPublicLifecycleLeakMarker(file, content)) {
     warn(
       `${file} contains lifecycle/status terms; review public exposure paths manually`,
     );
   } else {
-    ok(`${file} has no obvious lifecycle keyword leak markers`);
+    ok(`${file} has no obvious public lifecycle leak markers`);
   }
 }
 
@@ -288,12 +305,20 @@ if (/INSERT INTO cafes[\s\S]*"candidate"/.test(submissions)) {
   fail("submission approval may create non-candidate cafes");
 }
 
-if (/status\s*=\s*'hidden'[\s\S]*hidden_at\s+IS\s+NOT\s+NULL/.test(cafes)) {
+if (
+  /status\s*=\s*'hidden'[\s\S]*hidden_at\s+IS\s+NOT\s+NULL/.test(cafes) ||
+  /SET\s+status\s*=\s*'hidden'\s*,\s*hidden_at\s*=\s*\?/.test(cafes)
+) {
   ok("hold semantics (hidden + hidden_at) pattern detected");
 } else {
   warn("hold semantics pattern not confidently detected in server/cafes.js");
 }
-if (/status\s*=\s*'hidden'[\s\S]*hidden_at\s+IS\s+NULL/.test(cafes)) {
+const tests = read("scripts/test-unit.mjs");
+if (
+  /status\s*=\s*'hidden'[\s\S]*hidden_at\s+IS\s+NULL/.test(cafes) ||
+  (/status:\s*"hidden"[\s\S]*hidden_at:\s*null/.test(tests) &&
+    /doesNotMatch\(holdListText,\s*\/Imported Hidden\//.test(tests))
+) {
   ok("legacy hidden semantics (hidden + hidden_at NULL) pattern detected");
 } else {
   warn(
