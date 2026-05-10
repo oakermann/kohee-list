@@ -10,7 +10,7 @@
     "check:deploy-sync": "node scripts/check-deploy-sync.mjs",
     "detect:changed": "node scripts/detect-changed-areas.mjs",
     "smoke:check": "node scripts/smoke-check.mjs",
-    "test:unit": "node scripts/test-unit.mjs && node scripts/test-watchdog.mjs",
+    "test:unit": "node scripts/test-unit.mjs && node scripts/test-watchdog.mjs && node scripts/test-csv-export.mjs",
     "verify:release": "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify-release.ps1",
     "audit:kohee": "node scripts/audit-kohee.mjs",
     "audit:kohee:strict": "node scripts/audit-kohee.mjs --strict"
