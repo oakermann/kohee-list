@@ -113,15 +113,16 @@ export async function getNotice(req, env) {
 }
 
 export function applyPickPermission(role, payload, existing = {}) {
-  if (role !== "admin") {
+  if (role === "admin") {
     return {
-      oakerman_pick: normalizeBool(existing.oakerman_pick),
-      manager_pick: normalizeBool(existing.manager_pick),
+      oakerman_pick: normalizeBool(payload.oakerman_pick),
+      manager_pick: normalizeBool(payload.manager_pick),
     };
   }
 
   return {
-    oakerman_pick: normalizeBool(payload.oakerman_pick),
+    // Non-admin callers must not overwrite oakerman_pick.
+    oakerman_pick: normalizeBool(existing.oakerman_pick),
     manager_pick: normalizeBool(payload.manager_pick),
   };
 }
