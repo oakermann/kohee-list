@@ -48,8 +48,14 @@ async function signedWebhookRequest(event, bodyObject, customEnv = env) {
 
 assert.equal(isAllowedRepository(payload(), "oakermann/kohee-list"), true);
 assert.equal(isAllowedRepository(payload(), "other/repo"), false);
-assert.equal(isSelfBotActor("kohee-automation-bot[bot]", ["kohee-automation-bot[bot]"]), true);
-assert.equal(isSelfBotActor("chatgpt-codex-connector[bot]", ["kohee-automation-bot[bot]"]), false);
+assert.equal(
+  isSelfBotActor("kohee-automation-bot[bot]", ["kohee-automation-bot[bot]"]),
+  true,
+);
+assert.equal(
+  isSelfBotActor("chatgpt-codex-connector[bot]", ["kohee-automation-bot[bot]"]),
+  false,
+);
 
 const signed = await signGithubWebhookBody("{}", "unit-secret");
 assert.match(signed, /^sha256=[0-9a-f]{64}$/);
@@ -66,6 +72,13 @@ const safePr = classifyPullRequest({
   files: ["docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"],
 });
 assert.equal(safePr.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
+
+const unknownRiskDocsPr = classifyPullRequest({
+  body: "Lane: GOVERNANCE\nDocs-only change.",
+  files: ["docs/example.md"],
+});
+assert.equal(unknownRiskDocsPr.decision, "HOLD_HIGH_RISK");
+assert.match(unknownRiskDocsPr.reasons.join(" "), /does not declare LOW or MEDIUM/);
 
 const highRiskPr = classifyPullRequest({
   body: "Risk: MEDIUM\nLane: GOVERNANCE",
@@ -84,7 +97,15 @@ assert.match(draftPr.reasons.join(" "), /draft/);
 
 assert.equal(
   classifyCodexComment("I called make_pr but no actual GitHub PR URL was returned.").decision,
+  "OBSERVE",
+);
+assert.equal(
+  classifyCodexComment("PR_OPEN but no actual GitHub PR URL was returned.").decision,
   "UNVERIFIED_PR_CLAIM",
+);
+assert.equal(
+  classifyCodexComment("HOLD_HIGH_RISK: make_pr unavailable and policy decision needed.").decision,
+  "HOLD_HIGH_RISK",
 );
 assert.equal(
   classifyCodexComment("PATCH_READY: proposed docs-only patch.").decision,
