@@ -13,6 +13,8 @@ import {
 import { normalizeCafePayload, parseCafeCategories } from "./cafes.js";
 import { consumeRateLimit, safeWriteAuditLog } from "./security.js";
 
+const USER_FACING_OPERATOR_LABEL = "운영진";
+
 export function toSubmissionResponse(row) {
   return {
     id: row.id,
@@ -35,6 +37,15 @@ export function toSubmissionResponse(row) {
     oakerman_pick: !!row.oakerman_pick,
     manager_pick: !!row.manager_pick,
     created_at: row.created_at,
+  };
+}
+
+export function toUserSubmissionResponse(row) {
+  const reviewed = !!(row.reviewed_by || row.reviewed_by_username);
+  return {
+    ...toSubmissionResponse(row),
+    reviewed_by: null,
+    reviewed_by_username: reviewed ? USER_FACING_OPERATOR_LABEL : null,
   };
 }
 
@@ -102,7 +113,7 @@ export async function mySubmissions(req, env) {
       .all();
 
     return json(
-      { ok: true, items: (rows.results || []).map(toSubmissionResponse) },
+      { ok: true, items: (rows.results || []).map(toUserSubmissionResponse) },
       200,
       req,
       env,

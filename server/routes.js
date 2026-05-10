@@ -1,6 +1,7 @@
 import {
   health,
   healthDb,
+  json,
   requireAuth,
   requireRole,
   versionInfo,
@@ -46,6 +47,8 @@ import {
   resetCsv,
 } from "./csv.js";
 
+const USER_FACING_OPERATOR_LABEL = "운영진";
+
 function adminOnly(handler) {
   return (req, env) =>
     withGuard(req, env, async () => {
@@ -53,6 +56,43 @@ function adminOnly(handler) {
       requireRole(user, ["admin"]);
       return handler(req, env);
     });
+}
+
+function redactOperatorFields(item) {
+  const reviewed = !!(item.reviewed_by || item.reviewed_by_username);
+  const replied = !!(item.replied_by || item.replied_by_username);
+  const resolved = !!(item.resolved_by || item.resolved_by_username);
+  return {
+    ...item,
+    reviewed_by: null,
+    reviewed_by_username: reviewed ? USER_FACING_OPERATOR_LABEL : null,
+    replied_by: null,
+    replied_by_username: replied ? USER_FACING_OPERATOR_LABEL : null,
+    resolved_by: null,
+    resolved_by_username: resolved ? USER_FACING_OPERATOR_LABEL : null,
+  };
+}
+
+function redactUserFacingOperators(handler) {
+  return async (req, env) => {
+    const response = await handler(req, env);
+    if (!response.ok) return response;
+
+    let payload;
+    try {
+      payload = await response.clone().json();
+    } catch {
+      return response;
+    }
+
+    if (!Array.isArray(payload?.items)) return response;
+    return json(
+      { ...payload, items: payload.items.map(redactOperatorFields) },
+      response.status,
+      req,
+      env,
+    );
+  };
 }
 
 export const AUTH_ROUTES = [
@@ -72,8 +112,8 @@ export const PUBLIC_ROUTES = [
 
 export const USER_ROUTES = [
   ["POST", "/submit", submitCafe],
-  ["GET", "/my-submits", mySubmissions],
-  ["GET", "/my-error-reports", myErrorReports],
+  ["GET", "/my-submits", redactUserFacingOperators(mySubmissions)],
+  ["GET", "/my-error-reports", redactUserFacingOperators(myErrorReports)],
   ["POST", "/error-report", submitErrorReport],
   ["GET", "/favorites", getFavorites],
   ["POST", "/favorite", toggleFavorite],
