@@ -1,4 +1,4 @@
-﻿import {
+import {
   HttpError,
   cleanText,
   json,
@@ -86,7 +86,7 @@ export async function myErrorReports(req, env) {
 export async function getErrorReports(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const status = new URL(req.url).searchParams.get("status") || "open";
     const filter = ["open", "resolved"].includes(status) ? status : "open";
@@ -120,7 +120,7 @@ export async function getErrorReports(req, env) {
 export async function replyErrorReport(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
     const id = cleanText(body.id, 80);
@@ -180,7 +180,7 @@ export async function replyErrorReport(req, env) {
 export async function resolveErrorReport(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
     const id = cleanText(body.id, 80);
