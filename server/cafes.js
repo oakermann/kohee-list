@@ -15,6 +15,25 @@ import {
 } from "./shared.js";
 import { safeWriteAuditLog } from "./security.js";
 
+const ALLOWED_CAFE_CATEGORIES = new Set([
+  "espresso",
+  "drip",
+  "decaf",
+  "instagram",
+  "dessert",
+]);
+
+export function parseCafeCategories(value) {
+  const categories = parseJsonArray(value);
+  const invalid = categories.filter(
+    (category) => !ALLOWED_CAFE_CATEGORIES.has(category),
+  );
+  if (invalid.length) {
+    throw new HttpError(400, "Invalid category value", "VALIDATION_ERROR");
+  }
+  return categories;
+}
+
 export function toCafeResponse(row) {
   return {
     id: row.id,
@@ -119,7 +138,7 @@ export function normalizeCafePayload(payload, role, existing = {}) {
     signature: JSON.stringify(parseJsonArray(payload.signature)),
     beanShop: cleanUrl(payload.beanShop),
     instagram: cleanUrl(payload.instagram),
-    category: JSON.stringify(parseJsonArray(payload.category)),
+    category: JSON.stringify(parseCafeCategories(payload.category)),
     oakerman_pick: picks.oakerman_pick,
     manager_pick: picks.manager_pick,
   };
