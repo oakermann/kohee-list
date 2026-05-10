@@ -63,6 +63,8 @@ export const USER_ROUTES = [
   ["POST", "/favorite", toggleFavorite],
 ];
 
+// This group is a routing surface, not the final permission contract.
+// Some handlers below enforce stricter admin-only checks internally.
 export const MANAGER_ROUTES = [
   ["GET", "/submissions", getSubmissions],
   ["GET", "/error-reports", getErrorReports],
