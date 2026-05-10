@@ -10,6 +10,10 @@ import {
 } from "./shared.js";
 import { safeWriteAuditLog } from "./security.js";
 
+function publicRole(role) {
+  return role === "admin" ? "admin" : "user";
+}
+
 export async function setRole(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
@@ -19,11 +23,9 @@ export async function setRole(req, env) {
     const targetUsername = cleanText(body.username, 40).toLowerCase();
     const role = safeRole(body.role);
 
-    if (!targetUsername || (role === "user" && body.role !== "user")) {
-      throw new HttpError(400, "Invalid role update payload");
+    if (!targetUsername || role !== "user" || body.role !== "user") {
+      throw new HttpError(400, "Role must be user");
     }
-    if (!["manager", "user"].includes(role))
-      throw new HttpError(400, "Role must be user or manager");
 
     const target = await env.DB.prepare(
       "SELECT id, role FROM users WHERE username = ?",
@@ -72,7 +74,7 @@ export async function getUsers(req, env) {
     const items = (rows.results || []).map((row) => ({
       id: row.id,
       username: row.username,
-      role: safeRole(row.role),
+      role: publicRole(row.role),
       created_at: row.created_at,
     }));
 
