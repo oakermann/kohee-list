@@ -124,32 +124,12 @@ export async function mySubmissions(req, env) {
 export async function getSubmissions(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const status = new URL(req.url).searchParams.get("status") || "pending";
     const filter = ["pending", "approved", "rejected"].includes(status)
       ? status
       : "pending";
-
-    if (user.role === "manager" && filter !== "pending") {
-      const rows = await env.DB.prepare(
-        `SELECT s.*, u.username, reviewer.username AS reviewed_by_username
-         FROM submissions s
-         JOIN users u ON u.id = s.user_id
-         LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
-         WHERE s.status = ? AND s.reviewed_by = ?
-         ORDER BY COALESCE(s.reviewed_at, s.created_at) DESC`,
-      )
-        .bind(filter, user.user_id)
-        .all();
-
-      return json(
-        { ok: true, items: (rows.results || []).map(toSubmissionResponse) },
-        200,
-        req,
-        env,
-      );
-    }
 
     const rows = await env.DB.prepare(
       `SELECT s.*, u.username, reviewer.username AS reviewed_by_username
@@ -174,7 +154,7 @@ export async function getSubmissions(req, env) {
 export async function approveSubmission(req, env) {
   return withGuard(req, env, async () => {
     const reviewer = await requireAuth(req, env);
-    requireRole(reviewer, ["manager", "admin"]);
+    requireRole(reviewer, ["admin"]);
 
     const body = await readJson(req);
     const submissionId = cleanText(body.submissionId, 80);
@@ -287,7 +267,7 @@ export async function approveSubmission(req, env) {
 export async function rejectSubmission(req, env) {
   return withGuard(req, env, async () => {
     const reviewer = await requireAuth(req, env);
-    requireRole(reviewer, ["manager", "admin"]);
+    requireRole(reviewer, ["admin"]);
 
     const body = await readJson(req);
     const submissionId = cleanText(body.submissionId, 80);
@@ -329,7 +309,7 @@ export async function rejectSubmission(req, env) {
 export async function updateSubmission(req, env) {
   return withGuard(req, env, async () => {
     const reviewer = await requireAuth(req, env);
-    requireRole(reviewer, ["manager", "admin"]);
+    requireRole(reviewer, ["admin"]);
 
     const body = await readJson(req);
     const submissionId = cleanText(body.id, 80);
