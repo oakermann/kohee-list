@@ -94,6 +94,21 @@ The Worker should start in dry-run mode only.
 
 Start with the smallest useful permission set.
 
+### Permission matrix
+
+| Permission | Phase 1 dry-run | Phase 2 comments | Phase 4 auto-merge | Rationale |
+|---|---:|---:|---:|---|
+| Metadata | read | read | read | Required by GitHub Apps. |
+| Contents | read | read | read | Read changed files and denylist matches. Never write in this design. |
+| Issues | read | write | write | Read batch/command issues; later comment/close completed or duplicate issues. |
+| Pull requests | read | read | write | Read PR state and changed files; later enable native auto-merge only for safe PRs. |
+| Checks | read | read | read | Confirm check status before any merge-related decision. |
+| Actions | read | read | read | Inspect workflow_run status when needed. |
+| Administration | none | none | none | Not needed; branch protection must remain external. |
+| Secrets | none | none | none | Never manage secrets from this bot. |
+| Deployments | none | none | none | No deploy behavior in this design. |
+| Contents write | none | none | none | Explicitly forbidden unless a separate HIGH-risk design is approved. |
+
 Required for Phase 1 dry-run:
 
 - Metadata: read
@@ -103,9 +118,12 @@ Required for Phase 1 dry-run:
 - Checks: read
 - Actions: read
 
-Required for Phase 2 mechanical writes:
+Required for Phase 2 mechanical issue comments:
 
 - Issues: write
+
+Required for Phase 4 native auto-merge enablement:
+
 - Pull requests: write
 
 Do not grant initially:
@@ -253,8 +271,12 @@ If a Codex comment claims PR success without an actual GitHub PR URL, the bot sh
 Required before live use:
 
 - Verify `X-Hub-Signature-256` using `GITHUB_WEBHOOK_SECRET`.
+- Reject unsigned or malformed webhook requests.
+- Apply a replay window check where a timestamp is available; otherwise rely on delivery-id dedupe and short retention.
 - Validate event `repository.full_name === "oakermann/kohee-list"`.
-- Store and de-duplicate `X-GitHub-Delivery` ids.
+- Validate GitHub App `installation.id` against an allowlist.
+- Store and de-duplicate `X-GitHub-Delivery` ids with a TTL.
+- Parse webhook payloads with strict event schemas and fail closed on unknown shapes.
 - Ignore self-triggered bot loops.
 - Use GitHub App installation tokens, not a long-lived personal token.
 - Keep app private key in Cloudflare secrets.
@@ -264,6 +286,51 @@ Required before live use:
 - Do not print secrets or tokens.
 - Add rate limiting/backoff for GitHub API errors.
 - Treat missing evidence as HOLD, not success.
+
+## Loop prevention and idempotency
+
+The bot must avoid event storms and self-triggered loops.
+
+Required controls:
+
+- Ignore events authored by the bot account unless the event is explicitly allowed for confirmation.
+- Use `installation_id + delivery_id` as the primary idempotency key.
+- Record event action, repository, issue/PR number, head SHA, and decision in the audit log.
+- Do not process the same delivery id twice.
+- Add a max retry count for GitHub API failures.
+- Use exponential backoff for transient GitHub API errors.
+- Record failed non-retryable events as HOLD or ERROR, not as success.
+- Keep a global dry-run flag and a global kill switch.
+
+## Kill switch and safety flags
+
+Before live use, the Worker must support:
+
+- `KOHEE_BOT_ENABLED=false` to disable all write actions.
+- `KOHEE_BOT_DRY_RUN=true` as the default mode.
+- `KOHEE_BOT_AUTO_MERGE_ENABLED=false` to disable auto-merge enablement.
+- `KOHEE_BOT_ISSUE_CLOSE_ENABLED=false` to disable issue closing.
+- `KOHEE_BOT_ALLOWED_REPOS=oakermann/kohee-list` to restrict repositories.
+
+If a flag is missing, the bot should choose the safer behavior.
+
+## Metrics
+
+Track at least these metrics before enabling non-dry-run actions:
+
+- Webhook events received by type.
+- Events ignored as duplicates.
+- Events ignored as bot-authored self-events.
+- Safe auto-merge eligible decisions.
+- HOLD decisions by reason.
+- False-positive HOLDs found during review.
+- Issue cleanup eligible decisions.
+- Issue cleanup skipped decisions.
+- GitHub API error rate.
+- Median time from PR merge to issue cleanup.
+- Median time from PR open to auto-merge enable decision.
+
+Phase 4 should not start until dry-run metrics show low false positives.
 
 ## Cloudflare Worker endpoints
 
