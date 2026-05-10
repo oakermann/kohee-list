@@ -8,12 +8,13 @@ This document records the current operating baseline for KOHEE LIST GitHub / Cod
 
 The current automation is usable, but it is not fully hands-off.
 
-- ChatGPT GitHub connector is the primary reliable executor for branch, file, pull request, check, review-thread, and merge operations.
+- ChatGPT GitHub connector is the primary reliable executor for branch, file, pull request, check, review-thread, issue cleanup, and merge operations.
 - GitHub Actions is the validation and deploy gate.
 - Codex Cloud is useful for review, analysis, and direct task PRs, but its self-reports must be checked against GitHub evidence.
 - GitHub issue `@codex` triggers can wake Codex, but they are not treated as the primary PR publishing path.
-- LOW/MEDIUM safe PRs should use GitHub native auto-merge when checks and review-thread requirements are satisfied.
+- LOW/MEDIUM safe PRs should use GitHub native auto-merge or connector merge when checks and review-thread requirements are satisfied.
 - HIGH-risk work remains HOLD / user-approved only.
+- Routine maintenance is centered on issue `#23`; scheduled fan-out to multiple parallel maintenance issues is disabled.
 
 ## Reliable paths
 
@@ -35,9 +36,9 @@ Operational rule:
 
 - Create normal PRs by default.
 - Avoid draft PRs unless the user explicitly asks for draft.
-- Enable GitHub native auto-merge by default for safe LOW/MEDIUM PRs.
+- Enable GitHub native auto-merge by default for safe LOW/MEDIUM PRs when available.
 - Do not enable auto-merge for HIGH-risk runtime/policy PRs.
-- Manual merge remains acceptable if native auto-merge is unavailable.
+- Manual connector merge remains acceptable if native auto-merge is unavailable.
 
 ### GitHub Actions validation
 
@@ -50,6 +51,18 @@ The standard PR gate is:
 - KOHEE PR evidence checks where configured
 
 Deploy and smoke verification still follow the existing GitHub Actions deploy workflow rules.
+
+### Manual Codex Cloud maintenance workflow
+
+`KOHEE Codex Cloud Maintenance` is manual-only after PR `#79`.
+
+Current behavior:
+
+- No daily schedule.
+- No creation of separate parallel maintenance issues.
+- Default manual run records a maintenance note on `#23` only.
+- `trigger_codex=true` posts one explicit analysis-only `@codex` request on `#23`.
+- Issue-triggered Codex should report `PATCH_READY`, `DONE_NO_DEPLOY`, or `HOLD`; it must not claim `PR_OPEN` without an actual GitHub PR URL.
 
 ### Status Watchdog
 
@@ -65,8 +78,9 @@ It classifies automation issues as:
 Last verified watchdog state:
 
 - `#23` is `ACTIVE`.
-- `#24` is `TERMINAL / HOLD`.
-- `stale_queued = 0`.
+- `#24`, `#59`, and `#60` are `HOLD_USER_APPROVAL` tasks and must not be run automatically.
+- `#71` through `#77` were closed as superseded after PR `#79`.
+- Expected `stale_queued = 0`.
 
 Regression coverage exists in `scripts/test-watchdog.mjs` and is included in `npm run test:unit`.
 
@@ -141,8 +155,8 @@ Operational flow:
 1. Open one normal PR for a safe maintenance batch.
 2. Check changed files and PR body evidence.
 3. Confirm the PR is LOW/MEDIUM and outside the auto-merge denylist.
-4. Enable GitHub native auto-merge before checks finish when safe.
-5. Let GitHub merge automatically after required checks and review-thread requirements pass.
+4. Enable GitHub native auto-merge before checks finish when safe, or use connector merge after checks pass.
+5. Let GitHub merge automatically after required checks and review-thread requirements pass when native auto-merge is active.
 6. If native auto-merge is unavailable, fall back to manual connector merge after checks pass.
 7. Record DONE/HOLD status in the batch or child issue after merge.
 
@@ -165,6 +179,7 @@ Prefer one batch parent issue for multiple related tasks instead of many small c
 - `#23` `KOHEE_CLOUD_MAINTENANCE: Scheduled Codex maintenance`
   - Long-lived maintenance control issue.
   - Keep open as ACTIVE.
+  - Use this as the single routine maintenance control issue.
 
 ### Held
 
@@ -177,16 +192,18 @@ Prefer one batch parent issue for multiple related tasks instead of many small c
 - `#59` `[KOHEE_COMMAND] AUTH_ROLE / HIGH / Audit manager approved-cafe edit permissions`
   - HIGH / AUTH_ROLE.
   - Held with `HOLD_USER_APPROVAL`.
+  - Audit result: manager can edit approved/public cafe fields through `/edit`, while lifecycle-changing actions remain admin-only.
   - Do not change runtime permissions until a separate policy is approved.
 
 - `#60` `[KOHEE_COMMAND] PUBLIC_EXPOSURE / HIGH / Audit user-facing operator username exposure`
   - HIGH / PUBLIC_EXPOSURE.
   - Held with `HOLD_USER_APPROVAL`.
+  - Audit result: user-facing MyPage paths expose or include operator usernames through `replied_by_username` and `reviewed_by_username` surfaces.
   - Do not change user-facing API/frontend behavior until a separate policy is approved.
 
 ### Closed cleanup set
 
-The following smoke/test/parallel issues were completed and closed to keep the watchdog queue clean:
+The following smoke/test/parallel issues were completed or superseded and closed to keep the watchdog queue clean:
 
 - `#26` deploy smoke verification.
 - `#27` manager removal audit.
@@ -202,6 +219,7 @@ The following smoke/test/parallel issues were completed and closed to keep the w
 - `#56` duplicate of #57, closed as duplicate.
 - `#57` review CSV formula guard, completed by PR #61.
 - `#58` route grouping clarity, completed by PR #61.
+- `#71` through `#77` scheduled parallel maintenance fan-out issues, superseded by PR #79.
 
 ## Pull requests that established this baseline
 
@@ -220,6 +238,7 @@ The following smoke/test/parallel issues were completed and closed to keep the w
 - `#52` watchdog regression tests.
 - `#61` review CSV export formula guard and route grouping clarity.
 - `#62` API cafe category whitelist.
+- `#79` manual-only Codex Cloud maintenance workflow and parallel fan-out removal.
 
 ## Operating procedure for future work
 
@@ -230,7 +249,7 @@ The following smoke/test/parallel issues were completed and closed to keep the w
 5. Keep direct Codex Cloud tasks evidence-gated.
 6. Treat issue `@codex` as analysis / PATCH_READY / HOLD unless it produces an actual PR URL.
 7. Check actual GitHub PR URL, head SHA, changed files, checks, and review threads.
-8. Enable native auto-merge for safe LOW/MEDIUM PRs when available.
+8. Enable native auto-merge or use connector merge for safe LOW/MEDIUM PRs when available.
 9. Keep HIGH-risk changes as HOLD until the user explicitly approves.
 
 ## HIGH-risk areas
@@ -244,6 +263,7 @@ The following remain user-approved / HOLD by default:
 - Destructive data behavior.
 - Cloudflare deploy workflow behavior and secrets.
 - Manager role removal or production access semantics.
+- User-facing operator identity exposure policy.
 
 ## Current automation completion estimate
 
@@ -251,7 +271,7 @@ Current practical automation level:
 
 - GitHub PR execution through ChatGPT connector: high.
 - Validation and watchdog coverage: high.
-- Native auto-merge for safe PRs: enabled operationally when repository settings allow it.
+- Native auto-merge / connector merge for safe PRs: enabled operationally when repository settings and checks allow it.
 - Direct Codex Cloud autonomous execution: medium, evidence-gated.
 - Issue `@codex` as PR publisher: limited.
 - Fully hands-off HIGH-risk automation: not enabled.
