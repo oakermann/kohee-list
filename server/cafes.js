@@ -80,7 +80,7 @@ export async function getData(req, env) {
 export async function listCafes(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const url = new URL(req.url);
     const lifecycle = String(url.searchParams.get("lifecycle") || "active");
@@ -113,16 +113,15 @@ export async function getNotice(req, env) {
 }
 
 export function applyPickPermission(role, payload, existing = {}) {
-  if (role === "admin") {
+  if (role !== "admin") {
     return {
-      oakerman_pick: normalizeBool(payload.oakerman_pick),
-      manager_pick: normalizeBool(payload.manager_pick),
+      oakerman_pick: normalizeBool(existing.oakerman_pick),
+      manager_pick: normalizeBool(existing.manager_pick),
     };
   }
 
   return {
-    // Managers may manage manager_pick, but they must not overwrite oakerman_pick.
-    oakerman_pick: normalizeBool(existing.oakerman_pick),
+    oakerman_pick: normalizeBool(payload.oakerman_pick),
     manager_pick: normalizeBool(payload.manager_pick),
   };
 }
@@ -147,7 +146,7 @@ export function normalizeCafePayload(payload, role, existing = {}) {
 export async function addCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
     const payload = normalizeCafePayload(body, user.role);
@@ -203,7 +202,7 @@ export async function addCafe(req, env) {
 export async function editCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
     const id = cleanText(body.id, 80);
