@@ -1,0 +1,18 @@
+{
+  "event": "issue_comment",
+  "payload": {
+    "action": "created",
+    "repository": {
+      "full_name": "oakermann/kohee-list"
+    },
+    "sender": {
+      "login": "chatgpt-codex-connector[bot]"
+    },
+    "issue": {
+      "number": 104
+    },
+    "comment": {
+      "body": "KOHEE_STATUS:\n  state: HOLD_HIGH_RISK\n  result: make_pr was not used because this needs user approval."
+    }
+  }
+}
