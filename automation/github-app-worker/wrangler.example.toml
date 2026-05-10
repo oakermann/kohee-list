@@ -1,0 +1,18 @@
+# Example only. Do not deploy from this file without a separate approved phase.
+# Copy to a separate local config only for future dry-run testing.
+
+name = "kohee-github-app-worker-dry-run"
+main = "src/index.mjs"
+compatibility_date = "2026-05-10"
+workers_dev = true
+
+[vars]
+KOHEE_BOT_ENABLED = "false"
+KOHEE_BOT_DRY_RUN = "true"
+KOHEE_BOT_AUTO_MERGE_ENABLED = "false"
+KOHEE_BOT_ISSUE_CLOSE_ENABLED = "false"
+KOHEE_BOT_ALLOWED_REPOS = "oakermann/kohee-list"
+KOHEE_BOT_LOGINS = "kohee-automation-bot[bot]"
+
+# Runtime credentials are intentionally not included here.
+# Register them only in a later approved setup phase.
