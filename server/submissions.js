@@ -10,7 +10,7 @@ import {
   requireRole,
   withGuard,
 } from "./shared.js";
-import { normalizeCafePayload } from "./cafes.js";
+import { normalizeCafePayload, parseCafeCategories } from "./cafes.js";
 import { consumeRateLimit, safeWriteAuditLog } from "./security.js";
 
 export function toSubmissionResponse(row) {
@@ -60,7 +60,7 @@ export async function submitCafe(req, env) {
       signature: JSON.stringify(parseJsonArray(body.signature)),
       beanShop: cleanUrl(body.beanShop),
       instagram: cleanUrl(body.instagram),
-      category: JSON.stringify(parseJsonArray(body.category)),
+      category: JSON.stringify(parseCafeCategories(body.category)),
       created_at: nowIso(),
     };
 
