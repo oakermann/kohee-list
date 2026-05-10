@@ -105,6 +105,7 @@ export function classifyPullRequest({ body = "", draft = false, files = [] } = {
   const reasons = [];
 
   if (draft) reasons.push("PR is draft");
+  if (risk === "UNKNOWN") reasons.push("PR body does not declare LOW or MEDIUM risk");
   if (risk === "HIGH") reasons.push("PR body declares HIGH risk");
   if (fileClassification.hasHighRiskFiles) {
     reasons.push(
@@ -131,11 +132,11 @@ export function classifyPullRequest({ body = "", draft = false, files = [] } = {
     };
   }
 
-  if (["LOW", "MEDIUM", "UNKNOWN"].includes(risk) && safeCategory) {
+  if (["LOW", "MEDIUM"].includes(risk) && safeCategory) {
     return {
       decision: "SAFE_AUTO_MERGE_ELIGIBLE",
       risk,
-      reasons: ["docs/test/tooling-only changes outside denylist"],
+      reasons: ["explicit LOW/MEDIUM docs/test/tooling-only changes outside denylist"],
       ...fileClassification,
     };
   }
@@ -153,16 +154,7 @@ export function classifyCodexComment(body) {
   const hasPrUrl = /https:\/\/github\.com\/[^\s/]+\/[^\s/]+\/pull\/\d+/i.test(
     text,
   );
-  const claimsPr = /\bPR_OPEN\b|\bmake_pr\b|\bactual GitHub PR URL\b/i.test(
-    text,
-  );
 
-  if (claimsPr && !hasPrUrl) {
-    return {
-      decision: "UNVERIFIED_PR_CLAIM",
-      reasons: ["comment claims PR/publishing evidence without actual PR URL"],
-    };
-  }
   if (/\bHOLD_USER_APPROVAL\b/.test(text)) {
     return { decision: "HOLD_USER_APPROVAL", reasons: ["explicit HOLD_USER_APPROVAL"] };
   }
@@ -174,6 +166,12 @@ export function classifyCodexComment(body) {
   }
   if (/\bDONE_NO_DEPLOY\b/.test(text)) {
     return { decision: "DONE_NO_DEPLOY", reasons: ["explicit DONE_NO_DEPLOY"] };
+  }
+  if (/\bPR_OPEN\b/.test(text) && !hasPrUrl) {
+    return {
+      decision: "UNVERIFIED_PR_CLAIM",
+      reasons: ["comment claims PR_OPEN without actual PR URL"],
+    };
   }
 
   return { decision: "OBSERVE", reasons: ["no codex status marker detected"] };
