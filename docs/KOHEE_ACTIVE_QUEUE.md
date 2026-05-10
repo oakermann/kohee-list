@@ -21,6 +21,7 @@ KOHEE LIST is currently operating in:
 - GitHub Actions validation-gate mode
 - Codex reviewer/PATCH_READY support mode
 - parallel-by-default mode for safe LOW/MEDIUM work
+- safe auto-merge preferred mode for eligible LOW/MEDIUM PRs
 
 Trust actual GitHub evidence:
 
@@ -43,13 +44,63 @@ Do not trust by itself:
 
 Execution expectation:
 
-- For LOW/MEDIUM tasks that ChatGPT can safely execute, ChatGPT should continue through PR creation, checks, review-thread verification, merge, and final evidence report without stopping at intermediate PR-open status.
+- For LOW/MEDIUM tasks that ChatGPT can safely execute, ChatGPT should continue through PR creation, checks, review-thread verification, merge/auto-merge setup, and final evidence report without stopping at intermediate PR-open status.
 - Stop early only for HOLD/HIGH, failed checks, review findings, tool/API errors, missing permissions, or explicit user interruption.
 - For multi-lane safe work, default to parallel planning and independent PR lanes when file/risk overlap checks pass.
+- Prefer enabling GitHub native auto-merge for eligible safe PRs instead of manually polling and directly merging.
 
 ---
 
-# 1. Current repo state
+# 1. Safe auto-merge activation
+
+State: P0 operational efficiency target
+
+Goal:
+
+- reduce user touches before GitHub App Worker Phase 3+ is available.
+- let GitHub wait for required checks and merge eligible safe PRs automatically.
+
+Default flow for eligible LOW/MEDIUM PRs:
+
+1. create PR
+2. verify changed files and risk lane
+3. deny HIGH/HOLD paths and behaviors
+4. verify no unresolved review thread at the time auto-merge is enabled
+5. enable GitHub native auto-merge
+6. let GitHub wait for required checks
+7. ChatGPT verifies final merged state or reports precise blocker
+
+Eligible examples:
+
+- docs-only
+- governance-only
+- audit-only
+- isolated automation tooling without write enablement
+- isolated frontend copy/wording with no permission or data behavior
+
+Auto-merge is not allowed for:
+
+- D1/schema/migration
+- auth/session/security
+- public `/data` behavior
+- CSV import/reset semantics
+- deploy workflows/secrets
+- GitHub App production write enablement
+- destructive data behavior
+- automatic branch deletion
+- issue-close automation
+- PRs with unresolved review threads
+- PRs with unclear changed files or broad scope
+
+If auto-merge enablement fails:
+
+- report the exact blocker
+- do not present the work as completed
+- fall back to manual merge only if GitHub evidence confirms it is safe and rules allow it
+
+---
+
+# 2. Current repo state
 
 Repository:
 
@@ -61,37 +112,33 @@ Branch:
 
 Current known state as of 2026-05-11:
 
-- Open PRs: 0
 - Active issue: #23 (`KOHEE_CLOUD_MAINTENANCE`)
 - Open HIGH/HOLD implementation issue: none known
-- Active failed PR: none known
-- Active merge conflict: none known
 - Branch count is high and needs cleanup-audit automation before any deletion automation.
+
+Current repo inefficiency targets:
+
+- stale merged branches
+- overlapping automation docs
+- repetitive governance PRs
+- queue/status drift
+- repeated user prompts for merge continuation
+- excessive intermediate reporting
+- direct manual merge polling where auto-merge can safely wait instead
 
 ---
 
-# 2. Current P0 queue
+# 3. Current P0 queue
 
 ## P0-1 — ChatGPT-main stabilization
 
 State: mostly completed / maintain
-
-Completed baseline:
-
-- `AGENTS.md`
-- `docs/KOHEE_MASTER_CONTEXT.md`
-- `kohee.contract.json`
-- GitHub evidence-first rule
-- Codex self-report distrust rule
-- issue #23 maintenance consolidation
 
 Remaining:
 
 - prevent regression to Codex-main assumptions
 - keep orchestration rules synchronized
 - keep ChatGPT execution reports evidence-based
-
----
 
 ## P0-2 — Master source-of-truth
 
@@ -105,18 +152,6 @@ Operational overlay:
 
 - `docs/KOHEE_ACTIVE_QUEUE.md`
 
-Current problem:
-
-- operational status can still fragment across:
-  - chat memory
-  - issue #23
-  - governance docs
-  - future automation state
-
-Direction:
-
-- ACTIVE_QUEUE should become semi-generated from GitHub evidence over time.
-
 Future sync candidates:
 
 - open PR count
@@ -127,26 +162,17 @@ Future sync candidates:
 - queue age
 - cleanup-audit summary
 
----
-
 ## P0-3 — Parallel lane enforcement
 
 State: partially implemented / operationally important
 
-Done:
-
-- policy exists in docs/contracts
-- risk lanes exist
-- merge-order rules documented
-
 Current gap:
 
-- no hard validator for:
-  - same-file overlap
-  - shared test overlap
-  - HIGH/HOLD parallel denial
-  - merge-order conflicts
-  - queued command overwrite/conflict
+- no hard validator for same-file overlap
+- no hard validator for shared test overlap
+- no hard validator for HIGH/HOLD parallel denial
+- no hard validator for merge-order conflicts
+- no hard validator for queued command overwrite/conflict
 
 Primary next patch candidate:
 
@@ -162,17 +188,9 @@ Expected responsibilities:
 - validate command isolation
 - read policy from `kohee.contract.json`
 
-Related risk:
-
-- silent parallel-lane conflict
-- queue corruption
-- stale branch merge ordering
-
----
-
 ## P0-4 — Maintenance audit automation
 
-State: newly promoted to P0 planning candidate
+State: promoted P0 automation-efficiency task
 
 Goal:
 
@@ -186,45 +204,50 @@ First phase must be read-only:
 - no file write
 - no deploy
 
-Initial outputs:
-
-- GitHub Actions summary
-- optional issue #23 report comment later
-- optional ACTIVE_QUEUE sync PR later
-
-Audit targets:
-
-- merged PR branches still present
-- closed/unmerged PR branches still present
-- stale branches
-- stale open PRs
-- failed workflows
-- stale command issues
-- ACTIVE_QUEUE vs actual GitHub state mismatch
-- automation-doc overlap candidates
-- cleanup candidates requiring manual review
-
-Classification:
-
-- `SAFE_DELETE_CANDIDATE`: merged PR head branch, head SHA included in main, not protected, not active work.
-- `REVIEW_REQUIRED`: unmerged branch, unknown PR link, branch name suggests active/retry work, or related to a recent failed/closed PR.
-- `HOLD`: `main`, protected/control-plane branch, watchdog branch, Phase 2 control-plane branch, HIGH/HOLD-related branch.
-
 Recommended implementation candidate:
 
 - `.github/workflows/kohee-maintenance-audit.yml`
 - `scripts/kohee-maintenance-audit.mjs`
 
-Recommended schedule:
+## P0-5 — Touchless LOW/MEDIUM execution
 
-- manual `workflow_dispatch` first
-- optional daily read-only run after stable
+State: promoted operational target
 
-Do not implement automatic deletion until the read-only report has been reviewed across multiple runs.
+Goal:
 
----
+- let the user issue goals once and avoid repeated manual continuation prompts.
 
-## P0-5 — GitHub App Worker Phase 2 dry-run
+Target execution flow:
+
+1. user gives goal
+2. ChatGPT decomposes tasks
+3. safe lanes are parallelized automatically
+4. PRs are created automatically
+5. GitHub native auto-merge is enabled for eligible safe PRs
+6. checks run under GitHub rules
+7. safe LOW/MEDIUM failures are retried automatically when possible
+8. final result report happens once at batch completion or precise blocker
+
+## P0-6 — Safe auto-merge activation
+
+State: newly promoted P0 target
+
+Goal:
+
+- use repository native auto-merge for eligible safe PRs to reduce manual polling and user continuation prompts.
+
+Required behavior:
+
+- direct manual merge is no longer the default for eligible safe LOW/MEDIUM PRs.
+- auto-merge enablement should be attempted after file/risk/review-thread gates pass.
+- ChatGPT should verify the final merged state later or report the blocker.
+
+Implementation candidate:
+
+- update orchestration practice immediately
+- later encode in `scripts/validate-kohee-command.mjs` and GitHub App Worker dry-run decision logs
+
+## P0-7 — GitHub App Worker Phase 2 dry-run
 
 State: deferred until explicit user start
 
@@ -242,81 +265,23 @@ Must not:
 - modify production runtime
 - modify D1/auth/CSV/public behavior
 
-Expected Worker:
-
-- `kohee-github-app-worker-dry-run`
-
-Required dry-run flags:
-
-- `KOHEE_BOT_ENABLED=false`
-- `KOHEE_BOT_DRY_RUN=true`
-- `KOHEE_BOT_AUTO_MERGE_ENABLED=false`
-- `KOHEE_BOT_ISSUE_CLOSE_ENABLED=false`
-- `KOHEE_BOT_ALLOWED_REPOS=oakermann/kohee-list`
-
-Recommended future direction:
-
-1. read-only observability
-2. queue synchronization
-3. validator integration
-4. safe LOW docs auto-merge
-5. safe LOW tooling auto-merge
-6. issue lifecycle automation
-7. runtime automation later
-
-Do not prioritize runtime write automation yet.
-
 ---
 
-# 3. Current blockers
+# 4. Current blockers
 
 ## Blocker A — automation control-plane incomplete
 
-Problem:
-
 - orchestration policy exists
 - validator layer incomplete
-
-Impact:
-
 - future parallel lanes may conflict silently
 - queue overwrite risk exists
 
-Priority:
-
-- operational HIGH
-- not runtime HIGH
-
----
-
 ## Blocker B — context fragmentation
 
-Problem:
-
-- status split across:
-  - chat context
-  - issue #23
-  - MASTER_CONTEXT
-  - ACTIVE_QUEUE
-  - automation docs
-
-Impact:
-
-- stale task understanding
-- duplicate work
-- outdated queue state
-
-Mitigation:
-
-- keep ACTIVE_QUEUE synchronized after major GitHub evidence changes
-
----
+- status is split across chat, issue #23, MASTER_CONTEXT, ACTIVE_QUEUE, and automation docs
+- stale task understanding and duplicate work remain possible
 
 ## Blocker C — missing operational observability
-
-Current weakness:
-
-- operational visibility is weaker than runtime visibility
 
 Needed future observability:
 
@@ -329,34 +294,21 @@ Needed future observability:
 - queue aging
 - lane conflicts
 
-Long-term direction:
-
-- internal operational dashboard
-- not just cafe CRUD admin
-
----
-
 ## Blocker D — branch cleanup debt
 
-Current weakness:
+- many historical feature/docs/fix branches remain after PR merges or superseded work
+- read-only maintenance audit should classify cleanup candidates before deletion automation
 
-- many historical feature/docs/fix branches remain after PR merges or superseded work.
+## Blocker E — repetitive operational flow
 
-Risk:
-
-- branch list noise
-- stale branch reuse mistakes
-- wrong-base branch work
-- confusion about active vs completed lanes
-
-Mitigation:
-
-- read-only maintenance audit first
-- safe deletion only after verified criteria and user-approved automation phase
+- repeated manual continuation prompts
+- repeated merge confirmation prompts for LOW docs/tooling work
+- repeated PR-open-only reporting
+- direct merge polling when auto-merge can safely wait
 
 ---
 
-# 4. Current safe lanes
+# 5. Safe lanes and parallel defaults
 
 Safe LOW/MEDIUM candidates:
 
@@ -368,6 +320,7 @@ Safe LOW/MEDIUM candidates:
 - isolated automation tooling
 - export-only CSV additions without public exposure changes
 - read-only maintenance audits
+- cleanup audit reporting
 
 Not safe for parallel:
 
@@ -388,114 +341,23 @@ Parallel default rule:
 - When multiple requested tasks are LOW/MEDIUM, independent, and non-overlapping, plan them as parallel lanes by default.
 - Do not serialize safe independent docs/tooling lanes unless they touch the same files or require ordered merge.
 - Merge remains sequential after checks and review-thread gates pass.
+- Native auto-merge is preferred for eligible safe PRs.
 
 ---
 
-# 5. Current HIGH/HOLD
+# 6. Current HIGH/HOLD
 
-## HOLD — D1 manager role schema removal
+- HOLD — D1 manager role schema removal
+- HOLD — resetCsv redesign
+- HOLD — evidence/category verification DB
 
-Reason:
-
-- schema/runtime/test coupling remains
-- explicit user approval required
-
----
-
-## HOLD — resetCsv redesign
-
-Reason:
-
-- transactional/staging redesign required
-- touches CSV semantics
-- explicit user approval required
-
----
-
-## HOLD — evidence/category verification DB
-
-Future concepts:
-
-- `cafe_evidence`
-- `category_verifications`
-- review memo
-- source URL
-- confidence/evidence level
-
-Reason:
-
-- schema/migration planning required
-- retention/privacy review required
-- explicit user approval required
-
----
-
-# 6. Current known risks
-
-## Operational risk
-
-Current primary risk is:
-
-- orchestration drift
-- stale context
-- policy mismatch
-- queued command conflict
-- stale branch confusion
-
-Current primary risk is not:
-
-- missing cafe app features
-
----
-
-## Command dispatch risk
-
-`.github/workflows/kohee-command-dispatch.yml` currently:
-
-- creates or updates KOHEE command issues
-- is not a full lane validator
-
-Potential issue:
-
-- command overwrite/update conflict
-- future batch conflict
-- lane isolation weakness
-
-Future fix:
-
-- explicit command conflict validator
-- stronger queue isolation
-- stable command state machine
-
----
-
-## Cleanup automation risk
-
-Do not start with destructive cleanup.
-
-Safe order:
-
-1. read-only maintenance audit
-2. issue #23 report
-3. ACTIVE_QUEUE sync PR
-4. cleanup candidate report
-5. safe branch deletion only after proven criteria
-6. LOW docs auto-merge after validator maturity
+These require explicit user approval.
 
 ---
 
 # 7. Current next patch candidates
 
 ## Candidate A — Parallel lane validator
-
-Goal:
-
-- deny same-file overlap
-- deny shared test overlap
-- deny HIGH/HOLD parallelism
-- enforce merge-order metadata
-- validate lane ownership
-- validate queue isolation
 
 Likely files:
 
@@ -506,8 +368,6 @@ Likely files:
 Risk:
 
 - MEDIUM governance/tooling
-
----
 
 ## Candidate B — Dispatch overwrite protection
 
@@ -521,23 +381,7 @@ Risk:
 
 - MEDIUM governance/tooling
 
----
-
 ## Candidate C — Read-only maintenance audit
-
-Goal:
-
-- automatically detect cleanup/efficiency targets without modifying repo state.
-
-Scope:
-
-- stale branches
-- merged PR branches
-- stale PRs
-- failed workflows
-- queue mismatches
-- stale command issues
-- docs/automation overlap candidates
 
 Likely files:
 
@@ -550,45 +394,19 @@ Risk:
 - LOW/MEDIUM governance/tooling
 - read-only only
 
----
-
 ## Candidate D — ACTIVE_QUEUE semi-generated sync
 
 Goal:
 
 - reduce manual status drift.
 
-Initial mode:
-
-- report mismatch only
-- later create PR to update ACTIVE_QUEUE
-
-Inputs:
-
-- GitHub PR state
-- workflow status
-- branch audit
-- issue #23 state
-- HIGH/HOLD issue state
-
----
-
 ## Candidate E — Queue aging and stale detection
-
-Goal:
-
-- detect stale branches
-- detect stale command issues
-- detect abandoned PRs
-- mark stale queue items
 
 Suggested future states:
 
 - `STALE_CANDIDATE`
 - `STALE`
 - `SUPERSEDED`
-
----
 
 ## Candidate F — Command state machine
 
@@ -608,25 +426,32 @@ Suggested future lifecycle:
 - `SUPERSEDED`
 - `STALE`
 
-Purpose:
-
-- future automation synchronization
-- Worker orchestration consistency
-- GitHub issue state consistency
-
----
-
 ## Candidate G — Structured Worker dry-run logs
-
-Goal:
-
-- auditable dry-run decision logs
-- improve future GitHub App observability
 
 Risk:
 
 - MEDIUM
 - must remain dry-run only
+
+## Candidate H — Governance/doc overlap cleanup
+
+Goal:
+
+- reduce duplicated operational guidance across docs.
+
+## Candidate I — Safe auto-merge implementation guard
+
+Goal:
+
+- encode safe auto-merge eligibility in command validation and future Worker decisions.
+
+Rules:
+
+- allow only safe LOW/MEDIUM scopes
+- deny HIGH/HOLD paths
+- deny unresolved review threads
+- deny broad unclear changed files
+- require GitHub Actions gates
 
 ---
 
@@ -639,7 +464,9 @@ Future direction:
   "laneOwners": {
     "GOVERNANCE": "chatgpt",
     "CSV_PIPELINE": "user_approval_required",
-    "PUBLIC_EXPOSURE": "high_review"
+    "PUBLIC_EXPOSURE": "high_review",
+    "AUTH_ROLE": "high_review",
+    "DEPLOY_SAFETY": "user_approval_required"
   }
 }
 ```
@@ -652,15 +479,12 @@ Purpose:
 
 ---
 
-# 9. Current admin/review direction
+# 9. Admin/review direction
 
 Direction:
 
 - not a generic CRUD admin
 - not a broad review app
-
-Target:
-
 - review workflow console
 - evidence-first curation system
 
@@ -677,25 +501,7 @@ Review console remains lower priority than operational stabilization.
 
 ---
 
-# 10. Current completed baseline
-
-Completed baseline items:
-
-- ChatGPT-main transition baseline
-- `docs/KOHEE_MASTER_CONTEXT.md`
-- `docs/KOHEE_ACTIVE_QUEUE.md`
-- Codex self-report distrust baseline
-- governance contract structure
-- issue #23 maintenance consolidation
-- scheduled Codex fan-out removal
-- manager runtime/admin removal
-- user-facing operator redaction
-- manager frontend label removal
-- policy guard baseline
-
----
-
-# 11. Do not touch without user approval
+# 10. Do not touch without user approval
 
 Never auto-change:
 
@@ -718,7 +524,7 @@ These remain:
 
 ---
 
-# 12. Current execution philosophy
+# 11. Execution philosophy
 
 Current KOHEE priority is not rapid feature expansion.
 
@@ -731,5 +537,7 @@ Current KOHEE priority is:
 - future parallel execution safety
 - operational observability
 - cleanup/efficiency automation
+- touchless LOW/MEDIUM execution
+- safe native auto-merge usage
 
 The current bottleneck is operational structure, not feature quantity.
