@@ -171,9 +171,7 @@ export async function jsonApi(path, options = {}) {
 }
 
 export function roleLabel(role) {
-  return (
-    { user: "일반 유저", manager: "매니저", admin: "관리자" }[role] || role
-  );
+  return { user: "일반 유저", admin: "관리자" }[role] || "일반 유저";
 }
 
 export function statusLabel(status) {
