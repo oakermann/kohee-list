@@ -1,4 +1,11 @@
-import { health, healthDb, versionInfo } from "./shared.js";
+import {
+  health,
+  healthDb,
+  requireAuth,
+  requireRole,
+  versionInfo,
+  withGuard,
+} from "./shared.js";
 import { login, logout, me, signup } from "./auth.js";
 import {
   addCafe,
@@ -39,6 +46,15 @@ import {
   resetCsv,
 } from "./csv.js";
 
+function adminOnly(handler) {
+  return (req, env) =>
+    withGuard(req, env, async () => {
+      const user = await requireAuth(req, env);
+      requireRole(user, ["admin"]);
+      return handler(req, env);
+    });
+}
+
 export const AUTH_ROUTES = [
   ["POST", "/signup", signup],
   ["POST", "/login", login],
@@ -63,22 +79,20 @@ export const USER_ROUTES = [
   ["POST", "/favorite", toggleFavorite],
 ];
 
-// This group is a routing surface, not the final permission contract.
-// Some handlers below enforce stricter admin-only checks internally.
-export const MANAGER_ROUTES = [
-  ["GET", "/submissions", getSubmissions],
-  ["GET", "/error-reports", getErrorReports],
-  ["POST", "/reply-error-report", replyErrorReport],
-  ["POST", "/resolve-error-report", resolveErrorReport],
-  ["POST", "/approve", approveSubmission],
-  ["POST", "/reject", rejectSubmission],
-  ["POST", "/update-submission", updateSubmission],
-  ["GET", "/cafes", listCafes],
-  ["POST", "/add", addCafe],
-  ["POST", "/edit", editCafe],
-  ["POST", "/delete", deleteCafe],
-  ["POST", "/restore", restoreCafe],
-  ["POST", "/import-csv", importCsv],
+export const ADMIN_OPERATION_ROUTES = [
+  ["GET", "/submissions", adminOnly(getSubmissions)],
+  ["GET", "/error-reports", adminOnly(getErrorReports)],
+  ["POST", "/reply-error-report", adminOnly(replyErrorReport)],
+  ["POST", "/resolve-error-report", adminOnly(resolveErrorReport)],
+  ["POST", "/approve", adminOnly(approveSubmission)],
+  ["POST", "/reject", adminOnly(rejectSubmission)],
+  ["POST", "/update-submission", adminOnly(updateSubmission)],
+  ["GET", "/cafes", adminOnly(listCafes)],
+  ["POST", "/add", adminOnly(addCafe)],
+  ["POST", "/edit", adminOnly(editCafe)],
+  ["POST", "/delete", adminOnly(deleteCafe)],
+  ["POST", "/restore", adminOnly(restoreCafe)],
+  ["POST", "/import-csv", adminOnly(importCsv)],
 ];
 
 export const ADMIN_ROUTES = [
@@ -99,6 +113,6 @@ export const ROUTES = [
   ...AUTH_ROUTES,
   ...PUBLIC_ROUTES,
   ...USER_ROUTES,
-  ...MANAGER_ROUTES,
+  ...ADMIN_OPERATION_ROUTES,
   ...ADMIN_ROUTES,
 ];
