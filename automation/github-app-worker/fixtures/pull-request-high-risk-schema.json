@@ -1,0 +1,22 @@
+{
+  "event": "pull_request",
+  "payload": {
+    "action": "opened",
+    "repository": {
+      "full_name": "oakermann/kohee-list"
+    },
+    "sender": {
+      "login": "oakermann"
+    },
+    "pull_request": {
+      "number": 102,
+      "body": "Risk: MEDIUM\nLane: GOVERNANCE\nSchema dry-run fixture.",
+      "draft": false
+    },
+    "kohee": {
+      "changed_files": [
+        "schema.sql"
+      ]
+    }
+  }
+}
