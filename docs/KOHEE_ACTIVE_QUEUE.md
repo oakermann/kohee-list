@@ -42,16 +42,42 @@ Do not trust by itself:
 - local commit claim
 - task-local done message
 
-Execution expectation:
+---
 
-- For LOW/MEDIUM tasks that ChatGPT can safely execute, ChatGPT should continue through PR creation, checks, review-thread verification, merge/auto-merge setup, and final evidence report without stopping at intermediate PR-open status.
-- Stop early only for HOLD/HIGH, failed checks, review findings, tool/API errors, missing permissions, or explicit user interruption.
-- For multi-lane safe work, default to parallel planning and independent PR lanes when file/risk overlap checks pass.
-- Prefer enabling GitHub native auto-merge for eligible safe PRs instead of manually polling and directly merging.
+# 1. Proper PR usage policy
+
+A pull request is not a chat progress report.
+
+Correct PR purposes:
+
+- reviewable code/docs change unit
+- validation/checks unit
+- audit trail for what changed and why
+- branch protection gate
+- rollback/reference point
+- merge unit for one coherent scope
+
+Incorrect PR usage:
+
+- opening a PR only to say work started
+- creating many tiny PRs for sequential edits to the same file when one coherent PR is enough
+- using PRs as TODO notes instead of issues or ACTIVE_QUEUE entries
+- using PRs as unresolved status reports when no file change is ready
+- leaving PRs open as reminders after the actual work moved elsewhere
+- creating parallel PRs that touch the same file or the same shared test path
+
+Operational rule:
+
+- Use issues/ACTIVE_QUEUE for task tracking.
+- Use PRs only when there is a concrete repo change to validate and merge.
+- Use auto-merge for eligible safe LOW/MEDIUM PRs.
+- Use direct merge only when auto-merge is not applicable and GitHub evidence confirms the PR is clean and safe.
+- Do not create a new PR for every minor queue wording change if the changes are part of the same active batch; amend/update the current batch PR instead.
+- After merge, stale branch cleanup must be tracked by maintenance audit.
 
 ---
 
-# 1. Safe auto-merge activation
+# 2. Safe auto-merge activation
 
 State: P0 operational efficiency target
 
@@ -100,7 +126,7 @@ If auto-merge enablement fails:
 
 ---
 
-# 2. Current repo state
+# 3. Current repo state
 
 Repository:
 
@@ -125,10 +151,11 @@ Current repo inefficiency targets:
 - repeated user prompts for merge continuation
 - excessive intermediate reporting
 - direct manual merge polling where auto-merge can safely wait instead
+- PRs being used as progress/status artifacts instead of clean change units
 
 ---
 
-# 3. Current P0 queue
+# 4. Current P0 queue
 
 ## P0-1 — ChatGPT-main stabilization
 
@@ -222,7 +249,7 @@ Target execution flow:
 1. user gives goal
 2. ChatGPT decomposes tasks
 3. safe lanes are parallelized automatically
-4. PRs are created automatically
+4. PRs are created automatically only for concrete repo changes
 5. GitHub native auto-merge is enabled for eligible safe PRs
 6. checks run under GitHub rules
 7. safe LOW/MEDIUM failures are retried automatically when possible
@@ -230,7 +257,7 @@ Target execution flow:
 
 ## P0-6 — Safe auto-merge activation
 
-State: newly promoted P0 target
+State: P0 target
 
 Goal:
 
@@ -242,12 +269,33 @@ Required behavior:
 - auto-merge enablement should be attempted after file/risk/review-thread gates pass.
 - ChatGPT should verify the final merged state later or report the blocker.
 
-Implementation candidate:
+## P0-7 — PR hygiene and usage cleanup
 
-- update orchestration practice immediately
-- later encode in `scripts/validate-kohee-command.mjs` and GitHub App Worker dry-run decision logs
+State: newly promoted operational cleanup target
 
-## P0-7 — GitHub App Worker Phase 2 dry-run
+Goal:
+
+- ensure PRs are used for their original purpose: reviewable changes and validation, not task chatter.
+
+Audit targets:
+
+- stale merged branches left after PRs
+- open PRs with no mergeable file change
+- PRs used as TODO/status records
+- many tiny sequential PRs touching the same file
+- superseded PRs still open or unclear
+- closed PR branches still alive
+
+Future maintenance audit should classify these as:
+
+- `OK_CHANGE_UNIT`
+- `MERGED_BRANCH_CLEANUP_CANDIDATE`
+- `SUPERSEDED_PR`
+- `STATUS_ONLY_PR_MISUSE`
+- `SAME_FILE_PR_FRAGMENTATION`
+- `REVIEW_REQUIRED`
+
+## P0-8 — GitHub App Worker Phase 2 dry-run
 
 State: deferred until explicit user start
 
@@ -267,7 +315,7 @@ Must not:
 
 ---
 
-# 4. Current blockers
+# 5. Current blockers
 
 ## Blocker A — automation control-plane incomplete
 
@@ -306,9 +354,14 @@ Needed future observability:
 - repeated PR-open-only reporting
 - direct merge polling when auto-merge can safely wait
 
+## Blocker F — PR usage drift
+
+- PRs can drift into progress-report/status-tracking artifacts if not governed.
+- ACTIVE_QUEUE/issues should carry task status; PRs should carry concrete repo changes.
+
 ---
 
-# 5. Safe lanes and parallel defaults
+# 6. Safe lanes and parallel defaults
 
 Safe LOW/MEDIUM candidates:
 
@@ -345,7 +398,7 @@ Parallel default rule:
 
 ---
 
-# 6. Current HIGH/HOLD
+# 7. Current HIGH/HOLD
 
 - HOLD — D1 manager role schema removal
 - HOLD — resetCsv redesign
@@ -355,7 +408,7 @@ These require explicit user approval.
 
 ---
 
-# 7. Current next patch candidates
+# 8. Current next patch candidates
 
 ## Candidate A — Parallel lane validator
 
@@ -445,17 +498,23 @@ Goal:
 
 - encode safe auto-merge eligibility in command validation and future Worker decisions.
 
-Rules:
+## Candidate J — PR hygiene audit
 
-- allow only safe LOW/MEDIUM scopes
-- deny HIGH/HOLD paths
-- deny unresolved review threads
-- deny broad unclear changed files
-- require GitHub Actions gates
+Goal:
+
+- detect PR misuse and stale branch/PR cleanup targets.
+
+Scope:
+
+- status-only PRs
+- same-file PR fragmentation
+- superseded open/closed PRs
+- merged branches still present
+- PRs that should have been issues or ACTIVE_QUEUE updates
 
 ---
 
-# 8. Lane ownership direction
+# 9. Lane ownership direction
 
 Future direction:
 
@@ -479,7 +538,7 @@ Purpose:
 
 ---
 
-# 9. Admin/review direction
+# 10. Admin/review direction
 
 Direction:
 
@@ -488,20 +547,11 @@ Direction:
 - review workflow console
 - evidence-first curation system
 
-Important future concepts:
-
-- evidence
-- hold reason
-- duplicate suspicion
-- category verification
-- review diff
-- staged review application
-
 Review console remains lower priority than operational stabilization.
 
 ---
 
-# 10. Do not touch without user approval
+# 11. Do not touch without user approval
 
 Never auto-change:
 
@@ -524,7 +574,7 @@ These remain:
 
 ---
 
-# 11. Execution philosophy
+# 12. Execution philosophy
 
 Current KOHEE priority is not rapid feature expansion.
 
@@ -539,5 +589,6 @@ Current KOHEE priority is:
 - cleanup/efficiency automation
 - touchless LOW/MEDIUM execution
 - safe native auto-merge usage
+- proper PR hygiene
 
 The current bottleneck is operational structure, not feature quantity.
