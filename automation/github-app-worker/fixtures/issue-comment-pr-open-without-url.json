@@ -1,0 +1,18 @@
+{
+  "event": "issue_comment",
+  "payload": {
+    "action": "created",
+    "repository": {
+      "full_name": "oakermann/kohee-list"
+    },
+    "sender": {
+      "login": "chatgpt-codex-connector[bot]"
+    },
+    "issue": {
+      "number": 103
+    },
+    "comment": {
+      "body": "KOHEE_STATUS:\n  state: PR_OPEN\n  result: PR was created but no actual GitHub PR URL is available."
+    }
+  }
+}
