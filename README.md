@@ -5,6 +5,12 @@ Cloudflare Pages + Workers + D1 based cafe curation platform for KOHEE LIST.
 This workspace keeps the live behavior intact while reorganizing the codebase
 into a cleaner, contract-preserving structure.
 
+## Automation Status
+
+Current GitHub / Codex / ChatGPT automation operating baseline is documented in [`docs/CODEX_AUTOMATION_STATUS.md`](docs/CODEX_AUTOMATION_STATUS.md).
+
+Use that status document before changing automation workflows, Codex execution rules, watchdog behavior, or PR evidence validation.
+
 ## Structure
 
 - `worker.js`
