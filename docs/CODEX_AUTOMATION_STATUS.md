@@ -12,6 +12,7 @@ The current automation is usable, but it is not fully hands-off.
 - GitHub Actions is the validation and deploy gate.
 - Codex Cloud is useful for review, analysis, and direct task PRs, but its self-reports must be checked against GitHub evidence.
 - GitHub issue `@codex` triggers can wake Codex, but they are not treated as the primary PR publishing path.
+- LOW/MEDIUM safe PRs should use GitHub native auto-merge when checks and review-thread requirements are satisfied.
 - HIGH-risk work remains HOLD / user-approved only.
 
 ## Reliable paths
@@ -26,6 +27,7 @@ This path has been verified for:
 - Reading changed files and patches.
 - Reading GitHub Actions checks.
 - Reading and resolving review threads.
+- Enabling native auto-merge for safe PRs when allowed by repository settings.
 - Squash-merging pull requests after checks and review threads pass.
 - Updating and closing issues.
 
@@ -33,7 +35,9 @@ Operational rule:
 
 - Create normal PRs by default.
 - Avoid draft PRs unless the user explicitly asks for draft.
-- Merge only after GitHub Actions checks pass and review threads are resolved.
+- Enable GitHub native auto-merge by default for safe LOW/MEDIUM PRs.
+- Do not enable auto-merge for HIGH-risk runtime/policy PRs.
+- Manual merge remains acceptable if native auto-merge is unavailable.
 
 ### GitHub Actions validation
 
@@ -107,6 +111,53 @@ Operational rule:
 - PR body must not retain stale `HOLD_CODEX_PR_PUBLISHING` / `UNVERIFIED` language if an actual PR exists.
 - `scripts/kohee-evidence-check.mjs` is expected to catch conflicting evidence claims.
 
+## Auto-merge policy
+
+Use GitHub native auto-merge to reduce manual clicks for safe PRs.
+
+Auto-merge is allowed for:
+
+- Docs-only changes.
+- Test-only changes.
+- Audit/tooling changes.
+- Route comments or governance clarity with no runtime behavior change.
+- Frontend rendering cleanup that does not change auth/session/permissions.
+- CSV export-only changes that do not touch import/reset semantics.
+- LOW/MEDIUM maintenance batch PRs after allowed/denied file review.
+
+Auto-merge is not allowed for:
+
+- D1 schema or migrations.
+- Auth, sessions, secrets, or role/permission policy.
+- Public `/data` exposure or public API behavior.
+- CSV import/reset semantics or review-result CSV upload/import.
+- Destructive data behavior.
+- Cloudflare deploy workflow behavior or secrets.
+- Manager role removal or production access semantics.
+- Any PR with unresolved review threads or unclear changed files.
+
+Operational flow:
+
+1. Open one normal PR for a safe maintenance batch.
+2. Check changed files and PR body evidence.
+3. Confirm the PR is LOW/MEDIUM and outside the auto-merge denylist.
+4. Enable GitHub native auto-merge before checks finish when safe.
+5. Let GitHub merge automatically after required checks and review-thread requirements pass.
+6. If native auto-merge is unavailable, fall back to manual connector merge after checks pass.
+7. Record DONE/HOLD status in the batch or child issue after merge.
+
+Do not create a separate custom auto-merge workflow unless explicitly approved. Native GitHub auto-merge is preferred because repository branch protection and required checks remain the gate.
+
+## Batch operating model
+
+Prefer one batch parent issue for multiple related tasks instead of many small command issues.
+
+- Codex issue-triggered work should report `PATCH_READY`, `DONE_NO_DEPLOY`, `HOLD_USER_APPROVAL`, or `HOLD_HIGH_RISK`.
+- Codex issue-triggered work must not claim `PR_OPEN` from `make_pr` metadata, local commits, or branch names without an actual GitHub PR URL.
+- ChatGPT GitHub connector should collect safe patch outputs into one integration branch when practical.
+- Prefer one normal PR and one squash merge commit per maintenance batch.
+- Keep risky policy decisions as HOLD notes inside the batch instead of mixing runtime changes into the same patch.
+
 ## Live automation issues
 
 ### Active
@@ -123,6 +174,16 @@ Operational rule:
   - Do not run automatically.
   - Current project rules still use `admin`, `manager`, and `user`; manager removal requires separate approval and a dedicated migration/permission plan.
 
+- `#59` `[KOHEE_COMMAND] AUTH_ROLE / HIGH / Audit manager approved-cafe edit permissions`
+  - HIGH / AUTH_ROLE.
+  - Held with `HOLD_USER_APPROVAL`.
+  - Do not change runtime permissions until a separate policy is approved.
+
+- `#60` `[KOHEE_COMMAND] PUBLIC_EXPOSURE / HIGH / Audit user-facing operator username exposure`
+  - HIGH / PUBLIC_EXPOSURE.
+  - Held with `HOLD_USER_APPROVAL`.
+  - Do not change user-facing API/frontend behavior until a separate policy is approved.
+
 ### Closed cleanup set
 
 The following smoke/test/parallel issues were completed and closed to keep the watchdog queue clean:
@@ -137,6 +198,10 @@ The following smoke/test/parallel issues were completed and closed to keep the w
 - `#36` Codex Cloud automation gates upgrade.
 - `#39` dispatch v1.5 smoke test.
 - `#45` Codex PR publishing E2E docs smoke.
+- `#55` API cafe category whitelist, completed by PR #62.
+- `#56` duplicate of #57, closed as duplicate.
+- `#57` review CSV formula guard, completed by PR #61.
+- `#58` route grouping clarity, completed by PR #61.
 
 ## Pull requests that established this baseline
 
@@ -153,17 +218,20 @@ The following smoke/test/parallel issues were completed and closed to keep the w
 - `#50` watchdog comment `KOHEE_STATUS` support.
 - `#51` cloud maintenance ACTIVE classification.
 - `#52` watchdog regression tests.
+- `#61` review CSV export formula guard and route grouping clarity.
+- `#62` API cafe category whitelist.
 
 ## Operating procedure for future work
 
 1. Classify the task as LOW / MEDIUM / HIGH.
-2. Confirm allowed files and denied files before changes.
-3. Prefer ChatGPT GitHub connector for actual PR-producing work.
-4. Keep direct Codex Cloud tasks evidence-gated.
-5. Treat issue `@codex` as analysis / ACK / HOLD unless it produces an actual PR URL.
-6. Check actual GitHub PR URL, head SHA, changed files, checks, and review threads.
-7. Merge only when checks pass, threads are resolved, and the diff is within scope.
-8. Keep HIGH-risk changes as HOLD until the user explicitly approves.
+2. Prefer a single batch issue for related work.
+3. Confirm allowed files and denied files before changes.
+4. Prefer ChatGPT GitHub connector for actual PR-producing work.
+5. Keep direct Codex Cloud tasks evidence-gated.
+6. Treat issue `@codex` as analysis / PATCH_READY / HOLD unless it produces an actual PR URL.
+7. Check actual GitHub PR URL, head SHA, changed files, checks, and review threads.
+8. Enable native auto-merge for safe LOW/MEDIUM PRs when available.
+9. Keep HIGH-risk changes as HOLD until the user explicitly approves.
 
 ## HIGH-risk areas
 
@@ -183,11 +251,12 @@ Current practical automation level:
 
 - GitHub PR execution through ChatGPT connector: high.
 - Validation and watchdog coverage: high.
+- Native auto-merge for safe PRs: enabled operationally when repository settings allow it.
 - Direct Codex Cloud autonomous execution: medium, evidence-gated.
 - Issue `@codex` as PR publisher: limited.
-- Full hands-off LOW/MEDIUM auto-merge: not yet enabled.
+- Fully hands-off HIGH-risk automation: not enabled.
 
 Estimated status:
 
-- Practical automation: 80% to 85%.
-- Fully hands-off automation: 60% to 65%.
+- Practical automation: 85% to 90%.
+- Fully hands-off automation: 65% to 70%.
