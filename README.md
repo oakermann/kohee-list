@@ -73,41 +73,23 @@ Root HTML/assets are synced mirrors for repository validation only, not a separa
 - Frontend auth is cookie-first and no longer stores the session token in `localStorage`
 - Login failures are rate-limited by IP + username
 - Signup and user submissions are rate-limited to reduce spam
-- Roles:
+- Runtime roles exposed to clients:
   - `user`
-  - `manager`
   - `admin`
+- Legacy `manager` values may still exist in old data or schema history, but current runtime/admin behavior normalizes non-admin users to `user`. Do not add or expand manager behavior.
 - First admin bootstrap is protected by `FIRST_ADMIN_CODE`
   - The very first signup becomes `admin`
   - That first signup must provide the configured admin code
 
 ## Required Cloudflare Setup
 
-1. Create D1 and put the binding info into `wrangler.toml`
-2. Run schema for a new database:
-
-```powershell
-npx.cmd wrangler d1 execute kohee-list --remote --file=./schema.sql
-```
-
-For an existing local database, apply migrations in order instead of replaying
-the whole schema:
-
-```powershell
-npx.cmd wrangler d1 execute kohee-list --local --file=./migrations/0002_rate_limits.sql
-npx.cmd wrangler d1 execute kohee-list --local --file=./migrations/0003_audit_logs.sql
-npx.cmd wrangler d1 execute kohee-list --local --file=./migrations/0004_session_security.sql
-```
-
-For the production D1 database, use `--remote`:
-
-```powershell
-npx.cmd wrangler d1 execute kohee-list --remote --file=./migrations/0002_rate_limits.sql
-npx.cmd wrangler d1 execute kohee-list --remote --file=./migrations/0003_audit_logs.sql
-npx.cmd wrangler d1 execute kohee-list --remote --file=./migrations/0004_session_security.sql
-```
-
-3. Set Worker secrets:
+1. Create D1 and put the binding info into `wrangler.toml`.
+2. For new databases or existing production databases, follow `docs/D1_MIGRATION_RUNBOOK.md` before applying any schema or migration file.
+   - Production D1 schema/migration changes are HIGH/HOLD work.
+   - Do not copy-paste remote migration commands without an approved backup, migration, and rollback plan.
+   - GitHub Actions must not automatically apply remote D1 migrations.
+3. For local-only development checks, schema/migration commands may be run with local bindings after confirming the target is not production.
+4. Set Worker secrets:
 
 ```powershell
 npx.cmd wrangler secret put SESSION_SECRET
@@ -117,7 +99,7 @@ npx.cmd wrangler secret put FIRST_ADMIN_CODE
 `SESSION_SECRET` is mandatory in every environment that uses auth/session flows.
 There is no insecure default fallback in production code.
 
-4. Confirm environment variables in `wrangler.toml`
+5. Confirm environment variables in `wrangler.toml`
    - `SESSION_DAYS`
    - `FRONTEND_ORIGIN`
    - `ALLOW_NULL_ORIGIN` only for explicit local/dev testing, normally unset
@@ -248,7 +230,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\import-csv.ps1 -CsvPath .\bac
   - `/update-submission`
   - `/approve`
   - `/reject`
-  - manager cannot set `oakerman_pick`
+  - non-admin users cannot set `oakerman_pick`
   - admin can set `oakerman_pick`
 
 The script creates a temporary user and removes it during cleanup.
@@ -293,9 +275,9 @@ This keeps backup and restore aligned with the same CSV schema used by the admin
 - 로그아웃 가능
 - 일반 유저 제보 가능
 - 일반 유저가 `/add` 접근 시 `403`
-- manager/admin이 후보 카페 추가 가능
+- admin이 후보 카페 추가 가능
 - 후보 카페는 admin 승인 전 public `/data`에 노출되지 않음
-- manager가 `oakerman_pick` 변경 못함
+- non-admin users cannot set `oakerman_pick`
 - admin은 `oakerman_pick` 변경 가능
 - CSV dry-run 가능
 - CSV 실제 import 가능
@@ -348,9 +330,10 @@ To activate CI for real:
 3. Push this workspace to GitHub
 4. GitHub Actions will start running `Validate` on push and pull request
 
-Required GitHub repository secret for Cloudflare deploy workflow:
+Required GitHub repository secrets for Cloudflare deploy workflow:
 
 - `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
 
 What they do:
 
@@ -364,7 +347,7 @@ What they do:
   - Uploads backup artifacts
   - Opens or updates a GitHub issue if maintenance fails
 
-`CLOUDFLARE_ACCOUNT_ID` is embedded in `wrangler.toml` for Worker deploys and passed as a workflow environment value for Pages deploys.
+Secrets must be stored in GitHub repository Settings -> Secrets and variables -> Actions. Do not hardcode secret values in code, docs examples, or logs.
 
 ## Frontend Notes
 
@@ -397,10 +380,10 @@ npm run check:deploy-sync
 - CSV is a secondary admin tool, not the main workflow
 - Primary operating flow is:
   - user submit
-  - manager/admin review
+  - admin review
   - approve/reject
   - reflect into cafes
-- Error reports now support admin/manager replies
+- Error reports now support admin replies
 - My page shows favorites, submissions, and error report replies
 
 ## Caution
