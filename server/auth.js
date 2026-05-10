@@ -15,6 +15,7 @@ import {
   json,
   nowIso,
   readJson,
+  safeRole,
   verifyPassword,
   withGuard,
 } from "./shared.js";
@@ -25,6 +26,10 @@ import {
   rateLimitKey,
   recordRateLimitFailure,
 } from "./security.js";
+
+function publicRole(role) {
+  return safeRole(role) === "admin" ? "admin" : "user";
+}
 
 function secureRandomToken() {
   return (
@@ -168,7 +173,7 @@ export async function login(req, env) {
     return json(
       {
         ok: true,
-        user: { id: user.id, username: user.username, role: user.role },
+        user: { id: user.id, username: user.username, role: publicRole(user.role) },
         csrfToken,
       },
       200,
@@ -215,7 +220,7 @@ export async function me(req, env) {
     return json(
       {
         ok: true,
-        user: { id: user.user_id, username: user.username, role: user.role },
+        user: { id: user.user_id, username: user.username, role: publicRole(user.role) },
         csrfToken,
       },
       200,
