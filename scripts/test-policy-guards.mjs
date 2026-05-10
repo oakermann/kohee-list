@@ -34,9 +34,9 @@ for (const [path, content] of [
   [".pages-deploy/assets/common.js", deployCommon],
 ]) {
   assert.equal(
-    /manager\s*:\s*["'`]매니저["'`]/.test(content),
+    /\bmanager\s*:/.test(content),
     false,
-    `${path} should not expose a legacy manager role label`,
+    `${path} should not expose any legacy manager role key`,
   );
   assert.ok(content.includes('admin: "관리자"'));
   assert.ok(content.includes('|| "일반 유저"'));
