@@ -2,9 +2,16 @@ name: KOHEE Codex Cloud Maintenance
 
 on:
   workflow_dispatch:
-  schedule:
-    # 09:10 KST. Codex Cloud is the worker; Actions is only the scheduler here.
-    - cron: "10 0 * * *"
+    inputs:
+      trigger_codex:
+        description: "Post an explicit @codex analysis request to #23"
+        required: false
+        default: false
+        type: boolean
+      note:
+        description: "Short maintenance note for the #23 control issue"
+        required: false
+        default: "routine maintenance check"
 
 permissions:
   contents: read
@@ -20,7 +27,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Request parallel Codex Cloud maintenance
+      - name: Record manual maintenance request
         uses: actions/github-script@v7
         with:
           script: |
@@ -29,267 +36,88 @@ jobs:
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const now = new Date().toISOString();
             const runId = context.runId;
-            const eventName = context.eventName;
-            const forcePrSmoke = eventName === "workflow_dispatch";
+            const controlIssueNumber = 23;
+            const triggerCodex = core.getBooleanInput("trigger_codex");
+            const rawNote = core.getInput("note") || "routine maintenance check";
+            const safeNote = rawNote.replace(/\s+/g, " ").trim().slice(0, 240);
 
-            const tasks = [
-              {
-                key: "verify-deploy-smoke",
-                title: "KOHEE_PARALLEL_MAINTENANCE: deploy smoke verification",
-                risk: "LOW",
-                lane: "DEPLOY_SAFETY",
-                terminal: "DONE_NO_DEPLOY | HOLD",
-                runtimeChangeAllowed: false,
-                task:
-                  "Read-only verification. Check latest audit warnings, open PR state, deploy status, and live smoke for Pages/Worker. Do not edit files and do not open a PR.",
-                acceptance: [
-                  "Run or verify relevant checks: npm run check:deploy-sync, npm run test:unit, npm run audit:kohee, git diff --check.",
-                  "Verify live smoke when possible: Pages admin load, Worker /health, /health/db, /version, /data.",
-                  "Report KOHEE_STATUS with VERIFIED, UNVERIFIED, or HOLD_DEPLOY_BLOCKED.",
-                ],
-                allowedFiles: ["read-only"],
-                deniedFiles: ["*"],
-              },
-              {
-                key: "manager-removal-audit",
-                title: "KOHEE_PARALLEL_MAINTENANCE: manager removal audit",
-                risk: "MEDIUM",
-                lane: "AUTH_ROLE",
-                terminal: "DONE_NO_DEPLOY | HOLD",
-                runtimeChangeAllowed: false,
-                task:
-                  "Audit manager role removal impact. Manager is legacy and should not be expanded. Do not remove runtime behavior in this task; report exact safe cleanup candidates and HOLD risky auth/permission changes.",
-                acceptance: [
-                  "Identify manager references and classify as safe cleanup, follow-up, or HOLD.",
-                  "Do not change auth/session/security behavior.",
-                  "Do not open a PR unless the change is documentation-only and scoped to this issue.",
-                ],
-                allowedFiles: ["read-only", "docs/audits/KOHEE_FINDINGS.md only if documenting HOLD"],
-                deniedFiles: ["server/**", "assets/**", "migrations/**", "schema.sql"],
-              },
-              {
-                key: "review-result-csv-import-audit",
-                title: "KOHEE_PARALLEL_MAINTENANCE: review-result CSV import HOLD audit",
-                risk: "HIGH",
-                lane: "CSV_PIPELINE",
-                terminal: "DONE_NO_DEPLOY | HOLD",
-                runtimeChangeAllowed: false,
-                task:
-                  "Audit review-result CSV import/upload only. This feature remains HOLD. Do not implement import/upload, reset behavior, D1 changes, or public API changes.",
-                acceptance: [
-                  "Confirm review-result CSV import/upload is not implemented.",
-                  "Confirm no public exposure or accidental UI activation exists.",
-                  "Report HOLD if implementation is requested or required.",
-                ],
-                allowedFiles: ["read-only"],
-                deniedFiles: ["server/**", "assets/**", "migrations/**", "schema.sql"],
-              },
-              {
-                key: "admin-console-ux-cleanup",
-                title: "KOHEE_PARALLEL_MAINTENANCE: admin console UX cleanup",
-                risk: "MEDIUM",
-                lane: "FRONTEND_RENDERING",
-                terminal: "DONE_NO_DEPLOY | PR_OPEN | HOLD",
-                runtimeChangeAllowed: false,
-                task:
-                  "Inspect admin console fallback/UX and patch only safe frontend cleanup using existing endpoints. Keep safe DOM rendering and root/.pages-deploy sync.",
-                acceptance: [
-                  "Patch only if a clear LOW/MEDIUM admin UX cleanup exists.",
-                  "Use existing endpoints only.",
-                  "Do not change login/session checks, role checks, permission gates, or admin/manager/user authorization logic.",
-                  "Bump admin asset versions if admin assets change.",
-                  "Run npm run check:deploy-sync, npm run test:unit, npm run audit:kohee, git diff --check.",
-                  "If a PR is opened, include the actual GitHub PR URL. A commit hash without a PR URL is UNVERIFIED.",
-                ],
-                allowedFiles: [
-                  "admin.html",
-                  ".pages-deploy/admin.html",
-                  "assets/admin.js",
-                  ".pages-deploy/assets/admin.js",
-                  "assets/admin.css",
-                  ".pages-deploy/assets/admin.css",
-                  "scripts/test-unit.mjs only if needed",
-                ],
-                deniedFiles: [
-                  "server/**",
-                  "migrations/**",
-                  "schema.sql",
-                  ".github/workflows/**",
-                  "login/session/auth/role/permission guard changes",
-                ],
-              },
-              {
-                key: "codex-workflow-verification",
-                title: "KOHEE_PARALLEL_MAINTENANCE: Codex Cloud workflow verification",
-                risk: "LOW",
-                lane: "GOVERNANCE",
-                terminal: "DONE_NO_DEPLOY | HOLD",
-                runtimeChangeAllowed: false,
-                task:
-                  "Verify Codex Cloud workflow behavior from GitHub evidence. Confirm maintenance issues, @codex replies, and PR/check flow. Do not edit code.",
-                acceptance: [
-                  "Check recent KOHEE_CLOUD_MAINTENANCE and KOHEE_PARALLEL_MAINTENANCE issues.",
-                  "Confirm @codex acknowledgement or mark QUEUED_STALE/HOLD_CODEX_NO_RESPONSE.",
-                  "Do not open a PR for this verification-only task.",
-                ],
-                allowedFiles: ["read-only"],
-                deniedFiles: ["*"],
-              },
-              {
-                key: "findings-docs-cleanup",
-                title: "KOHEE_PARALLEL_MAINTENANCE: findings docs cleanup",
-                risk: "LOW",
-                lane: "GOVERNANCE",
-                terminal: "DONE_NO_DEPLOY | PR_OPEN | HOLD",
-                runtimeChangeAllowed: false,
-                task:
-                  "Clean docs/audits/KOHEE_FINDINGS.md only if it has stale, duplicated, or oversized active/recent findings. Do not change runtime code.",
-                acceptance: [
-                  "Keep only active OPEN/HOLD/recent fixed items.",
-                  "Do not paste long logs.",
-                  "Open a docs-only PR if cleanup is needed.",
-                  "If a PR is opened, include the actual GitHub PR URL. A commit hash without a PR URL is UNVERIFIED.",
-                  "Do not edit runtime files.",
-                ],
-                allowedFiles: ["docs/audits/KOHEE_FINDINGS.md"],
-                deniedFiles: ["server/**", "assets/**", ".github/workflows/**", "migrations/**", "schema.sql"],
-              },
-              {
-                key: "pr-publishing-smoke",
-                title: "KOHEE_PARALLEL_MAINTENANCE: Codex PR publishing smoke",
-                risk: "LOW",
-                lane: "GOVERNANCE",
-                terminal: "DONE_NO_DEPLOY | PR_OPEN | HOLD",
-                runtimeChangeAllowed: false,
-                task:
-                  "Verify Codex Cloud can publish a real GitHub PR for a safe docs-only change. For workflow_dispatch/manual runs, make a tiny docs-only smoke note update in docs/audits/KOHEE_FINDINGS.md and open a real GitHub PR. For scheduled runs, do not create noise unless a safe docs-only maintenance patch is actually needed.",
-                acceptance: [
-                  "Do not edit runtime files.",
-                  "If force_pr_smoke is true, make a tiny docs-only update to a single reusable PR publishing smoke-test note in docs/audits/KOHEE_FINDINGS.md.",
-                  "If force_pr_smoke is true, open a real GitHub PR and include the actual PR URL.",
-                  "Before editing for force_pr_smoke, verify you have a real Git remote/push path or another GitHub PR creation path that can return an actual PR URL.",
-                  "If you cannot create a real PR URL, do not edit files, do not commit, and report HOLD / UNVERIFIED with blocker HOLD_CODEX_PR_PUBLISHING.",
-                  "If force_pr_smoke is false and no safe docs-only change is needed, reply DONE_NO_DEPLOY / no changes needed.",
-                  "Any report that mentions a commit, branch, patch, make_pr, or PR draft without an actual GitHub PR URL is UNVERIFIED and must not be reported as PR_OPEN or successful.",
-                  "Run git diff --check and any lightweight relevant checks.",
-                ],
-                allowedFiles: ["docs/audits/KOHEE_FINDINGS.md"],
-                deniedFiles: ["server/**", "assets/**", ".github/workflows/**", "migrations/**", "schema.sql"],
-                extraFields: [`  force_pr_smoke: ${forcePrSmoke}`],
-              },
+            const sharedRules = [
+              "Operating rules:",
+              "- Use #23 as the single ACTIVE maintenance control issue.",
+              "- Do not create parallel maintenance issues from this workflow.",
+              "- Codex issue-triggered work is analysis-only unless a real GitHub PR URL exists.",
+              "- Report PATCH_READY, DONE_NO_DEPLOY, or HOLD; do not claim PR_OPEN without an actual GitHub PR URL.",
+              "- HIGH-risk work remains HOLD / user-approved only.",
+              "- ChatGPT GitHub connector remains the reliable executor for branch, file, PR, check, and merge operations.",
             ];
 
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
+            const body = triggerCodex
+              ? [
+                  "@codex",
+                  "",
+                  "KOHEE_COMMAND:",
+                  `  command_id: manual-cloud-maintenance-${runId}`,
+                  "  state: QUEUED",
+                  "  risk: MEDIUM",
+                  "  lane: DEPLOY_SAFETY",
+                  "  source: manual KOHEE Codex Cloud Maintenance workflow",
+                  "  owner: codex",
+                  "  terminal_state: DONE_NO_DEPLOY | PATCH_READY | HOLD",
+                  "  user_action_required: false",
+                  "  runtime_change_allowed: false",
+                  `  task: ${safeNote}. Inspect current GitHub evidence and report safe maintenance findings only. Do not create parallel issues. Do not edit files or open a PR from this issue-triggered path unless an actual GitHub PR URL can be produced and the work is safe LOW/MEDIUM.`,
+                  "  acceptance_criteria:",
+                  "    - Check open PR state and open KOHEE automation issues.",
+                  "    - Report DONE_NO_DEPLOY if no action is needed.",
+                  "    - Report PATCH_READY if a safe LOW/MEDIUM patch should be collected by ChatGPT GitHub connector.",
+                  "    - Report HOLD for HIGH-risk, policy, permission, secret, D1/schema, CSV import/reset, or public API behavior decisions.",
+                  "    - Do not report PR_OPEN without an actual GitHub PR URL.",
+                  "  allowed_files:",
+                  "    - read-only",
+                  "  denied_files:",
+                  "    - *",
+                  "  do_not_change:",
+                  "    - D1/schema/migrations",
+                  "    - CSV import/reset behavior",
+                  "    - auth/session/security behavior",
+                  "    - public /data behavior",
+                  "    - deploy workflow behavior",
+                  "    - manager role expansion/removal",
+                  "    - review-result CSV import/upload",
+                  `  created_at: ${now}`,
+                  `  last_updated_at: ${now}`,
+                  "",
+                  ...sharedRules,
+                  "",
+                  `Workflow run: ${runUrl}`,
+                ]
+              : [
+                  "KOHEE_MAINTENANCE_NOTE:",
+                  "  state: RECORDED",
+                  "  issue: #23",
+                  "  trigger_codex: false",
+                  `  note: ${safeNote}`,
+                  `  recorded_at: ${now}`,
+                  "",
+                  "No @codex mention was posted because trigger_codex=false. This avoids scheduled/accidental fan-out noise.",
+                  "",
+                  ...sharedRules,
+                  "",
+                  `Workflow run: ${runUrl}`,
+                ];
+
+            await github.rest.issues.createComment({
               owner,
               repo,
-              state: "open",
+              issue_number: controlIssueNumber,
+              body: body.join("\n"),
             });
 
-            const createdIssueNumbers = [];
-
-            for (const task of tasks) {
-              const existing = issues.find((issue) => issue.title === task.title && !issue.pull_request);
-              const issueBody = [
-                "KOHEE_PARALLEL_MAINTENANCE:",
-                `  key: ${task.key}`,
-                "  purpose: Codex Cloud is the primary worker for this independent maintenance slice.",
-                "  state: ACTIVE",
-                `  risk: ${task.risk}`,
-                `  lane: ${task.lane}`,
-                "  owner: codex",
-                "  user_action_required: false",
-                "",
-                "Parallel rules:",
-                "- This issue is an independent Codex Cloud work slice.",
-                "- Respect allowed_files and denied_files to avoid parallel conflicts.",
-                "- If reporting PR_OPEN, include an actual GitHub PR URL. If there is no PR URL, status is UNVERIFIED, not PR_OPEN.",
-                "- If reporting a commit, branch, patch, make_pr call, or PR draft, include an actual GitHub PR URL or report UNVERIFIED.",
-                "- A commit hash, branch name, make_pr note, or internal draft is not GitHub evidence by itself.",
-                "- Before editing any file for a task that may require PR_OPEN, verify that a real GitHub PR URL can be created. If not, do not edit or commit; report HOLD_CODEX_PR_PUBLISHING.",
-                "- GitHub Actions validates PRs and deploys only after clean main merges.",
-                "- HIGH-risk or permission/secret/scope issues remain HOLD.",
-                "",
-                `Last scheduler run: ${runUrl}`,
-                `Last updated: ${now}`,
-              ].join("\n");
-
-              let issueNumber;
-              if (existing) {
-                await github.rest.issues.update({
-                  owner,
-                  repo,
-                  issue_number: existing.number,
-                  body: issueBody,
-                });
-                issueNumber = existing.number;
-              } else {
-                const created = await github.rest.issues.create({
-                  owner,
-                  repo,
-                  title: task.title,
-                  body: issueBody,
-                });
-                issueNumber = created.data.number;
-              }
-              createdIssueNumbers.push(issueNumber);
-
-              const triggerBody = [
-                "@codex",
-                "",
-                "KOHEE_COMMAND:",
-                `  command_id: cloud-maintenance-${task.key}-${runId}`,
-                "  state: QUEUED",
-                `  risk: ${task.risk}`,
-                `  lane: ${task.lane}`,
-                "  source: GitHub Actions parallel scheduler",
-                "  owner: codex",
-                `  terminal_state: ${task.terminal}`,
-                "  user_action_required: false",
-                `  runtime_change_allowed: ${task.runtimeChangeAllowed}`,
-                `  task: ${task.task}`,
-                "  acceptance_criteria:",
-                ...task.acceptance.map((item) => `    - ${item}`),
-                "    - If reporting PR_OPEN, include an actual GitHub PR URL. If there is no PR URL, report UNVERIFIED instead.",
-                "    - If reporting any commit, branch, patch, make_pr call, or PR draft, include an actual GitHub PR URL. Without that URL, report UNVERIFIED and do not claim the change landed.",
-                "    - If PR creation is required but no Git remote/push path or actual PR URL creation path is available, do not edit or commit; report HOLD_CODEX_PR_PUBLISHING.",
-                "  allowed_files:",
-                ...task.allowedFiles.map((item) => `    - ${item}`),
-                "  denied_files:",
-                ...task.deniedFiles.map((item) => `    - ${item}`),
-                ...(task.extraFields || []),
-                "  do_not_change:",
-                "    - D1/schema/migrations",
-                "    - CSV import/reset behavior",
-                "    - auth/session/security behavior unless this task is audit-only",
-                "    - public /data behavior",
-                "    - deploy workflow behavior",
-                "    - manager role expansion",
-                "    - review-result CSV import/upload",
-                "  high_risk_hold:",
-                "    - server behavior changes beyond narrow safe LOW/MEDIUM fixes",
-                "    - public API exposure",
-                "    - auth/session/security",
-                "    - D1/schema/migration",
-                "    - CSV import/reset semantics",
-                "    - role/permission policy",
-                "    - Cloudflare secret/token/permission blockers",
-                `  created_at: ${now}`,
-                `  last_updated_at: ${now}`,
-                "",
-                "Codex Cloud is the primary executor for this slice. GitHub Actions is the validation/deploy gate.",
-              ].join("\n");
-
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: issueNumber,
-                body: triggerBody,
-              });
-            }
-
             await core.summary
-              .addHeading("KOHEE Parallel Codex Cloud Maintenance")
-              .addRaw(`Requested ${createdIssueNumbers.length} parallel Codex Cloud maintenance slices.`)
+              .addHeading("KOHEE Codex Cloud Maintenance")
+              .addRaw(`Recorded maintenance note on #${controlIssueNumber}.`)
               .addBreak()
-              .addRaw(`Issues: ${createdIssueNumbers.map((n) => `#${n}`).join(", ")}`)
+              .addRaw(`trigger_codex: ${triggerCodex}`)
+              .addBreak()
+              .addRaw("No parallel maintenance issues were created.")
               .write();
