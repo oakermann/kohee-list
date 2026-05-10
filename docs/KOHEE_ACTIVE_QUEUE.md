@@ -5,8 +5,6 @@ Status owner: ChatGPT orchestration baseline
 
 This file is the active operational queue for ChatGPT-led KOHEE LIST work.
 
-Use this file as the current working overlay on top of `docs/KOHEE_MASTER_CONTEXT.md`.
-
 - `docs/KOHEE_MASTER_CONTEXT.md` = long-term source of truth
 - `docs/KOHEE_ACTIVE_QUEUE.md` = current queue, blockers, next patch candidates, operational risks, orchestration status, cleanup targets, and automation maturity direction
 
@@ -42,33 +40,58 @@ Do not trust by itself:
 - local commit claim
 - task-local done message
 
-Execution expectation:
+---
 
-- For LOW/MEDIUM tasks that ChatGPT can safely execute, ChatGPT should continue through task decomposition, lane planning, PR creation, checks, safe fix/retry, review-thread verification, merge, queue sync, and final evidence report without stopping at intermediate PR-open status.
-- Stop early only for HOLD/HIGH, failed checks that cannot be safely auto-fixed, review findings, tool/API errors, missing permissions, unexpected runtime risk, merge conflict, or explicit user interruption.
-- For multi-lane safe work, default to parallel planning and independent PR lanes when file/risk overlap checks pass.
-- Final reporting should happen after the requested work batch is actually complete, not after each intermediate PR step.
+## 1. Hard anti-stall rule
 
-Primary automation direction:
+For LOW/MEDIUM tasks that ChatGPT can safely execute, ChatGPT must not stop at intermediate operational states.
 
-- minimize required user touches
-- minimize intermediate status interruptions
-- maximize safe autonomous LOW/MEDIUM execution
-- keep HIGH/HOLD human-approved
+Do not stop merely because:
+
+- a branch was created
+- a PR was opened
+- checks are queued
+- checks are running
+- checks need another poll
+- a safe docs/tooling PR is waiting for merge
+- a stale branch update or queue sync is still part of the same requested batch
+
+Required default flow for safe LOW/MEDIUM work:
+
+1. decompose the user goal into lanes
+2. classify risk and deny HIGH/HOLD work
+3. create branches/PRs for safe lanes
+4. monitor checks until terminal state
+5. apply safe fix/retry when checks or review findings are recoverable
+6. verify changed files and review threads
+7. merge sequentially when GitHub evidence allows
+8. sync queue/status when relevant
+9. report once after the requested batch reaches MERGED, DONE_NO_DEPLOY, FIX, or HOLD
+
+Stop and report only for:
+
+- HIGH/HOLD detection
+- user approval required
+- non-recoverable check failure
+- unresolved blocking review that cannot be fixed or resolved by available tools
+- unexpected runtime/security/public-data risk
+- merge conflict
+- permission/tool/API error
+- explicit user interruption
+
+If a tool/API limitation prevents completion, report the precise blocker and the last verified GitHub evidence. Do not present the batch as complete.
 
 ---
 
-## 1. Current repo state
+## 2. Current repo state
 
-Current known state as of 2026-05-11:
+Current known state as of 2026-05-11 before this update batch:
 
 - Repository: `oakermann/kohee-list`
 - Branch: `main`
-- Open PRs: 0 when last synced before this update
+- Open PRs: 0 when last synced before this update line
 - Active issue: #23 (`KOHEE_CLOUD_MAINTENANCE`)
 - Open HIGH/HOLD implementation issue: none known
-- Active failed PR: none known
-- Active merge conflict: none known
 - Branch count is high and needs cleanup-audit automation before any deletion automation.
 
 Current repo inefficiency targets:
@@ -82,7 +105,7 @@ Current repo inefficiency targets:
 
 ---
 
-## 2. Current P0 queue
+## 3. Current P0 queue
 
 ### P0-1 — ChatGPT-main stabilization
 
@@ -220,24 +243,6 @@ Target execution flow:
 8. ACTIVE_QUEUE sync happens automatically when relevant
 9. final result report happens once at batch completion
 
-Do not interrupt the user for:
-
-- PR opened
-- checks running
-- waiting for merge
-- stale branch update
-- LOW docs/tooling continuation
-
-Interrupt only for:
-
-- HIGH/HOLD
-- non-recoverable check failure
-- review-blocking finding
-- unexpected runtime risk
-- merge conflict
-- permission/tool/API error
-- explicit user interruption
-
 ### P0-6 — GitHub App Worker Phase 2 dry-run
 
 State: deferred until explicit user start
@@ -258,7 +263,7 @@ Must not:
 
 ---
 
-## 3. Current blockers
+## 4. Current blockers
 
 ### Blocker A — automation control-plane incomplete
 
@@ -314,7 +319,7 @@ Direction:
 
 ---
 
-## 4. Safe lanes and parallel defaults
+## 5. Safe lanes and parallel defaults
 
 Safe LOW/MEDIUM candidates:
 
@@ -351,32 +356,13 @@ Parallel default rule:
 
 ---
 
-## 5. Current HIGH/HOLD
+## 6. Current HIGH/HOLD
 
 - HOLD — D1 manager role schema removal
 - HOLD — resetCsv redesign
 - HOLD — evidence/category verification DB
 
 These require explicit user approval.
-
----
-
-## 6. Current known risks
-
-Operational risk:
-
-- orchestration drift
-- stale context
-- policy mismatch
-- queued command conflict
-- stale branch confusion
-- repetitive operational overhead
-
-Cleanup automation risk:
-
-- do not start with destructive cleanup
-- read-only audit must come first
-- branch deletion and issue close automation remain HOLD until proven safe
 
 ---
 
