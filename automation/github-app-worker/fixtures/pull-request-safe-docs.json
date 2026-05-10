@@ -1,0 +1,22 @@
+{
+  "event": "pull_request",
+  "payload": {
+    "action": "opened",
+    "repository": {
+      "full_name": "oakermann/kohee-list"
+    },
+    "sender": {
+      "login": "oakermann"
+    },
+    "pull_request": {
+      "number": 101,
+      "body": "Risk: LOW\nLane: GOVERNANCE\nDocs-only dry-run fixture.",
+      "draft": false
+    },
+    "kohee": {
+      "changed_files": [
+        "docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"
+      ]
+    }
+  }
+}
