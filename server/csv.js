@@ -524,6 +524,19 @@ const SUBMISSION_REVIEW_EXPORT_COLUMNS = [
   "public_leak_risk",
 ];
 
+const CAFE_REVIEW_TEXT_COLUMNS = new Set([
+  "cafe_id",
+  "name",
+  "address",
+  "desc",
+  "category",
+  "signature",
+  "beanShop",
+  "instagram",
+  "status",
+  "hidden_by",
+]);
+
 function csvEscape(value) {
   const textValue = String(value ?? "");
   if (!/[",\n\r]/.test(textValue)) return textValue;
@@ -533,6 +546,14 @@ function csvEscape(value) {
 function csvReviewCell(value) {
   const textValue = String(value ?? "");
   return /^[=+\-@]/.test(textValue) ? `'${textValue}` : textValue;
+}
+
+function sanitizeCafeReviewRow(row) {
+  const output = { ...row };
+  for (const column of CAFE_REVIEW_TEXT_COLUMNS) {
+    output[column] = csvReviewCell(output[column]);
+  }
+  return output;
 }
 
 function toSubmissionReviewRow(row) {
@@ -601,13 +622,13 @@ async function exportReviewCsv(req, env, options) {
   const rowsResult = await env.DB.prepare(options.sql).all();
   const rows = (rowsResult?.results || []).map((row) => {
     if (options.mapRow) return options.mapRow(row);
-    return {
+    return sanitizeCafeReviewRow({
       ...row,
       cafe_id: row.id || "",
       submission_id: row.id || "",
       category: row.category || "",
       signature: row.signature || "",
-    };
+    });
   });
 
   return csvResponse(
