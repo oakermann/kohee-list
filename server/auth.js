@@ -33,6 +33,10 @@ function secureRandomToken() {
   );
 }
 
+function clientRole(role) {
+  return role === "admin" ? "admin" : "user";
+}
+
 export async function signup(req, env) {
   return withGuard(req, env, async () => {
     const body = await readJson(req);
@@ -168,7 +172,11 @@ export async function login(req, env) {
     return json(
       {
         ok: true,
-        user: { id: user.id, username: user.username, role: user.role },
+        user: {
+          id: user.id,
+          username: user.username,
+          role: clientRole(user.role),
+        },
         csrfToken,
       },
       200,
@@ -215,7 +223,11 @@ export async function me(req, env) {
     return json(
       {
         ok: true,
-        user: { id: user.user_id, username: user.username, role: user.role },
+        user: {
+          id: user.user_id,
+          username: user.username,
+          role: clientRole(user.role),
+        },
         csrfToken,
       },
       200,
