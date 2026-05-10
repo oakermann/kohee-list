@@ -1,7 +1,71 @@
 {
   "project": "KOHEE LIST",
   "authModelTarget": "admin_user",
-  "legacyRoles": ["manager"],
+  "legacyRoles": [
+    "manager"
+  ],
+  "sourceOfTruth": "docs/KOHEE_MASTER_CONTEXT.md",
+  "automation": {
+    "operatingModel": "chatgpt_main",
+    "executor": "ChatGPT GitHub connector",
+    "validationGate": "GitHub Actions",
+    "codexRole": [
+      "reviewer",
+      "analysis",
+      "PATCH_READY support"
+    ],
+    "githubAppWorkerRole": "future GitHub execution layer; dry-run until explicitly promoted",
+    "trusts": [
+      "actual PR URL",
+      "head SHA",
+      "changed files",
+      "checks",
+      "review threads",
+      "workflow results",
+      "issue state"
+    ],
+    "doesNotTrustWithoutGitHubEvidence": [
+      "Codex Cloud self-report",
+      "local branch name",
+      "local commit claim",
+      "make_pr metadata without actual PR URL"
+    ],
+    "phase2Connection": {
+      "status": "deferred_until_user_explicitly_starts",
+      "mustRunFrom": "local authenticated gh/wrangler environment",
+      "mustNotRunFrom": "Codex Cloud",
+      "dryRunOnly": true,
+      "noWriteActions": true,
+      "noIssueClose": true,
+      "noAutoMerge": true
+    }
+  },
+  "parallelExecution": {
+    "defaultFor": [
+      "LOW",
+      "MEDIUM"
+    ],
+    "mergePolicy": "sequential_after_checks_and_review_threads",
+    "allowedWhen": [
+      "files_do_not_overlap",
+      "risk_areas_do_not_overlap",
+      "no_shared_test_file_overlap",
+      "not_high_or_hold",
+      "explicit_merge_order_exists"
+    ],
+    "denyWhen": [
+      "HIGH_or_HOLD",
+      "D1_schema_migrations",
+      "auth_session_security",
+      "public_data_or_public_api_behavior",
+      "CSV_import_reset_semantics",
+      "destructive_data_behavior",
+      "production_deploy_workflow_or_secrets",
+      "GitHub_App_Cloudflare_control_plane_connection",
+      "manager_role_removal_shared_auth_server_tests",
+      "same_file_overlap"
+    ]
+  },
   "invariants": {
     "publicCafeWhere": "status = 'approved' AND deleted_at IS NULL",
     "newCafeDefaultStatus": "candidate",
@@ -89,7 +153,9 @@
       "files": [
         "AGENTS.md",
         "kohee.contract.json",
+        "docs/KOHEE_MASTER_CONTEXT.md",
         "docs/CODEX_WORKFLOW.md",
+        "docs/CODEX_AUTOMATION_STATUS.md",
         "docs/audits/KOHEE_FINDINGS.md",
         ".github/pull_request_template.md",
         ".github/ISSUE_TEMPLATE",
@@ -124,7 +190,7 @@
   "reportFormat": [
     "Risk",
     "Lane",
-    "Commit",
+    "Commit or PR",
     "Changed files",
     "Changed functions",
     "Tests",
