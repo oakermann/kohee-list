@@ -1,0 +1,162 @@
+import assert from "node:assert/strict";
+
+import { handleRequest } from "../src/index.mjs";
+import {
+  classifyCodexComment,
+  classifyPullRequest,
+  decideWebhookAction,
+} from "../src/policy.mjs";
+import {
+  isAllowedRepository,
+  isSelfBotActor,
+  signGithubWebhookBody,
+  verifyGithubSignature,
+} from "../src/security.mjs";
+
+const env = {
+  GITHUB_WEBHOOK_SECRET: "unit-secret",
+  KOHEE_BOT_ALLOWED_REPOS: "oakermann/kohee-list",
+  KOHEE_BOT_LOGINS: "kohee-automation-bot[bot]",
+};
+
+function payload(overrides = {}) {
+  return {
+    action: "opened",
+    repository: { full_name: "oakermann/kohee-list" },
+    sender: { login: "oakermann" },
+    ...overrides,
+  };
+}
+
+async function signedWebhookRequest(event, bodyObject, customEnv = env) {
+  const body = JSON.stringify(bodyObject);
+  const signature = await signGithubWebhookBody(
+    body,
+    customEnv.GITHUB_WEBHOOK_SECRET,
+  );
+  return new Request("https://bot.test/github/webhook", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-github-event": event,
+      "x-github-delivery": "delivery-1",
+      "x-hub-signature-256": signature,
+    },
+    body,
+  });
+}
+
+assert.equal(isAllowedRepository(payload(), "oakermann/kohee-list"), true);
+assert.equal(isAllowedRepository(payload(), "other/repo"), false);
+assert.equal(isSelfBotActor("kohee-automation-bot[bot]", ["kohee-automation-bot[bot]"]), true);
+assert.equal(isSelfBotActor("chatgpt-codex-connector[bot]", ["kohee-automation-bot[bot]"]), false);
+
+const signed = await signGithubWebhookBody("{}", "unit-secret");
+assert.match(signed, /^sha256=[0-9a-f]{64}$/);
+assert.equal(await verifyGithubSignature("{}", signed, "unit-secret"), true);
+assert.equal(await verifyGithubSignature("{}", signed, "wrong-secret"), false);
+
+const health = await handleRequest(new Request("https://bot.test/health"), env);
+assert.equal(health.status, 200);
+const healthJson = await health.json();
+assert.equal(healthJson.dryRun, true);
+
+const safePr = classifyPullRequest({
+  body: "Risk: LOW\nLane: GOVERNANCE\nDocs-only change.",
+  files: ["docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"],
+});
+assert.equal(safePr.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
+
+const highRiskPr = classifyPullRequest({
+  body: "Risk: MEDIUM\nLane: GOVERNANCE",
+  files: ["schema.sql"],
+});
+assert.equal(highRiskPr.decision, "HOLD_HIGH_RISK");
+assert.deepEqual(highRiskPr.highRiskFiles, ["schema.sql"]);
+
+const draftPr = classifyPullRequest({
+  body: "Risk: LOW\nLane: GOVERNANCE",
+  draft: true,
+  files: ["docs/example.md"],
+});
+assert.equal(draftPr.decision, "HOLD_HIGH_RISK");
+assert.match(draftPr.reasons.join(" "), /draft/);
+
+assert.equal(
+  classifyCodexComment("I called make_pr but no actual GitHub PR URL was returned.").decision,
+  "UNVERIFIED_PR_CLAIM",
+);
+assert.equal(
+  classifyCodexComment("PATCH_READY: proposed docs-only patch.").decision,
+  "PATCH_READY",
+);
+assert.equal(
+  classifyCodexComment("HOLD_USER_APPROVAL: policy decision needed.").decision,
+  "HOLD_USER_APPROVAL",
+);
+
+const decision = decideWebhookAction(
+  "pull_request",
+  payload({
+    pull_request: {
+      number: 65,
+      body: "Risk: LOW\nLane: GOVERNANCE\nDocs-only change.",
+      draft: false,
+    },
+    kohee: { changed_files: ["docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"] },
+  }),
+);
+assert.equal(decision.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
+assert.deepEqual(decision.wouldDo, ["enable_native_auto_merge"]);
+
+const webhookResponse = await handleRequest(
+  await signedWebhookRequest(
+    "pull_request",
+    payload({
+      pull_request: {
+        number: 66,
+        body: "Risk: MEDIUM\nLane: GOVERNANCE",
+        draft: false,
+      },
+      kohee: { changed_files: ["migrations/0006_test.sql"] },
+    }),
+  ),
+  env,
+);
+assert.equal(webhookResponse.status, 200);
+const webhookJson = await webhookResponse.json();
+assert.equal(webhookJson.dryRun, true);
+assert.equal(webhookJson.decision, "HOLD_HIGH_RISK");
+assert.deepEqual(webhookJson.wouldDo, ["comment_hold_or_observe"]);
+
+const deniedRepoResponse = await handleRequest(
+  await signedWebhookRequest("issues", payload({ repository: { full_name: "other/repo" } })),
+  env,
+);
+assert.equal(deniedRepoResponse.status, 403);
+
+const selfEventResponse = await handleRequest(
+  await signedWebhookRequest(
+    "issues",
+    payload({ sender: { login: "kohee-automation-bot[bot]" } }),
+  ),
+  env,
+);
+assert.equal(selfEventResponse.status, 200);
+const selfEventJson = await selfEventResponse.json();
+assert.equal(selfEventJson.decision, "IGNORE_SELF_EVENT");
+
+const unsignedResponse = await handleRequest(
+  new Request("https://bot.test/github/webhook", {
+    method: "POST",
+    headers: {
+      "x-github-event": "issues",
+      "x-github-delivery": "delivery-unsigned",
+    },
+    body: JSON.stringify(payload()),
+  }),
+  { KOHEE_BOT_ALLOWED_REPOS: "oakermann/kohee-list" },
+);
+assert.equal(unsignedResponse.status, 500);
+
+console.log("[github-app-worker-dry-run] ok");
