@@ -15,6 +15,7 @@ The current automation is usable, but it is not fully hands-off.
 - LOW/MEDIUM safe PRs should use GitHub native auto-merge or connector merge when checks and review-thread requirements are satisfied.
 - HIGH-risk work remains HOLD / user-approved only.
 - Routine maintenance is centered on issue `#23`; scheduled fan-out to multiple parallel maintenance issues is disabled.
+- Legacy manager runtime/admin access was removed by PR `#81`; physical D1/schema cleanup is a separate migration decision if needed later.
 
 ## Reliable paths
 
@@ -78,7 +79,8 @@ It classifies automation issues as:
 Last verified watchdog state:
 
 - `#23` is `ACTIVE`.
-- `#24`, `#59`, and `#60` are `HOLD_USER_APPROVAL` tasks and must not be run automatically.
+- `#60` is `HOLD_USER_APPROVAL` and must not be run automatically.
+- `#24` and `#59` were closed after PR `#81` removed legacy manager runtime/admin access.
 - `#71` through `#77` were closed as superseded after PR `#79`.
 - Expected `stale_queued = 0`.
 
@@ -147,7 +149,7 @@ Auto-merge is not allowed for:
 - CSV import/reset semantics or review-result CSV upload/import.
 - Destructive data behavior.
 - Cloudflare deploy workflow behavior or secrets.
-- Manager role removal or production access semantics.
+- Physical legacy manager D1/schema enum cleanup, if pursued later.
 - Any PR with unresolved review threads or unclear changed files.
 
 Operational flow:
@@ -176,24 +178,12 @@ Prefer one batch parent issue for multiple related tasks instead of many small c
 
 ### Active
 
-- `#23` `KOHEE_CLOUD_MAINTENANCE: Scheduled Codex maintenance`
+- `#23` `KOHEE_CLOUD_MAINTENANCE: Manual Codex maintenance control`
   - Long-lived maintenance control issue.
   - Keep open as ACTIVE.
   - Use this as the single routine maintenance control issue.
 
 ### Held
-
-- `#24` `[KOHEE_TASK] Remove legacy manager role safely`
-  - HIGH / AUTH_ROLE.
-  - Held with `HOLD_USER_APPROVAL`.
-  - Do not run automatically.
-  - Current project rules still use `admin`, `manager`, and `user`; manager removal requires separate approval and a dedicated migration/permission plan.
-
-- `#59` `[KOHEE_COMMAND] AUTH_ROLE / HIGH / Audit manager approved-cafe edit permissions`
-  - HIGH / AUTH_ROLE.
-  - Held with `HOLD_USER_APPROVAL`.
-  - Audit result: manager can edit approved/public cafe fields through `/edit`, while lifecycle-changing actions remain admin-only.
-  - Do not change runtime permissions until a separate policy is approved.
 
 - `#60` `[KOHEE_COMMAND] PUBLIC_EXPOSURE / HIGH / Audit user-facing operator username exposure`
   - HIGH / PUBLIC_EXPOSURE.
@@ -201,10 +191,11 @@ Prefer one batch parent issue for multiple related tasks instead of many small c
   - Audit result: user-facing MyPage paths expose or include operator usernames through `replied_by_username` and `reviewed_by_username` surfaces.
   - Do not change user-facing API/frontend behavior until a separate policy is approved.
 
-### Closed cleanup set
+### Completed or closed cleanup set
 
-The following smoke/test/parallel issues were completed or superseded and closed to keep the watchdog queue clean:
+The following smoke/test/parallel/HIGH-approved items were completed or superseded and closed to keep the watchdog queue clean:
 
+- `#24` legacy manager role runtime/admin access removal, completed by PR #81.
 - `#26` deploy smoke verification.
 - `#27` manager removal audit.
 - `#28` review-result CSV import HOLD audit.
@@ -219,6 +210,7 @@ The following smoke/test/parallel issues were completed or superseded and closed
 - `#56` duplicate of #57, closed as duplicate.
 - `#57` review CSV formula guard, completed by PR #61.
 - `#58` route grouping clarity, completed by PR #61.
+- `#59` manager approved/public cafe edit policy, superseded by PR #81 because manager no longer has operational API access.
 - `#71` through `#77` scheduled parallel maintenance fan-out issues, superseded by PR #79.
 
 ## Pull requests that established this baseline
@@ -239,6 +231,7 @@ The following smoke/test/parallel issues were completed or superseded and closed
 - `#61` review CSV export formula guard and route grouping clarity.
 - `#62` API cafe category whitelist.
 - `#79` manual-only Codex Cloud maintenance workflow and parallel fan-out removal.
+- `#81` legacy manager runtime/admin access removal.
 
 ## Operating procedure for future work
 
@@ -262,7 +255,7 @@ The following remain user-approved / HOLD by default:
 - CSV import/reset semantics and review-result CSV upload/import.
 - Destructive data behavior.
 - Cloudflare deploy workflow behavior and secrets.
-- Manager role removal or production access semantics.
+- Physical legacy manager D1/schema enum cleanup, if pursued later.
 - User-facing operator identity exposure policy.
 
 ## Current automation completion estimate
