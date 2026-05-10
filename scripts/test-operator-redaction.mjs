@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 
 import { ROUTES } from "../server/routes.js";
 
-function findRoute(method, path) {
+function findRoute(method, routePath) {
   const route = ROUTES.find(
-    ([routeMethod, routePath]) => routeMethod === method && routePath === path,
+    ([routeMethod, path]) => routeMethod === method && path === routePath,
   );
-  assert.ok(route, `${method} ${path} route exists`);
+  assert.ok(route, `${method} ${routePath} route exists`);
   return route[2];
 }
 
@@ -100,11 +100,11 @@ function createOperatorRedactionEnv(role = "user") {
   };
 }
 
-async function requestRoute(method, path, role = "user") {
-  const handler = findRoute(method, path);
+async function requestRoute(method, routePath, requestPath, role = "user") {
+  const handler = findRoute(method, routePath);
   const { env, statements } = createOperatorRedactionEnv(role);
   const response = await handler(
-    new Request(`https://kohee.test${path}`, {
+    new Request(`https://kohee.test${requestPath || routePath}`, {
       method,
       headers: { authorization: "Bearer unit-token" },
     }),
@@ -113,13 +113,13 @@ async function requestRoute(method, path, role = "user") {
   return { response, statements, body: await response.json() };
 }
 
-const userSubmissions = await requestRoute("GET", "/my-submits", "user");
+const userSubmissions = await requestRoute("GET", "/my-submits");
 assert.equal(userSubmissions.response.status, 200);
 assert.equal(userSubmissions.body.items[0].reviewed_by, null);
 assert.equal(userSubmissions.body.items[0].reviewed_by_username, "운영진");
 assert.equal(JSON.stringify(userSubmissions.body).includes("real-admin"), false);
 
-const userReports = await requestRoute("GET", "/my-error-reports", "user");
+const userReports = await requestRoute("GET", "/my-error-reports");
 assert.equal(userReports.response.status, 200);
 assert.equal(userReports.body.items[0].replied_by, null);
 assert.equal(userReports.body.items[0].replied_by_username, "운영진");
@@ -129,6 +129,7 @@ assert.equal(JSON.stringify(userReports.body).includes("real-admin"), false);
 
 const adminSubmissions = await requestRoute(
   "GET",
+  "/submissions",
   "/submissions?status=approved",
   "admin",
 );
