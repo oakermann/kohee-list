@@ -8,7 +8,7 @@ This file is the active operational queue for ChatGPT-led KOHEE LIST work.
 Use this file as the current working overlay on top of `docs/KOHEE_MASTER_CONTEXT.md`.
 
 - `docs/KOHEE_MASTER_CONTEXT.md` = long-term source of truth
-- `docs/KOHEE_ACTIVE_QUEUE.md` = current queue, blockers, next patch candidates, operational risks, and orchestration status
+- `docs/KOHEE_ACTIVE_QUEUE.md` = current queue, blockers, next patch candidates, operational risks, orchestration status, cleanup targets, and automation maturity direction
 
 ---
 
@@ -21,6 +21,7 @@ KOHEE LIST is currently operating in:
 - GitHub Actions validation-gate mode
 - Codex reviewer/PATCH_READY support mode
 - parallel-by-default mode for safe LOW/MEDIUM work
+- touchless-execution direction for safe automation
 
 Trust actual GitHub evidence:
 
@@ -43,9 +44,17 @@ Do not trust by itself:
 
 Execution expectation:
 
-- For LOW/MEDIUM tasks that ChatGPT can safely execute, ChatGPT should continue through PR creation, checks, review-thread verification, merge, and final evidence report without stopping at intermediate PR-open status.
-- Stop early only for HOLD/HIGH, failed checks, review findings, tool/API errors, missing permissions, or explicit user interruption.
+- For LOW/MEDIUM tasks that ChatGPT can safely execute, ChatGPT should continue through task decomposition, lane planning, PR creation, checks, fix/retry, review-thread verification, merge, queue sync, and final evidence report without stopping at intermediate PR-open status.
+- Stop early only for HOLD/HIGH, failed checks that cannot be safely auto-fixed, review findings, tool/API errors, missing permissions, unexpected runtime risk, merge conflict, or explicit user interruption.
 - For multi-lane safe work, default to parallel planning and independent PR lanes when file/risk overlap checks pass.
+- Final reporting should happen after the requested work batch is actually complete, not after each intermediate PR step.
+
+Primary automation direction:
+
+- minimize required user touches
+- minimize intermediate status interruptions
+- maximize safe autonomous LOW/MEDIUM execution
+- keep HIGH/HOLD human-approved
 
 ---
 
@@ -67,6 +76,15 @@ Current known state as of 2026-05-11:
 - Active failed PR: none known
 - Active merge conflict: none known
 - Branch count is high and needs cleanup-audit automation before any deletion automation.
+
+Current repo inefficiency targets:
+
+- stale merged branches
+- overlapping automation docs
+- repetitive governance PRs
+- queue/status drift
+- repeated user prompts for merge continuation
+- excessive intermediate reporting
 
 ---
 
@@ -90,6 +108,7 @@ Remaining:
 - prevent regression to Codex-main assumptions
 - keep orchestration rules synchronized
 - keep ChatGPT execution reports evidence-based
+- keep execution flow interruption-free for safe LOW/MEDIUM work
 
 ---
 
@@ -126,6 +145,7 @@ Future sync candidates:
 - latest merged PRs
 - queue age
 - cleanup-audit summary
+- stale workflow state
 
 ---
 
@@ -168,11 +188,18 @@ Related risk:
 - queue corruption
 - stale branch merge ordering
 
+Target execution model:
+
+- parallel-first planning
+- sequential merge after validation
+- automatic retry for safe LOW/MEDIUM failures
+- batch-completion reporting instead of PR-by-PR interruption
+
 ---
 
 ## P0-4 — Maintenance audit automation
 
-State: newly promoted to P0 planning candidate
+State: promoted P0 automation-efficiency task
 
 Goal:
 
@@ -202,6 +229,8 @@ Audit targets:
 - stale command issues
 - ACTIVE_QUEUE vs actual GitHub state mismatch
 - automation-doc overlap candidates
+- duplicate governance docs
+- repetitive operational flows
 - cleanup candidates requiring manual review
 
 Classification:
@@ -224,7 +253,53 @@ Do not implement automatic deletion until the read-only report has been reviewed
 
 ---
 
-## P0-5 — GitHub App Worker Phase 2 dry-run
+## P0-5 — Touchless LOW/MEDIUM execution
+
+State: newly promoted operational target
+
+Goal:
+
+- let the user issue goals once and avoid repeated manual continuation prompts.
+
+Target execution flow:
+
+1. user gives goal
+2. ChatGPT decomposes tasks
+3. safe lanes are parallelized automatically
+4. PRs are created automatically
+5. checks are monitored automatically
+6. safe LOW/MEDIUM failures are retried automatically
+7. merge is completed automatically after evidence validation
+8. ACTIVE_QUEUE sync happens automatically when relevant
+9. final result report happens once at batch completion
+
+Do not interrupt the user for:
+
+- PR opened
+- checks running
+- waiting for merge
+- stale branch update
+- LOW docs/tooling continuation
+
+Interrupt only for:
+
+- HIGH/HOLD
+- non-recoverable check failure
+- review-blocking finding
+- unexpected runtime risk
+- merge conflict
+- permission/tool/API error
+- explicit user interruption
+
+Long-term direction:
+
+- touchless LOW/MEDIUM governance/tooling execution
+- issue-driven autonomous maintenance
+- minimal user-touch orchestration
+
+---
+
+## P0-6 — GitHub App Worker Phase 2 dry-run
 
 State: deferred until explicit user start
 
@@ -328,6 +403,8 @@ Needed future observability:
 - audit warnings
 - queue aging
 - lane conflicts
+- duplicate governance files
+- automation cleanup debt
 
 Long-term direction:
 
@@ -356,6 +433,26 @@ Mitigation:
 
 ---
 
+## Blocker E — repetitive operational flow
+
+Current weakness:
+
+- repeated manual continuation prompts
+- repeated merge confirmation prompts for LOW docs/tooling work
+- repeated PR-open-only reporting
+
+Impact:
+
+- unnecessary user touches
+- slower orchestration throughput
+- higher operator fatigue
+
+Direction:
+
+- move toward touchless LOW/MEDIUM execution flow.
+
+---
+
 # 4. Current safe lanes
 
 Safe LOW/MEDIUM candidates:
@@ -368,6 +465,7 @@ Safe LOW/MEDIUM candidates:
 - isolated automation tooling
 - export-only CSV additions without public exposure changes
 - read-only maintenance audits
+- cleanup audit reporting
 
 Not safe for parallel:
 
@@ -388,6 +486,7 @@ Parallel default rule:
 - When multiple requested tasks are LOW/MEDIUM, independent, and non-overlapping, plan them as parallel lanes by default.
 - Do not serialize safe independent docs/tooling lanes unless they touch the same files or require ordered merge.
 - Merge remains sequential after checks and review-thread gates pass.
+- Automatic retry is preferred over user interruption for safe LOW/MEDIUM failures.
 
 ---
 
@@ -441,6 +540,7 @@ Current primary risk is:
 - policy mismatch
 - queued command conflict
 - stale branch confusion
+- repetitive operational overhead
 
 Current primary risk is not:
 
@@ -538,6 +638,8 @@ Scope:
 - queue mismatches
 - stale command issues
 - docs/automation overlap candidates
+- duplicate governance docs
+- repetitive operational flows
 
 Likely files:
 
@@ -630,6 +732,27 @@ Risk:
 
 ---
 
+## Candidate H — Governance/doc overlap cleanup
+
+Goal:
+
+- reduce duplicated operational guidance across docs.
+
+Targets:
+
+- duplicated automation explanations
+- stale operational status docs
+- repeated governance wording
+- overlapping queue definitions
+
+Direction:
+
+- MASTER_CONTEXT = long-term policy
+- ACTIVE_QUEUE = live operational overlay
+- STATUS docs = historical/reference layer only
+
+---
+
 # 8. Lane ownership direction
 
 Future direction:
@@ -637,99 +760,4 @@ Future direction:
 ```json
 {
   "laneOwners": {
-    "GOVERNANCE": "chatgpt",
-    "CSV_PIPELINE": "user_approval_required",
-    "PUBLIC_EXPOSURE": "high_review"
-  }
-}
-```
-
-Purpose:
-
-- safer auto-merge decisions
-- future Worker orchestration
-- explicit ownership boundaries
-
----
-
-# 9. Current admin/review direction
-
-Direction:
-
-- not a generic CRUD admin
-- not a broad review app
-
-Target:
-
-- review workflow console
-- evidence-first curation system
-
-Important future concepts:
-
-- evidence
-- hold reason
-- duplicate suspicion
-- category verification
-- review diff
-- staged review application
-
-Review console remains lower priority than operational stabilization.
-
----
-
-# 10. Current completed baseline
-
-Completed baseline items:
-
-- ChatGPT-main transition baseline
-- `docs/KOHEE_MASTER_CONTEXT.md`
-- `docs/KOHEE_ACTIVE_QUEUE.md`
-- Codex self-report distrust baseline
-- governance contract structure
-- issue #23 maintenance consolidation
-- scheduled Codex fan-out removal
-- manager runtime/admin removal
-- user-facing operator redaction
-- manager frontend label removal
-- policy guard baseline
-
----
-
-# 11. Do not touch without user approval
-
-Never auto-change:
-
-- D1 migrations
-- auth/session
-- public exposure rules
-- CSV import/reset semantics
-- deploy workflows
-- Cloudflare secrets
-- GitHub App production write permissions
-- destructive data behavior
-- automatic branch deletion
-- automatic issue close
-
-These remain:
-
-- HIGH
-- HOLD
-- user-approved only
-
----
-
-# 12. Current execution philosophy
-
-Current KOHEE priority is not rapid feature expansion.
-
-Current KOHEE priority is:
-
-- operational stabilization
-- orchestration hardening
-- source-of-truth consolidation
-- safe automation layering
-- future parallel execution safety
-- operational observability
-- cleanup/efficiency automation
-
-The current bottleneck is operational structure, not feature quantity.
+    "GOVERNANCE": "chatg
