@@ -3,14 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "format": "prettier --write \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \"assets/**/*.css\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \".pages-deploy/assets/**/*.css\" \"scripts/**/*.mjs\" \"worker.js\" --end-of-line auto --ignore-unknown",
-    "format:check": "prettier --check \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \"assets/**/*.css\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \".pages-deploy/assets/**/*.css\" \"scripts/**/*.mjs\" \"worker.js\" --end-of-line auto --ignore-unknown",
+    "format": "prettier --write \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \"assets/**/*.css\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \".pages-deploy/assets/**/*.css\" \"scripts/**/*.mjs\" \"automation/**/*.mjs\" \"worker.js\" --end-of-line auto --ignore-unknown",
+    "format:check": "prettier --check \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"assets/**/*.js\" \"assets/**/*.css\" \".pages-deploy/**/*.html\" \".pages-deploy/assets/**/*.js\" \".pages-deploy/assets/**/*.css\" \"scripts/**/*.mjs\" \"automation/**/*.mjs\" \"worker.js\" --end-of-line auto --ignore-unknown",
     "preflight": "powershell -ExecutionPolicy Bypass -File .\\scripts\\preflight.ps1",
     "check:repo-safety": "node scripts/check-repo-safety.mjs",
     "check:deploy-sync": "node scripts/check-deploy-sync.mjs",
     "detect:changed": "node scripts/detect-changed-areas.mjs",
     "smoke:check": "node scripts/smoke-check.mjs",
-    "test:unit": "node scripts/test-unit.mjs && node scripts/test-watchdog.mjs && node scripts/test-csv-export.mjs && node scripts/test-category-whitelist.mjs",
+    "test:unit": "node scripts/test-unit.mjs && node scripts/test-watchdog.mjs && node scripts/test-csv-export.mjs && node scripts/test-category-whitelist.mjs && node automation/github-app-worker/test/dry-run.test.mjs",
     "verify:release": "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify-release.ps1",
     "audit:kohee": "node scripts/audit-kohee.mjs",
     "audit:kohee:strict": "node scripts/audit-kohee.mjs --strict"
