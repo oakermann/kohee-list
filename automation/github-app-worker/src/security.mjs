@@ -46,9 +46,8 @@ export function isAllowedRepository(payload, allowedRepos) {
   return allowed.includes(payload?.repository?.full_name || "");
 }
 
-export function isBotActor(login, botLogins = []) {
+export function isSelfBotActor(login, botLogins = []) {
   const actor = String(login || "").toLowerCase();
   if (!actor) return false;
-  if (actor.includes("[bot]")) return true;
   return botLogins.map((bot) => String(bot).toLowerCase()).includes(actor);
 }
