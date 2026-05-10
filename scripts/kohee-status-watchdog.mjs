@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 const STALE_HOURS = Number(process.env.KOHEE_WATCHDOG_STALE_HOURS || 12);
 const MAX_ITEMS = Number(process.env.KOHEE_WATCHDOG_MAX_ITEMS || 30);
@@ -227,7 +228,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(`[kohee-watchdog] ${error.stack || error.message}`);
-  process.exit(1);
-});
+export { classifyIssue, commandState, koheeStatusState, sectionStates };
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(`[kohee-watchdog] ${error.stack || error.message}`);
+    process.exit(1);
+  });
+}
