@@ -77,7 +77,54 @@ Operational rule:
 
 ---
 
-# 2. Safe auto-merge activation
+# 2. Current open PR queue and merge order
+
+Current open PRs when this queue was refreshed:
+
+1. PR #100 — `docs: add queue state machine`
+   - Files: `docs/QUEUE_STATE_MACHINE.md`
+   - Risk: LOW / docs-only
+   - Priority: P0 support doc
+   - Merge order: first
+   - Reason: independent and safest; establishes canonical state names before automation code relies on them.
+
+2. PR #95 — `chore: add command guard`
+   - Files: `.github/workflows/kohee-command-dispatch.yml`, `.github/workflows/pr-validate.yml`, `AGENTS.md`, `package.json`, `scripts/validate-kohee-command.mjs`
+   - Risk: MEDIUM governance/tooling because it touches validation workflow and command dispatch
+   - Priority: P0 core guardrail
+   - Merge order: second, after #100
+   - Reason: enforces parallel lane/command validation and affects future PR validation behavior.
+
+3. PR #101 — `fix: prevent command dispatch issue overwrite`
+   - Files: `.github/workflows/kohee-command-dispatch.yml`
+   - Risk: MEDIUM governance/tooling
+   - Priority: P0 command isolation
+   - Merge order: after #95, or fold/rebase against #95 if overlap is significant
+   - Reason: overlaps #95 on command dispatch workflow, so it must not merge independently before #95 impact is known.
+
+4. PR #99 — `feat: add read-only maintenance audit`
+   - Files: `.github/workflows/kohee-maintenance-audit.yml`, `package.json`, `scripts/kohee-maintenance-audit.mjs`
+   - Risk: LOW/MEDIUM governance/tooling, read-only intended
+   - Priority: P0/P1 after command guard
+   - Merge order: after #95 because both touch `package.json`
+   - Reason: should rebase/update after #95 and rerun checks to avoid package script conflict.
+
+Current recommended sequence:
+
+```text
+#100 -> #95 -> #101 -> update/recheck #99 -> #99
+```
+
+Current parallel rule applied:
+
+- #100 is independent and can merge first.
+- #95 and #101 overlap on `.github/workflows/kohee-command-dispatch.yml`; do not merge in parallel.
+- #95 and #99 overlap on `package.json`; do not merge in parallel without rebase/recheck.
+- #99 must remain read-only: no branch deletion, no issue close, no auto-merge, no deploy, no runtime behavior change.
+
+---
+
+# 3. Safe auto-merge activation
 
 State: P0 operational efficiency target
 
@@ -92,7 +139,7 @@ Default flow for eligible LOW/MEDIUM PRs:
 2. verify changed files and risk lane
 3. deny HIGH/HOLD paths and behaviors
 4. verify no unresolved review thread at the time auto-merge is enabled
-5. enable GitHub native auto-merge
+5. enable GitHub native auto-merge if available and allowed
 6. let GitHub wait for required checks
 7. ChatGPT verifies final merged state or reports precise blocker
 
@@ -126,35 +173,6 @@ If auto-merge enablement fails:
 
 ---
 
-# 3. Current repo state
-
-Repository:
-
-- `oakermann/kohee-list`
-
-Branch:
-
-- `main`
-
-Current known state as of 2026-05-11:
-
-- Active issue: #23 (`KOHEE_CLOUD_MAINTENANCE`)
-- Open HIGH/HOLD implementation issue: none known
-- Branch count is high and needs cleanup-audit automation before any deletion automation.
-
-Current repo inefficiency targets:
-
-- stale merged branches
-- overlapping automation docs
-- repetitive governance PRs
-- queue/status drift
-- repeated user prompts for merge continuation
-- excessive intermediate reporting
-- direct manual merge polling where auto-merge can safely wait instead
-- PRs being used as progress/status artifacts instead of clean change units
-
----
-
 # 4. Current P0 queue
 
 ## P0-1 — ChatGPT-main stabilization
@@ -179,31 +197,13 @@ Operational overlay:
 
 - `docs/KOHEE_ACTIVE_QUEUE.md`
 
-Future sync candidates:
-
-- open PR count
-- failed checks
-- stale branches
-- HOLD items
-- latest merged PRs
-- queue age
-- cleanup-audit summary
-
 ## P0-3 — Parallel lane enforcement
 
-State: partially implemented / operationally important
+State: active implementation through PR #95
 
-Current gap:
+Primary PR:
 
-- no hard validator for same-file overlap
-- no hard validator for shared test overlap
-- no hard validator for HIGH/HOLD parallel denial
-- no hard validator for merge-order conflicts
-- no hard validator for queued command overwrite/conflict
-
-Primary next patch candidate:
-
-- `scripts/validate-kohee-command.mjs`
+- PR #95
 
 Expected responsibilities:
 
@@ -215,30 +215,58 @@ Expected responsibilities:
 - validate command isolation
 - read policy from `kohee.contract.json`
 
-## P0-4 — Maintenance audit automation
+## P0-4 — Dispatch overwrite protection
 
-State: promoted P0 automation-efficiency task
+State: active implementation through PR #101
 
-Goal:
+Primary PR:
 
-- make cleanup/efficiency checks automatic before enabling automatic cleanup.
+- PR #101
+
+Reason:
+
+- command dispatch must create isolated command records instead of updating unrelated queued issues.
+- This is required for reliable parallel/touchless operation.
+
+## P0-5 — Queue state machine
+
+State: active documentation through PR #100
+
+Primary PR:
+
+- PR #100
+
+Reason:
+
+- needed to normalize queue/PR/workflow status names before automation and maintenance audit use them.
+
+## P0-6 — Maintenance audit automation
+
+State: active implementation through PR #99
+
+Primary PR:
+
+- PR #99
 
 First phase must be read-only:
 
 - no branch deletion
 - no issue close
 - no auto-merge
-- no file write
+- no file write to repo state
 - no deploy
 
-Recommended implementation candidate:
+Recommended rollout:
 
-- `.github/workflows/kohee-maintenance-audit.yml`
-- `scripts/kohee-maintenance-audit.mjs`
+1. manual `workflow_dispatch`
+2. optional daily read-only run after stable
+3. issue #23 report
+4. ACTIVE_QUEUE sync PR
+5. safe branch deletion only after proven criteria and explicit approval
 
-## P0-5 — Touchless LOW/MEDIUM execution
+## P0-7 — Touchless LOW/MEDIUM execution
 
-State: promoted operational target
+State: operational target
 
 Goal:
 
@@ -250,32 +278,18 @@ Target execution flow:
 2. ChatGPT decomposes tasks
 3. safe lanes are parallelized automatically
 4. PRs are created automatically only for concrete repo changes
-5. GitHub native auto-merge is enabled for eligible safe PRs
+5. GitHub native auto-merge is enabled for eligible safe PRs when possible
 6. checks run under GitHub rules
 7. safe LOW/MEDIUM failures are retried automatically when possible
 8. final result report happens once at batch completion or precise blocker
 
-## P0-6 — Safe auto-merge activation
+## P0-8 — PR hygiene and usage cleanup
 
-State: P0 target
-
-Goal:
-
-- use repository native auto-merge for eligible safe PRs to reduce manual polling and user continuation prompts.
-
-Required behavior:
-
-- direct manual merge is no longer the default for eligible safe LOW/MEDIUM PRs.
-- auto-merge enablement should be attempted after file/risk/review-thread gates pass.
-- ChatGPT should verify the final merged state later or report the blocker.
-
-## P0-7 — PR hygiene and usage cleanup
-
-State: newly promoted operational cleanup target
+State: planned through maintenance audit / candidate J
 
 Goal:
 
-- ensure PRs are used for their original purpose: reviewable changes and validation, not task chatter.
+- ensure PRs are used for reviewable changes and validation, not task chatter.
 
 Audit targets:
 
@@ -286,16 +300,7 @@ Audit targets:
 - superseded PRs still open or unclear
 - closed PR branches still alive
 
-Future maintenance audit should classify these as:
-
-- `OK_CHANGE_UNIT`
-- `MERGED_BRANCH_CLEANUP_CANDIDATE`
-- `SUPERSEDED_PR`
-- `STATUS_ONLY_PR_MISUSE`
-- `SAME_FILE_PR_FRAGMENTATION`
-- `REVIEW_REQUIRED`
-
-## P0-8 — GitHub App Worker Phase 2 dry-run
+## P0-9 — GitHub App Worker Phase 2 dry-run
 
 State: deferred until explicit user start
 
@@ -317,47 +322,30 @@ Must not:
 
 # 5. Current blockers
 
-## Blocker A — automation control-plane incomplete
+## Blocker A — command/control-plane overlap
 
-- orchestration policy exists
-- validator layer incomplete
-- future parallel lanes may conflict silently
-- queue overwrite risk exists
+- PR #95 and PR #101 both touch `.github/workflows/kohee-command-dispatch.yml`.
+- They require explicit merge order or rebase/fold decision.
 
-## Blocker B — context fragmentation
+## Blocker B — shared package script overlap
 
-- status is split across chat, issue #23, MASTER_CONTEXT, ACTIVE_QUEUE, and automation docs
-- stale task understanding and duplicate work remain possible
+- PR #95 and PR #99 both touch `package.json`.
+- PR #99 must rebase/update after #95 before merge.
 
-## Blocker C — missing operational observability
+## Blocker C — validation workflow mutation risk
 
-Needed future observability:
-
-- current HIGH/HOLD items
-- failed workflows
-- stale PRs
-- stale branches
-- unsafe pending merge
-- audit warnings
-- queue aging
-- lane conflicts
+- PR #95 touches `.github/workflows/pr-validate.yml`.
+- After #95 merges, the next PR must prove required checks still run correctly.
 
 ## Blocker D — branch cleanup debt
 
-- many historical feature/docs/fix branches remain after PR merges or superseded work
-- read-only maintenance audit should classify cleanup candidates before deletion automation
+- many historical feature/docs/fix branches remain after PR merges or superseded work.
+- read-only maintenance audit should classify cleanup candidates before deletion automation.
 
-## Blocker E — repetitive operational flow
+## Blocker E — context fragmentation
 
-- repeated manual continuation prompts
-- repeated merge confirmation prompts for LOW docs/tooling work
-- repeated PR-open-only reporting
-- direct merge polling when auto-merge can safely wait
-
-## Blocker F — PR usage drift
-
-- PRs can drift into progress-report/status-tracking artifacts if not governed.
-- ACTIVE_QUEUE/issues should carry task status; PRs should carry concrete repo changes.
+- status is split across chat, issue #23, MASTER_CONTEXT, ACTIVE_QUEUE, and automation docs.
+- stale task understanding and duplicate work remain possible.
 
 ---
 
@@ -412,40 +400,21 @@ These require explicit user approval.
 
 ## Candidate A — Parallel lane validator
 
-Likely files:
+Status:
 
-- `scripts/validate-kohee-command.mjs`
-- `.github/workflows/kohee-command-dispatch.yml`
-- `package.json`
-
-Risk:
-
-- MEDIUM governance/tooling
+- active PR #95
 
 ## Candidate B — Dispatch overwrite protection
 
-Goal:
+Status:
 
-- avoid updating unrelated queued command issue
-- improve batch isolation
-- improve queue auditability
-
-Risk:
-
-- MEDIUM governance/tooling
+- active PR #101
 
 ## Candidate C — Read-only maintenance audit
 
-Likely files:
+Status:
 
-- `scripts/kohee-maintenance-audit.mjs`
-- `.github/workflows/kohee-maintenance-audit.yml`
-- `package.json`
-
-Risk:
-
-- LOW/MEDIUM governance/tooling
-- read-only only
+- active PR #99
 
 ## Candidate D — ACTIVE_QUEUE semi-generated sync
 
@@ -463,21 +432,9 @@ Suggested future states:
 
 ## Candidate F — Command state machine
 
-Suggested future lifecycle:
+Status:
 
-- `QUEUED`
-- `ANALYZING`
-- `PATCH_READY`
-- `PR_OPEN`
-- `CHECKS_RUNNING`
-- `CHECKS_FAILED`
-- `READY_TO_MERGE`
-- `MERGED`
-- `DEPLOYED`
-- `HOLD_HIGH`
-- `HOLD_USER`
-- `SUPERSEDED`
-- `STALE`
+- active PR #100
 
 ## Candidate G — Structured Worker dry-run logs
 
@@ -503,14 +460,6 @@ Goal:
 Goal:
 
 - detect PR misuse and stale branch/PR cleanup targets.
-
-Scope:
-
-- status-only PRs
-- same-file PR fragmentation
-- superseded open/closed PRs
-- merged branches still present
-- PRs that should have been issues or ACTIVE_QUEUE updates
 
 ---
 
@@ -538,20 +487,7 @@ Purpose:
 
 ---
 
-# 10. Admin/review direction
-
-Direction:
-
-- not a generic CRUD admin
-- not a broad review app
-- review workflow console
-- evidence-first curation system
-
-Review console remains lower priority than operational stabilization.
-
----
-
-# 11. Do not touch without user approval
+# 10. Do not touch without user approval
 
 Never auto-change:
 
@@ -559,7 +495,7 @@ Never auto-change:
 - auth/session
 - public exposure rules
 - CSV import/reset semantics
-- deploy workflows
+- deploy workflows/secrets for production behavior
 - Cloudflare secrets
 - GitHub App production write permissions
 - destructive data behavior
@@ -574,7 +510,7 @@ These remain:
 
 ---
 
-# 12. Execution philosophy
+# 11. Execution philosophy
 
 Current KOHEE priority is not rapid feature expansion.
 
