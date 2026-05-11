@@ -52,23 +52,25 @@ Blocker: GitHub App webhook URL must use actual account endpoint if not already 
 Next action: set webhook URL to `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, trigger issue/comment event, confirm delivery 200 and dry-run log.
 Evidence: health passed at `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health`; no production KOHEE deploy was run.
 
-## Current PR queue
+## Current MOBILE_TRACK docs PR work
 
-Track: `MOBILE_TRACK`
-Status: no open PR expected after Phase 2 evidence merges.
-Next action: before any new work, confirm open PR count and route task to `MOBILE_TRACK` or `LOCAL_TRACK` as appropriate.
-Evidence: latest merged evidence PRs include dry-run endpoint and log records.
+Status: ready for PR review.
+Next action: merge the docs/governance PR if checks pass and review threads are clear.
+Evidence:
+
+- `docs/GITHUB_APP_WORKER_PHASE3_PLAN.md`
+- `docs/QUEUE_STATE_MACHINE.md`
+- `docs/DOCUMENT_ROLE_CLEANUP_PLAN.md`
 
 ## Cleanup targets
 
 P0/P1:
 
 - Confirm Phase 2 webhook delivery.
-- Design Phase 3 safe issue-comment bridge.
+- Implement Phase 3 safe issue-comment bridge only after Phase 2 delivery evidence is stable.
 - Rebuild command validator without custom commit statuses.
 - Rebuild command dispatch create-only/no-overwrite behavior while preserving manual `@codex` guidance.
 - Implement read-only maintenance audit.
-- Rewrite queue state machine if still needed.
 - Retry handler-internal manager cleanup without touching D1/schema.
 - Continue admin review console Phase 2/3/4.
 - Add submissions review CSV export Phase 2.
@@ -76,8 +78,7 @@ P0/P1:
 - Defer admin UI CSV button wiring until review console/export flows are stable.
 - Strengthen `audit:kohee` only from useful observed WARNs; avoid noisy blocking rules.
 - Keep broader LOW-only auto-merge automation deferred until the automation/check/review loop is stable over more PRs; existing manual use of native auto-merge for verified safe PRs remains allowed.
-- Mark `CODEX_WORKFLOW.md` as legacy/local Codex reference.
-- Reduce `CODEX_AUTOMATION_STATUS.md` to historical/reference status.
+- Run document role cleanup following `docs/DOCUMENT_ROLE_CLEANUP_PLAN.md`.
 
 HOLD/HIGH:
 
