@@ -30,7 +30,6 @@ function cafeCategories(cafe) {
 function cafeTags(cafe) {
   const tags = [];
   if (cafe.oakerman_pick) tags.push("오커맨픽");
-  if (cafe.manager_pick) tags.push("매니저픽");
   cafeCategories(cafe).forEach((tag) => tags.push(CAT_MAP[tag]));
   return tags;
 }
@@ -197,12 +196,11 @@ function renderMenu(user) {
   mainLink.textContent = "메인";
 
   const nodes = [mainLink];
-  if (user.role === "admin" || user.role === "manager") {
+  if (user.role === "admin") {
     const roleLink = document.createElement("a");
     roleLink.className = "mini-btn primary";
     roleLink.href = "admin.html";
-    roleLink.textContent =
-      user.role === "admin" ? "관리자 페이지" : "매니저 페이지";
+    roleLink.textContent = "관리자 페이지";
     nodes.push(roleLink);
   }
 
