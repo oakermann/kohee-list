@@ -34,6 +34,16 @@ export function parseCafeCategories(value) {
   return categories;
 }
 
+export function applyPickPermission(role, payload, existing = {}) {
+  return {
+    oakerman_pick:
+      role === "admin"
+        ? normalizeBool(payload.oakerman_pick)
+        : normalizeBool(existing.oakerman_pick),
+    manager_pick: 0,
+  };
+}
+
 export function toCafeResponse(row) {
   return {
     id: row.id,
