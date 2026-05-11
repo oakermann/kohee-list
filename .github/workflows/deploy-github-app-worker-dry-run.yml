@@ -53,10 +53,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.GITHUB_APP_WEBHOOK_SECRET }}
+          KOHEE_GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.KOHEE_GITHUB_APP_WEBHOOK_SECRET }}
         run: |
           missing=""
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID GITHUB_APP_WEBHOOK_SECRET; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID KOHEE_GITHUB_APP_WEBHOOK_SECRET; do
             if [ -z "${!name}" ]; then
               missing="$missing $name"
             fi
@@ -76,9 +76,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.GITHUB_APP_WEBHOOK_SECRET }}
+          KOHEE_GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.KOHEE_GITHUB_APP_WEBHOOK_SECRET }}
         run: |
-          printf "%s" "$GITHUB_APP_WEBHOOK_SECRET" | npx wrangler secret put GITHUB_WEBHOOK_SECRET --config automation/github-app-worker/wrangler.toml
+          printf "%s" "$KOHEE_GITHUB_APP_WEBHOOK_SECRET" | npx wrangler secret put GITHUB_WEBHOOK_SECRET --config automation/github-app-worker/wrangler.toml
 
       - name: Verify health endpoint
         run: |

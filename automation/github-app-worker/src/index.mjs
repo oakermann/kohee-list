@@ -22,7 +22,7 @@ function envFlag(value, fallback = false) {
 }
 
 function botLogins(env) {
-  return String(env.KOHEE_BOT_LOGINS || "kohee-automation-bot[bot]")
+  return String(env.KOHEE_BOT_LOGINS || "kohee-list-automation[bot]")
     .split(",")
     .map((login) => login.trim())
     .filter(Boolean);

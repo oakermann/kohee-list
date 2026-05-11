@@ -69,5 +69,5 @@ Commands: `gh auth status`, `wrangler whoami`, `npm run check:deploy-sync`, `npm
 Findings: GitHub CLI auth works via local GitHub CLI install; Wrangler auth works; Worker config name is `kohee-github-app-worker-dry-run`; dry-run safety flags are disabled for writes, auto-merge, and issue-close; dry-run bundle validation passes.
 Changes: no runtime change and no Worker deployment; this is a docs-only readiness record.
 Tests: `check:deploy-sync` pass; `test:unit` pass; `audit:kohee` pass with warnings=0; `wrangler deploy --dry-run` pass; `git diff --check` pass.
-Unresolved: `GITHUB_APP_WEBHOOK_SECRET` is not present in GitHub Actions secrets, and Cloudflare reports Worker `kohee-github-app-worker-dry-run` is not created yet.
-Next action: create/configure the GitHub App webhook secret and install/configure the app, then run the manual dry-run Worker deployment workflow.
+Unresolved: Cloudflare reports Worker `kohee-github-app-worker-dry-run` is not created yet.
+Next action: use repo secret `KOHEE_GITHUB_APP_WEBHOOK_SECRET`, align the workflow/app name, then run the manual dry-run Worker deployment workflow.

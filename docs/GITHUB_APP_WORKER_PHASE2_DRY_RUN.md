@@ -32,7 +32,7 @@ Register these GitHub Actions secrets before running the deploy workflow:
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
-- `GITHUB_APP_WEBHOOK_SECRET`
+- `KOHEE_GITHUB_APP_WEBHOOK_SECRET`
 
 Use a dedicated webhook secret value. Do not reuse account passwords, API tokens, or app private keys as the webhook secret.
 
@@ -42,7 +42,7 @@ Create a GitHub App for dry-run automation.
 
 Recommended app name:
 
-- `kohee-automation-bot`
+- `kohee-list-automation`
 
 Webhook URL after the Worker is deployed:
 
@@ -52,7 +52,7 @@ https://kohee-github-app-worker-dry-run.workers.dev/github/webhook
 
 Webhook secret:
 
-- Same value as `GITHUB_APP_WEBHOOK_SECRET`.
+- Same value as `KOHEE_GITHUB_APP_WEBHOOK_SECRET`.
 
 ### Minimum permissions for Phase 2 dry-run
 
@@ -202,7 +202,7 @@ DENY:
 REQUIRED SECRETS:
 - GitHub Actions secret CLOUDFLARE_API_TOKEN
 - GitHub Actions secret CLOUDFLARE_ACCOUNT_ID
-- GitHub Actions secret GITHUB_APP_WEBHOOK_SECRET
+- GitHub Actions secret KOHEE_GITHUB_APP_WEBHOOK_SECRET
 
 GITHUB APP PERMISSIONS FOR PHASE 2:
 - Metadata read
@@ -222,10 +222,10 @@ WEBHOOK EVENTS:
 
 STEPS:
 1. Confirm PR with .github/workflows/deploy-github-app-worker-dry-run.yml and automation/github-app-worker/wrangler.toml is merged into main.
-2. Create/configure GitHub App kohee-automation-bot with the exact Phase 2 read-only permissions above.
+2. Create/configure GitHub App kohee-list-automation with the exact Phase 2 read-only permissions above.
 3. Install it only on oakermann/kohee-list.
 4. Register webhook URL: https://kohee-github-app-worker-dry-run.workers.dev/github/webhook.
-5. Use the same webhook secret value as GITHUB_APP_WEBHOOK_SECRET.
+5. Use the same webhook secret value as KOHEE_GITHUB_APP_WEBHOOK_SECRET.
 6. Register the three required GitHub Actions secrets.
 7. Run GitHub Actions workflow Deploy GitHub App Worker Dry Run with confirm=deploy-dry-run-bot.
 8. Verify https://kohee-github-app-worker-dry-run.workers.dev/health returns ok=true, dryRun=true, botEnabled=false.
