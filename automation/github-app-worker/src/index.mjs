@@ -38,6 +38,20 @@ function actorLogin(payload) {
   );
 }
 
+function emitDryRunLog(entry) {
+  const log = {
+    type: "kohee.github_app_worker.dry_run_decision",
+    timestamp: new Date().toISOString(),
+    ...entry,
+  };
+  console.log(JSON.stringify(log));
+  return log;
+}
+
+function responseWithLog(body, log, status = 200) {
+  return json({ ...body, dryRunLog: log }, status);
+}
+
 export async function handleWebhookRequest(request, env = {}) {
   const body = await request.text();
   const eventName = request.headers.get("x-github-event") || "";
@@ -68,13 +82,26 @@ export async function handleWebhookRequest(request, env = {}) {
     return json({ ok: false, error: "Invalid JSON payload" }, 400);
   }
 
+  const repository = payload?.repository?.full_name || null;
   if (!isAllowedRepository(payload, env.KOHEE_BOT_ALLOWED_REPOS || "")) {
-    return json({ ok: false, error: "Repository is not allowed" }, 403);
+    const log = emitDryRunLog({
+      event: eventName,
+      deliveryId,
+      repository,
+      action: payload?.action || null,
+      actor: actorLogin(payload) || null,
+      decision: "REJECT_REPOSITORY_NOT_ALLOWED",
+      wouldDo: [],
+      reasons: ["repository is not allowed"],
+      botEnabled: envFlag(env.KOHEE_BOT_ENABLED, false),
+      dryRun: true,
+    });
+    return responseWithLog({ ok: false, error: "Repository is not allowed" }, log, 403);
   }
 
   const actor = actorLogin(payload);
   if (isSelfBotActor(actor, botLogins(env))) {
-    return json({
+    const body = {
       ok: true,
       dryRun: true,
       event: eventName,
@@ -82,17 +109,44 @@ export async function handleWebhookRequest(request, env = {}) {
       decision: "IGNORE_SELF_EVENT",
       reasons: [`ignored bot actor: ${actor}`],
       wouldDo: [],
+    };
+    const log = emitDryRunLog({
+      event: eventName,
+      deliveryId,
+      repository,
+      action: payload?.action || null,
+      actor,
+      decision: body.decision,
+      wouldDo: body.wouldDo,
+      reasons: body.reasons,
+      botEnabled: envFlag(env.KOHEE_BOT_ENABLED, false),
+      dryRun: true,
     });
+    return responseWithLog(body, log);
   }
 
   const decision = decideWebhookAction(eventName, payload);
-  return json({
+  const responseBody = {
     ...decision,
     deliveryId,
-    repository: payload?.repository?.full_name || null,
+    repository,
     botEnabled: envFlag(env.KOHEE_BOT_ENABLED, false),
     dryRun: true,
+  };
+  const log = emitDryRunLog({
+    event: eventName,
+    deliveryId,
+    repository,
+    action: payload?.action || null,
+    actor: actor || null,
+    decision: decision.decision,
+    wouldDo: decision.wouldDo || [],
+    reasons: decision.reasons || [],
+    highRiskFiles: decision.highRiskFiles || [],
+    botEnabled: responseBody.botEnabled,
+    dryRun: true,
   });
+  return responseWithLog(responseBody, log);
 }
 
 export async function handleRequest(request, env = {}) {
