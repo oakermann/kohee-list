@@ -47,7 +47,7 @@ Recommended app name:
 Webhook URL after the Worker is deployed:
 
 ```text
-https://kohee-github-app-worker-dry-run.workers.dev/github/webhook
+https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook
 ```
 
 Webhook secret:
@@ -99,6 +99,7 @@ deploy-dry-run-bot
 Expected result:
 
 - Worker deployed to `kohee-github-app-worker-dry-run.workers.dev`.
+- Actual account endpoint is `kohee-github-app-worker-dry-run.gabefinder.workers.dev`.
 - `GITHUB_WEBHOOK_SECRET` registered as a Cloudflare Worker secret.
 - `/health` returns JSON.
 - No repo write actions occur.
@@ -108,7 +109,7 @@ Expected result:
 Expected:
 
 ```bash
-curl https://kohee-github-app-worker-dry-run.workers.dev/health
+curl https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health
 ```
 
 Expected fields:
@@ -224,11 +225,11 @@ STEPS:
 1. Confirm PR with .github/workflows/deploy-github-app-worker-dry-run.yml and automation/github-app-worker/wrangler.toml is merged into main.
 2. Create/configure GitHub App kohee-list-automation with the exact Phase 2 read-only permissions above.
 3. Install it only on oakermann/kohee-list.
-4. Register webhook URL: https://kohee-github-app-worker-dry-run.workers.dev/github/webhook.
+4. Register webhook URL: https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook.
 5. Use the same webhook secret value as KOHEE_GITHUB_APP_WEBHOOK_SECRET.
 6. Register the three required GitHub Actions secrets.
 7. Run GitHub Actions workflow Deploy GitHub App Worker Dry Run with confirm=deploy-dry-run-bot.
-8. Verify https://kohee-github-app-worker-dry-run.workers.dev/health returns ok=true, dryRun=true, botEnabled=false.
+8. Verify https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health returns ok=true, dryRun=true, botEnabled=false.
 9. Trigger harmless test events and inspect dry-run decisions/logs.
 10. Comment results on issue #23 with exact evidence.
 

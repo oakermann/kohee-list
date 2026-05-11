@@ -62,10 +62,10 @@ Do not:
 
 ## Current automation blocker
 
-Status: READY_TO_DEPLOY for GitHub App Worker Phase 2 dry-run live connection after workflow/app-name patch.
-Blocker: Cloudflare Worker `kohee-github-app-worker-dry-run` is not created yet.
-Next action: merge the workflow/app-name patch, then run the manual dry-run Worker deployment workflow.
-Evidence: local GitHub CLI and Wrangler auth passed; repo secrets include `KOHEE_GITHUB_APP_WEBHOOK_SECRET`; no production KOHEE deploy was run.
+Status: DEPLOYED for GitHub App Worker Phase 2 dry-run Worker; webhook delivery awaits GitHub App URL correction if it still points at the old host.
+Blocker: GitHub App webhook URL must use the actual account endpoint if not already updated.
+Next action: set GitHub App webhook URL to `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, then trigger a harmless issue/comment event.
+Evidence: dry-run Worker health passed at `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health`; no production KOHEE deploy was run.
 
 ## Current open PR queue
 
