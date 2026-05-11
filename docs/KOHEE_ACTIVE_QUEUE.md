@@ -36,32 +36,13 @@ If a `MOBILE_TRACK` task hits local-tool or secret-dependent requirements, move 
 - Stop only for HIGH/HOLD, non-recoverable checks, unresolved blocking review, merge conflict, permission/tool errors, or explicit user interruption.
 - If a LOW/MEDIUM problem occurs, investigate first using GitHub evidence, repo code, workflow logs, review threads, and relevant official docs before asking the user.
 
-## Brevity rule
-
-All operational records, docs, PR bodies, queue entries, scripts, and comments should be concise, readable, and action-oriented.
-
-Do:
-
-- write short sections with clear status, blocker, next action
-- keep code small and focused
-- prefer exact file/risk/decision lists over long explanations
-- move old details to history/reference docs when no longer active
-
-Do not:
-
-- repeat the same policy across many docs
-- write long narrative status dumps in active queue
-- create many tiny PRs for sequential edits to the same file
-- use PRs as status chatter
-- mix current queue state into long-term policy docs
-
 ## Current runtime health
 
 - Production runtime is relatively stable.
 - Public `/data` invariant remains: `status = 'approved' AND deleted_at IS NULL`.
 - Auth/session/security has token hashing, CSRF, required `SESSION_SECRET`, rate limits, and audit scrubbing.
 - CSV direct approved publishing is blocked by candidate staging.
-- Current main weakness is automation/control-plane maturity, not cafe runtime functionality.
+- Current main weaknesses: automation/control-plane maturity and admin review UX.
 
 ## Current automation blocker
 
@@ -90,6 +71,11 @@ P0/P1:
 - Rewrite queue state machine if still needed.
 - Retry handler-internal manager cleanup without touching D1/schema.
 - Continue admin review console Phase 2/3/4.
+- Add submissions review CSV export Phase 2.
+- Defer all-review export until status-specific/submission exports are stable.
+- Defer admin UI CSV button wiring until review console/export flows are stable.
+- Strengthen `audit:kohee` only from useful observed WARNs; avoid noisy blocking rules.
+- Keep broader LOW-only auto-merge automation deferred until the automation/check/review loop is stable over more PRs; existing manual use of native auto-merge for verified safe PRs remains allowed.
 - Mark `CODEX_WORKFLOW.md` as legacy/local Codex reference.
 - Reduce `CODEX_AUTOMATION_STATUS.md` to historical/reference status.
 
@@ -105,6 +91,12 @@ HOLD/HIGH:
 - GitHub App production write enablement
 - automatic branch deletion
 - automatic issue close
+
+Always preserve:
+
+- Public/internal data separation.
+- Public `/data` only approved + non-deleted.
+- HIGH server/data/auth/D1/deploy work requires PR + user approval.
 
 ## Next reporting rule
 
