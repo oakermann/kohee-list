@@ -46,6 +46,14 @@ async function signedWebhookRequest(event, bodyObject, customEnv = env) {
   });
 }
 
+function assertDryRunLog(json, expectedDecision) {
+  assert.equal(json.dryRunLog.type, "kohee.github_app_worker.dry_run_decision");
+  assert.equal(json.dryRunLog.dryRun, true);
+  assert.equal(json.dryRunLog.decision, expectedDecision);
+  assert.ok(json.dryRunLog.timestamp);
+  assert.ok(json.dryRunLog.deliveryId);
+}
+
 assert.equal(isAllowedRepository(payload(), "oakermann/kohee-list"), true);
 assert.equal(isAllowedRepository(payload(), "other/repo"), false);
 assert.equal(
@@ -149,12 +157,16 @@ const webhookJson = await webhookResponse.json();
 assert.equal(webhookJson.dryRun, true);
 assert.equal(webhookJson.decision, "HOLD_HIGH_RISK");
 assert.deepEqual(webhookJson.wouldDo, ["comment_hold_or_observe"]);
+assertDryRunLog(webhookJson, "HOLD_HIGH_RISK");
+assert.deepEqual(webhookJson.dryRunLog.highRiskFiles, ["migrations/0006_test.sql"]);
 
 const deniedRepoResponse = await handleRequest(
   await signedWebhookRequest("issues", payload({ repository: { full_name: "other/repo" } })),
   env,
 );
 assert.equal(deniedRepoResponse.status, 403);
+const deniedRepoJson = await deniedRepoResponse.json();
+assertDryRunLog(deniedRepoJson, "REJECT_REPOSITORY_NOT_ALLOWED");
 
 const selfEventResponse = await handleRequest(
   await signedWebhookRequest(
@@ -166,6 +178,7 @@ const selfEventResponse = await handleRequest(
 assert.equal(selfEventResponse.status, 200);
 const selfEventJson = await selfEventResponse.json();
 assert.equal(selfEventJson.decision, "IGNORE_SELF_EVENT");
+assertDryRunLog(selfEventJson, "IGNORE_SELF_EVENT");
 
 const unsignedResponse = await handleRequest(
   new Request("https://bot.test/github/webhook", {
