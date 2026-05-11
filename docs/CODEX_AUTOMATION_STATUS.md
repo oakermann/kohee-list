@@ -32,7 +32,6 @@ If this file conflicts with `docs/KOHEE_MASTER_CONTEXT.md` or `docs/KOHEE_ACTIVE
 - Phase 2 dry-run setup and endpoint: `docs/GITHUB_APP_WORKER_PHASE2_DRY_RUN.md`
 - Phase 3 proposed issue-comment bridge: `docs/GITHUB_APP_WORKER_PHASE3_PLAN.md`
 - Queue state language: `docs/QUEUE_STATE_MACHINE.md`
-- Document cleanup plan: `docs/DOCUMENT_ROLE_CLEANUP_PLAN.md`
 
 ## Reliable paths
 
