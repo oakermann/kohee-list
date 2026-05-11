@@ -221,7 +221,7 @@ KOHEE_STATUS:
   state: DONE_NO_DEPLOY
   risk: MEDIUM
   lane: CSV_PIPELINE
-  owner: kohee-automation-bot
+  owner: kohee-list-automation
   result: Completed via merged PR #123.
   evidence:
     merged_pr: PR #123
@@ -235,7 +235,7 @@ KOHEE_STATUS:
   state: HOLD
   risk: HIGH
   lane: AUTH_ROLE
-  owner: kohee-automation-bot
+  owner: kohee-list-automation
   blocker: HOLD_USER_APPROVAL
   runtime_change_allowed: false
 ```

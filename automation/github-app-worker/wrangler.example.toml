@@ -12,7 +12,7 @@ KOHEE_BOT_DRY_RUN = "true"
 KOHEE_BOT_AUTO_MERGE_ENABLED = "false"
 KOHEE_BOT_ISSUE_CLOSE_ENABLED = "false"
 KOHEE_BOT_ALLOWED_REPOS = "oakermann/kohee-list"
-KOHEE_BOT_LOGINS = "kohee-automation-bot[bot]"
+KOHEE_BOT_LOGINS = "kohee-list-automation[bot]"
 
 # Runtime credentials are intentionally not included here.
 # Register them only in a later approved setup phase.

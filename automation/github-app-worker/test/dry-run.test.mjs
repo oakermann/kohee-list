@@ -16,7 +16,7 @@ import {
 const env = {
   GITHUB_WEBHOOK_SECRET: "unit-secret",
   KOHEE_BOT_ALLOWED_REPOS: "oakermann/kohee-list",
-  KOHEE_BOT_LOGINS: "kohee-automation-bot[bot]",
+  KOHEE_BOT_LOGINS: "kohee-list-automation[bot]",
 };
 
 function payload(overrides = {}) {
@@ -57,11 +57,11 @@ function assertDryRunLog(json, expectedDecision) {
 assert.equal(isAllowedRepository(payload(), "oakermann/kohee-list"), true);
 assert.equal(isAllowedRepository(payload(), "other/repo"), false);
 assert.equal(
-  isSelfBotActor("kohee-automation-bot[bot]", ["kohee-automation-bot[bot]"]),
+  isSelfBotActor("kohee-list-automation[bot]", ["kohee-list-automation[bot]"]),
   true,
 );
 assert.equal(
-  isSelfBotActor("chatgpt-codex-connector[bot]", ["kohee-automation-bot[bot]"]),
+  isSelfBotActor("chatgpt-codex-connector[bot]", ["kohee-list-automation[bot]"]),
   false,
 );
 
@@ -171,7 +171,7 @@ assertDryRunLog(deniedRepoJson, "REJECT_REPOSITORY_NOT_ALLOWED");
 const selfEventResponse = await handleRequest(
   await signedWebhookRequest(
     "issues",
-    payload({ sender: { login: "kohee-automation-bot[bot]" } }),
+    payload({ sender: { login: "kohee-list-automation[bot]" } }),
   ),
   env,
 );

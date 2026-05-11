@@ -63,5 +63,5 @@ PR / Commit: local docs-only readiness record, no production deploy
 Changed files: `docs/audits/LOCAL_CODEX_AUDIT_LOG.md`, `docs/audits/WORK_SESSION_LOG.md`, `docs/KOHEE_ACTIVE_QUEUE.md`
 Checks: local `check:deploy-sync`, `test:unit`, `audit:kohee`, `wrangler deploy --dry-run`, and `git diff --check` passed.
 Review threads: not applicable before PR creation
-Blocker: `GITHUB_APP_WEBHOOK_SECRET` is missing from GitHub Actions secrets; Cloudflare Worker `kohee-github-app-worker-dry-run` is not created yet.
-Next action: user configures GitHub App webhook secret/install, then run the manual dry-run Worker deployment workflow.
+Blocker: Cloudflare Worker `kohee-github-app-worker-dry-run` is not created yet.
+Next action: use repo secret `KOHEE_GITHUB_APP_WEBHOOK_SECRET`, align the workflow/app name, then run the manual dry-run Worker deployment workflow.
