@@ -71,3 +71,14 @@ Changes: no runtime change and no Worker deployment; this is a docs-only readine
 Tests: `check:deploy-sync` pass; `test:unit` pass; `audit:kohee` pass with warnings=0; `wrangler deploy --dry-run` pass; `git diff --check` pass.
 Unresolved: Cloudflare reports Worker `kohee-github-app-worker-dry-run` is not created yet.
 Next action: use repo secret `KOHEE_GITHUB_APP_WEBHOOK_SECRET`, align the workflow/app name, then run the manual dry-run Worker deployment workflow.
+
+## 2026-05-11 - GitHub App Worker Phase 2 dry-run deploy
+
+Scope: GitHub App automation Worker dry-run deploy and health verification; no production KOHEE Worker or Pages deploy.
+Base: `main` at `2b0a29acdd6d5368cd6e1ad2dc1c33362195f504`
+Commands: `gh workflow run`, `gh run watch`, `curl /health`, unsigned `/github/webhook` POST, `wrangler secret list`, issue #23 harmless comment test.
+Findings: Dry-run Worker deployed; Worker secret `GITHUB_WEBHOOK_SECRET` exists; `/health` returns `ok=true`, `dryRun=true`, `botEnabled=false`; unsigned webhook is rejected with 401 invalid signature.
+Changes: PR #111 aligned the GitHub Actions secret/app login; PR #112 corrected the actual Cloudflare account endpoint.
+Tests: deploy workflow run `25649073122` passed; local release verification passed before PRs.
+Unresolved: GitHub App delivery was not observed in Worker tail after the #23 test comment, likely because the GitHub App webhook URL still needs the actual account endpoint.
+Next action: set GitHub App webhook URL to `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, then redeliver or create another harmless issue/comment event.
