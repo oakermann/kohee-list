@@ -71,17 +71,49 @@ on:
           - preset
           - "true"
           - "false"
+      merge_order:
+        description: "Explicit sequential merge order metadata for parallel lanes"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
   issues: write
 
 jobs:
-  dispatch:
+  validate-command:
     runs-on: ubuntu-latest
     steps:
-      - name: Create or update KOHEE command issue
-        id: upsert
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Validate KOHEE command isolation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          INPUT_TASK: ${{ inputs.task }}
+          INPUT_PRESET: ${{ inputs.preset }}
+          INPUT_RISK: ${{ inputs.risk }}
+          INPUT_LANE: ${{ inputs.lane }}
+          INPUT_ALLOWED_FILES: ${{ inputs.allowed_files }}
+          INPUT_DENIED_FILES: ${{ inputs.denied_files }}
+          INPUT_RUNTIME_CHANGE_ALLOWED: ${{ inputs.runtime_change_allowed }}
+          INPUT_USER_APPROVAL_REQUIRED: ${{ inputs.user_approval_required }}
+          INPUT_MERGE_ORDER: ${{ inputs.merge_order }}
+        run: node scripts/validate-kohee-command.mjs
+
+  dispatch:
+    needs: validate-command
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create isolated KOHEE command issue
+        id: create
         uses: actions/github-script@v7
         env:
           INPUT_TASK: ${{ inputs.task }}
@@ -92,12 +124,13 @@ jobs:
           INPUT_DENIED_FILES: ${{ inputs.denied_files }}
           INPUT_RUNTIME_CHANGE_ALLOWED: ${{ inputs.runtime_change_allowed }}
           INPUT_USER_APPROVAL_REQUIRED: ${{ inputs.user_approval_required }}
+          INPUT_MERGE_ORDER: ${{ inputs.merge_order }}
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const now = new Date().toISOString();
-            const commandId = `kohee-${Date.now()}`;
+            const commandId = `kohee-${context.runId}-${Date.now()}`;
             const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const labels = ["kohee-task", "codex"];
             const presets = {
@@ -125,6 +158,7 @@ jobs:
             const denied = lines(process.env.INPUT_DENIED_FILES) || preset.denied_files || "(none)";
             const runtimeAllowed = boolValue(process.env.INPUT_RUNTIME_CHANGE_ALLOWED, preset.runtime_change_allowed ?? false);
             const approvalRequired = boolValue(process.env.INPUT_USER_APPROVAL_REQUIRED, preset.user_approval_required ?? false);
+            const mergeOrder = String(process.env.INPUT_MERGE_ORDER || "").trim() || "(none)";
             const task = `${preset.taskPrefix ? `${preset.taskPrefix} ` : ""}${String(process.env.INPUT_TASK || "").trim()}`.trim();
             const yamlList = (raw) => {
               const items = String(raw || "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
@@ -133,19 +167,13 @@ jobs:
             const manualCodexComment = ["@" + "codex", "", "Please execute this KOHEE_COMMAND from the issue body.", "", "Acknowledge with KOHEE_STATUS.", "Follow the PR evidence guard.", "If this task requires code changes, use the existing GitHub PR flow and include the actual PR URL.", "Do not claim PR_OPEN without an actual GitHub PR URL."].join("\n");
             const marker = "<!-- kohee-command-dispatch:v1 -->";
             const title = `[KOHEE_COMMAND] ${lane} / ${risk} / ${task.slice(0, 80)}`;
-            const body = `${marker}\n\n## Lane\n${lane}\n\n## Risk\n${risk}\n\n## Preset\n${selectedPreset || "(none)"}\n\n## Scope / allowlist (files + functions)\n- Allowed files:\n${yamlList(allowed)}\n- Denied files:\n${yamlList(denied)}\n\n## KOHEE_COMMAND\n\n\`\`\`yaml\nKOHEE_COMMAND:\n  command_id: ${commandId}\n  state: QUEUED\n  risk: ${risk}\n  lane: ${lane}\n  source: GitHub Actions workflow_dispatch\n  owner: codex\n  terminal_state: MERGED_AND_DEPLOYED | DONE_NO_DEPLOY | HOLD\n  user_action_required: ${approvalRequired}\n  task: ${task}\n  acceptance_criteria:\n    - Implement only allowed scope\n    - Run required verification commands\n    - Keep runtime change policy\n  allowed_files:\n${yamlList(allowed)}\n  denied_files:\n${yamlList(denied)}\n  runtime_change_allowed: ${runtimeAllowed}\n  do_not_change:\n${yamlList(denied)}\n  high_risk_hold:\n    - HOLD_HIGH_RISK\n    - HOLD_USER_APPROVAL\n    - HOLD_SCOPE_CONFLICT\n    - HOLD_CODEX_PR_PUBLISHING\n  created_at: ${now}\n  last_updated_at: ${now}\n\`\`\`\n\n## Manual Codex trigger required\n\nCodex Cloud auto-reaction is not guaranteed from bot comments.\n\nPost the following comment manually from a user account:\n\n\`\`\`text\n${manualCodexComment}\n\`\`\`\n\n## Codex trigger behavior\n\nThis workflow intentionally does not post an automatic \`@codex\` bot comment by default because GitHub Actions bot comments may not trigger Codex Cloud and can create noisy duplicate comments.\n\n## PR evidence guard\n\n- Actual GitHub PR URL is required for \`PR_OPEN\`.\n- Commit hash, branch name, local task output, make_pr metadata, or internal draft without a real PR URL is \`UNVERIFIED\`.\n- If PR publishing is blocked, use \`HOLD_CODEX_PR_PUBLISHING\`.\n- GitHub evidence wins over Codex self-reports.\n\n## Dispatch evidence\n\n- workflow_run: ${runUrl}\n`;
-            const { data: openIssues } = await github.rest.issues.listForRepo({ owner, repo, state: "open", labels: "codex", per_page: 100 });
-            const matched = openIssues.filter((issue) => issue.title.startsWith(`[KOHEE_COMMAND] ${lane} / ${risk}`)).find((issue) => (issue.body || "").includes(marker));
-            const issue = matched
-              ? (await github.rest.issues.update({ owner, repo, issue_number: matched.number, title, body, labels })).data
-              : (await github.rest.issues.create({ owner, repo, title, body, labels })).data;
+            const body = `${marker}\n\n## Lane\n${lane}\n\n## Risk\n${risk}\n\n## Preset\n${selectedPreset || "(none)"}\n\n## Merge order\n${mergeOrder}\n\n## Scope / allowlist (files + functions)\n- Allowed files:\n${yamlList(allowed)}\n- Denied files:\n${yamlList(denied)}\n\n## KOHEE_COMMAND\n\n\`\`\`yaml\nKOHEE_COMMAND:\n  command_id: ${commandId}\n  state: QUEUED\n  risk: ${risk}\n  lane: ${lane}\n  source: GitHub Actions workflow_dispatch\n  owner: codex\n  terminal_state: MERGED_AND_DEPLOYED | DONE_NO_DEPLOY | HOLD\n  user_action_required: ${approvalRequired}\n  merge_order: ${mergeOrder}\n  task: ${task}\n  acceptance_criteria:\n    - Implement only allowed scope\n    - Run required verification commands\n    - Keep runtime change policy\n    - Preserve queue isolation\n    - Avoid parallel lane conflicts\n    - Do not overwrite unrelated command issues\n  allowed_files:\n${yamlList(allowed)}\n  denied_files:\n${yamlList(denied)}\n  runtime_change_allowed: ${runtimeAllowed}\n  do_not_change:\n${yamlList(denied)}\n  high_risk_hold:\n    - HOLD_HIGH_RISK\n    - HOLD_USER_APPROVAL\n    - HOLD_SCOPE_CONFLICT\n    - HOLD_CODEX_PR_PUBLISHING\n  created_at: ${now}\n  last_updated_at: ${now}\n\`\`\`\n\n## Manual Codex trigger required\n\nCodex Cloud auto-reaction is not guaranteed from bot comments. Post this comment manually from a user account:\n\n\`\`\`text\n${manualCodexComment}\n\`\`\`\n\n## PR evidence guard\n\n- Actual GitHub PR URL is required for \`PR_OPEN\`.\n- Commit hash, branch name, local task output, make_pr metadata, or internal draft without a real PR URL is \`UNVERIFIED\`.\n- GitHub evidence wins over Codex self-reports.\n\n## Dispatch evidence\n\n- workflow_run: ${runUrl}\n- overwrite_policy: create-only command issue\n`;
+            const issue = (await github.rest.issues.create({ owner, repo, title, body, labels })).data;
             core.setOutput("issue_number", String(issue.number));
             core.setOutput("issue_url", issue.html_url);
-            core.setOutput("effective_preset", selectedPreset || "(none)");
             core.setOutput("effective_lane", lane);
             core.setOutput("effective_risk", risk);
-            core.setOutput("effective_runtime_change_allowed", String(runtimeAllowed));
-            core.setOutput("effective_user_approval_required", String(approvalRequired));
+            core.setOutput("effective_merge_order", mergeOrder);
             core.setOutput("manual_codex_comment", manualCodexComment);
 
       - name: Write workflow summary
@@ -153,18 +181,15 @@ jobs:
           {
             echo "## KOHEE command dispatch result"
             echo ""
-            echo "- Issue: ${{ steps.upsert.outputs.issue_url }}"
-            echo "- Issue number: #${{ steps.upsert.outputs.issue_number }}"
-            echo "- Preset: ${{ steps.upsert.outputs.effective_preset }}"
-            echo "- Lane: ${{ steps.upsert.outputs.effective_lane }}"
-            echo "- Risk: ${{ steps.upsert.outputs.effective_risk }}"
-            echo "- Runtime change allowed: ${{ steps.upsert.outputs.effective_runtime_change_allowed }}"
-            echo "- User approval required: ${{ steps.upsert.outputs.effective_user_approval_required }}"
+            echo "- Issue: ${{ steps.create.outputs.issue_url }}"
+            echo "- Issue number: #${{ steps.create.outputs.issue_number }}"
+            echo "- Lane: ${{ steps.create.outputs.effective_lane }}"
+            echo "- Risk: ${{ steps.create.outputs.effective_risk }}"
+            echo "- Merge order: ${{ steps.create.outputs.effective_merge_order }}"
+            echo "- Overwrite protection: create-only command issue"
             echo ""
             echo "## Manual Codex trigger required"
-            echo "Codex Cloud auto-reaction is not guaranteed from bot comments."
-            echo "Post this comment manually from a user account:"
             echo '```text'
-            echo "${{ steps.upsert.outputs.manual_codex_comment }}"
+            echo "${{ steps.create.outputs.manual_codex_comment }}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
