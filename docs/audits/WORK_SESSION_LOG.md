@@ -45,3 +45,13 @@ Checks: `PR Validate` success, `Validate` success
 Review threads: none
 Blocker: none
 Next action: Continue actual code/workflow fixes from ACTIVE_QUEUE, not from long chat state.
+
+## 2026-05-11 - PR #109 required checks triage
+
+Status: in progress
+PR / Commit: PR #109, head `cf9e22a927aa3b9f17451170743fa1bb553de93d`
+Changed files: docs-only audit log split
+Checks: `PR Validate` success, `Validate` success; job names `pr-validate` and `verify`
+Review threads: none
+Blocker: REST merge returned `2 of 2 required status checks are expected` even though required GitHub Actions check-runs exist on the head SHA.
+Next action: Refresh PR #109 head with this docs-only evidence update and recheck mergeability.

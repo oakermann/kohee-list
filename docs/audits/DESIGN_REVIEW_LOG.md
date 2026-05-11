@@ -48,3 +48,11 @@ Decision: Separate design decisions, work execution records, and local Codex aud
 Evidence: ACTIVE_QUEUE became too verbose when design analysis and execution details were mixed.
 Impact: ACTIVE_QUEUE remains short; detailed evidence moves to audit logs.
 Next action: Use this file for design judgment, `WORK_SESSION_LOG.md` for GitHub execution, and `LOCAL_CODEX_AUDIT_LOG.md` for local Codex runs.
+
+## 2026-05-11 - Required checks expected triage
+
+Status: decided
+Decision: Treat PR #109 as a ruleset/check association problem, not an app runtime problem.
+Evidence: PR #109 head SHA has GitHub Actions check-runs `pr-validate` and `verify` from app id `15368`, both successful, but REST merge reports `2 of 2 required status checks are expected`.
+Impact: Prefer fresh PR-head checks and native auto-merge before changing repository rulesets.
+Next action: If fresh checks still do not satisfy the ruleset, inspect and minimally adjust required-check settings.
