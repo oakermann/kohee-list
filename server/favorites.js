@@ -15,7 +15,7 @@ export async function getFavorites(req, env) {
     const rows = await env.DB.prepare(
       `SELECT f.id AS favorite_id, f.created_at,
               c.id, c.name, c.address, c.desc, c.lat, c.lng, c.signature, c.beanShop, c.instagram, c.category,
-              c.oakerman_pick, c.manager_pick, c.updated_at
+              c.oakerman_pick, c.updated_at
        FROM favorites f
        JOIN cafes c ON c.id = f.cafe_id
        WHERE f.user_id = ?
