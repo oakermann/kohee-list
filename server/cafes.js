@@ -95,7 +95,7 @@ export async function getData(req, env) {
 export async function listCafes(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["admin"]);
+    requireRole(user, ["admin", "manager"]);
 
     const url = new URL(req.url);
     const lifecycle = String(url.searchParams.get("lifecycle") || "active");
@@ -145,7 +145,7 @@ export function normalizeCafePayload(payload) {
 export async function addCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["admin"]);
+    requireRole(user, ["admin", "manager"]);
 
     const body = await readJson(req);
     const payload = normalizeCafePayload(body);
@@ -158,8 +158,8 @@ export async function addCafe(req, env) {
     await env.DB.prepare(
       `INSERT INTO cafes(
         id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-        oakerman_pick, status, created_by, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        oakerman_pick, manager_pick, status, created_by, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -173,6 +173,7 @@ export async function addCafe(req, env) {
         payload.instagram,
         payload.category,
         payload.oakerman_pick,
+        0,
         status,
         user.user_id,
         updatedAt,
@@ -219,7 +220,7 @@ export async function editCafe(req, env) {
     await env.DB.prepare(
       `UPDATE cafes SET
         name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, updated_at = ?
+        oakerman_pick = ?, manager_pick = 0, updated_at = ?
        WHERE id = ?`,
     )
       .bind(
