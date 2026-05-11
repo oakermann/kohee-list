@@ -60,6 +60,13 @@ Do not:
 - Settings-side cleanup is done enough for now.
 - Remaining required-check risk is code-side: PR #95 must not add custom commit status context `pr-validate`.
 
+## Current automation blocker
+
+Status: BLOCKED for GitHub App Worker Phase 2 dry-run live connection.
+Blocker: `GITHUB_APP_WEBHOOK_SECRET` is missing from GitHub Actions secrets, and Cloudflare Worker `kohee-github-app-worker-dry-run` is not created yet.
+Next action: configure the GitHub App webhook secret/install, then run the manual dry-run Worker deployment workflow.
+Evidence: local GitHub CLI and Wrangler auth passed; `wrangler deploy --dry-run --config automation/github-app-worker/wrangler.toml` passed; no production KOHEE deploy was run.
+
 ## Current open PR queue
 
 ### Independent / clean candidates

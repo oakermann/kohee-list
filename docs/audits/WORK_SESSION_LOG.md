@@ -55,3 +55,13 @@ Checks: `PR Validate` success, `Validate` success; job names `pr-validate` and `
 Review threads: none
 Blocker: REST merge returned `2 of 2 required status checks are expected` even though required GitHub Actions check-runs exist on the head SHA.
 Next action: Refresh PR #109 head with this docs-only evidence update and recheck mergeability.
+
+## 2026-05-11 - GitHub App Worker dry-run readiness
+
+Status: BLOCKED
+PR / Commit: local docs-only readiness record, no production deploy
+Changed files: `docs/audits/LOCAL_CODEX_AUDIT_LOG.md`, `docs/audits/WORK_SESSION_LOG.md`, `docs/KOHEE_ACTIVE_QUEUE.md`
+Checks: local `check:deploy-sync`, `test:unit`, `audit:kohee`, `wrangler deploy --dry-run`, and `git diff --check` passed.
+Review threads: not applicable before PR creation
+Blocker: `GITHUB_APP_WEBHOOK_SECRET` is missing from GitHub Actions secrets; Cloudflare Worker `kohee-github-app-worker-dry-run` is not created yet.
+Next action: user configures GitHub App webhook secret/install, then run the manual dry-run Worker deployment workflow.
