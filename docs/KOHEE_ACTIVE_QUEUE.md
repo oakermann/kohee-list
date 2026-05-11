@@ -9,7 +9,8 @@ Source split:
 
 - `docs/KOHEE_MASTER_CONTEXT.md` = long-term policy and invariants
 - `docs/KOHEE_ACTIVE_QUEUE.md` = current queue and blockers
-- `docs/audits/DESIGN_REVIEW_LOG.md` = design/review decisions and rationale
+- `docs/LOCAL_CODEX_RUNBOOK.md` = local Codex start/read/report rules
+- `docs/audits/DESIGN_REVIEW_LOG.md` = design decisions and rationale
 - `docs/audits/WORK_SESSION_LOG.md` = ChatGPT GitHub execution evidence
 - `docs/audits/LOCAL_CODEX_AUDIT_LOG.md` = local Codex audits, fixes, and local verification
 - `docs/CODEX_AUTOMATION_STATUS.md` = historical automation status/reference
@@ -22,7 +23,7 @@ Use tracks as routing hints, not blockers:
 - `MOBILE_TRACK`: ChatGPT/GitHub connector can plan, review, update docs/queue, inspect PRs/checks, and handle safe GitHub edits.
 - `LOCAL_TRACK`: local Codex should execute because the task needs local tests, `gh`, `wrangler`, Cloudflare, webhook checks, secrets/private-key handling, or deeper local debugging.
 
-If a `MOBILE_TRACK` task hits local-tool or secret-dependent requirements, move it to `LOCAL_TRACK` instead of forcing progress.
+For LOCAL_TRACK, local Codex should read `docs/LOCAL_CODEX_RUNBOOK.md` first and then follow the first ready local task in this queue.
 
 ## Operating rules
 
@@ -51,7 +52,7 @@ If a `MOBILE_TRACK` task hits local-tool or secret-dependent requirements, move 
 Track: `LOCAL_TRACK`
 Status: `HOLD_LOCAL_REQUIRED`
 Blocker: `scripts/test-unit.mjs` still has legacy direct-handler tests that expect manager-role handler calls to return 200.
-Next action: rework `scripts/test-unit.mjs` expectations around manager direct-handler calls, preserve route-level manager denial, then rerun full local verification.
+Next action: use `docs/LOCAL_CODEX_RUNBOOK.md`, rework `scripts/test-unit.mjs` expectations around manager direct-handler calls, preserve route-level manager denial, then rerun full local verification.
 Evidence: `https://github.com/oakermann/kohee-list/pull/118`
 
 ### Phase 2 webhook delivery
