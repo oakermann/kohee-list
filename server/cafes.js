@@ -40,12 +40,12 @@ export function applyPickPermission(role, payload, existing = {}) {
       role === "admin"
         ? normalizeBool(payload.oakerman_pick)
         : normalizeBool(existing.oakerman_pick),
-    manager_pick: 0,
+    manager_pick: role === "manager" ? normalizeBool(payload.manager_pick) : 0,
   };
 }
 
 export function toCafeResponse(row) {
-  return {
+  const cafe = {
     id: row.id,
     name: row.name,
     address: row.address,
@@ -59,6 +59,12 @@ export function toCafeResponse(row) {
     oakerman_pick: !!row.oakerman_pick,
     updated_at: row.updated_at,
   };
+
+  if (Object.prototype.hasOwnProperty.call(row, "manager_pick")) {
+    cafe.manager_pick = !!row.manager_pick;
+  }
+
+  return cafe;
 }
 
 export function toAdminCafeResponse(row) {
