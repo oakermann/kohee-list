@@ -22,6 +22,7 @@ Source split:
 - Merge remains sequential after checks and review-thread gates pass.
 - Prefer native auto-merge for eligible safe PRs when available.
 - Stop only for HIGH/HOLD, non-recoverable checks, unresolved blocking review, merge conflict, permission/tool errors, or explicit user interruption.
+- If a LOW/MEDIUM problem occurs, investigate first using GitHub evidence, repo code, workflow logs, review threads, and relevant official docs before asking the user.
 
 ## Brevity rule
 
@@ -50,15 +51,26 @@ Do not:
 - CSV direct approved publishing is blocked by candidate staging.
 - Current main weakness is automation/control-plane maturity, not cafe runtime functionality.
 
+## Current GitHub settings state
+
+- Required checks now show native GitHub Actions sources: `pr-validate` and `verify`.
+- Settings-side cleanup is done enough for now.
+- Remaining required-check risk is code-side: PR #95 must not add custom commit status context `pr-validate`.
+
 ## Current open PR queue
 
-### Independent / can be handled separately
+### Independent / clean candidates
 
 - PR #103 — structured dry-run worker logs
   - Files: `automation/github-app-worker/src/index.mjs`, `automation/github-app-worker/test/dry-run.test.mjs`
   - Status: checks seen passing, no review threads seen
   - Risk: LOW/MEDIUM dry-run automation only
   - Action: merge candidate if still clean
+
+- PR #105 — ops governance follow-up plans
+  - Status: checks seen passing, no review threads seen
+  - Risk: LOW docs/governance
+  - Action: merge candidate if still clean and not duplicative
 
 ### Sequential dependency queue
 
@@ -68,16 +80,26 @@ Do not:
    - Fix before merge:
      - use `state: HOLD` + blocker/reason, not `HOLD_HIGH` / `HOLD_USER` as canonical states
      - restrict stale transition to queued-without-evidence cases
-   - Action: fix first, then merge first
+   - Action: fix first, then merge
 
 2. PR #95 — command guard / validator
    - Files: command dispatch workflow, PR validate workflow, `AGENTS.md`, `package.json`, validator script
    - Risk: MEDIUM governance/tooling
-   - Action: integrate/coordinate with #101 before final merge
+   - Must fix before merge:
+     - remove custom `pr-validate` commit status publishing
+     - remove `statuses: write`
+     - remove `github.rest.repos.createCommitStatus(...)`
+     - keep native GitHub Actions check-run only
+     - coordinate/fold #101 overwrite protection
+   - Action: fix, recheck, then merge after #100
 
 3. PR #101 — dispatch overwrite protection
    - Files: command dispatch workflow
    - Blocker: removes manual `@codex` trigger guidance while workflow does not auto-post `@codex`
+   - Required fix:
+     - keep create-only/no-overwrite behavior
+     - restore manual `@codex` trigger guidance in issue body and workflow summary
+     - preserve PR evidence guard
    - Action: fold into #95 if practical; otherwise rebase/fix after #95
 
 4. PR #99 — read-only maintenance audit
@@ -88,10 +110,9 @@ Do not:
 Correct sequence:
 
 ```text
-#103 if clean and independent
+#103/#105 if still clean and independent
 #100 fix -> merge
-#95 + #101 integration decision
-#95 merge after dispatch overwrite policy is correct
+#95 fix custom status + coordinate #101 -> merge
 #101 close as superseded or rebase/fix/merge after #95
 #99 update/rebase/recheck -> merge
 ```
@@ -100,8 +121,8 @@ Correct sequence:
 
 P0:
 
-- Reflect PR #103 in active queue.
 - Fix #100 state names and stale semantics.
+- Fix #95 by removing custom `pr-validate` commit status publishing.
 - Resolve #95/#101 command-dispatch overlap.
 - Preserve manual `@codex` trigger guidance while preventing command issue overwrite.
 - Keep #99 read-only and recheck it after #95.
