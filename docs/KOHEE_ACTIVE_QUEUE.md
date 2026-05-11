@@ -25,20 +25,20 @@ Source split:
 
 ## Brevity rule
 
-All operational records, docs, PR bodies, queue entries, scripts, and comments should be concise, readable, and action-oriented.
+All records, docs, PR bodies, queue entries, scripts, and comments should be concise, readable, and action-oriented.
 
 Do:
 
-- write short sections with clear status, blocker, next action
+- write short sections with status, blocker, next action
 - keep code small and focused
-- prefer exact file/risk/decision lists over long explanations
-- move old details to history/reference docs when no longer active
+- prefer exact file/risk/decision lists
+- move old details to history/reference docs
 
 Do not:
 
 - repeat the same policy across many docs
-- write long narrative status dumps in active queue
-- create many tiny PRs for sequential edits to the same file
+- write long narrative dumps in active queue
+- create tiny sequential PRs for the same file
 - use PRs as status chatter
 - mix current queue state into long-term policy docs
 
@@ -48,51 +48,80 @@ Do not:
 - Public `/data` invariant remains: `status = 'approved' AND deleted_at IS NULL`.
 - Auth/session/security has token hashing, CSRF, required `SESSION_SECRET`, rate limits, and audit scrubbing.
 - CSV direct approved publishing is blocked by candidate staging.
-- Current main weakness is automation/control-plane maturity, not cafe runtime functionality.
+- Main weakness is automation/control-plane maturity, not cafe runtime functionality.
+
+## Required-check cleanup
+
+Status:
+
+- GitHub branch protection now requires native GitHub Actions checks: `pr-validate` and `verify`.
+- This is correct.
+
+Blocker:
+
+- PR #95 still tries to add a custom commit status named `pr-validate`.
+- That can recreate the head-SHA vs test-merge-SHA `pr-validate expected` problem.
+
+Next action:
+
+- In PR #95, remove custom commit status publishing:
+  - remove `statuses: write`
+  - remove `Publish required status context`
+  - remove `github.rest.repos.createCommitStatus(...)`
+  - keep native GitHub Actions check-runs only
+
+Evidence:
+
+- `main` currently has no custom `pr-validate` commit-status publisher.
+- #95 introduces it, so #95 must be fixed before merge.
 
 ## Current open PR queue
 
-### Independent / can be handled separately
+### Independent / clean candidates
 
 - PR #103 — structured dry-run worker logs
   - Files: `automation/github-app-worker/src/index.mjs`, `automation/github-app-worker/test/dry-run.test.mjs`
-  - Status: checks seen passing, no review threads seen
+  - Status: checks success, no review threads seen
   - Risk: LOW/MEDIUM dry-run automation only
   - Action: merge candidate if still clean
+
+- PR #105 — ops governance follow-up docs
+  - Status: checks success, no review threads seen
+  - Risk: LOW docs/governance
+  - Action: merge candidate if still clean and not duplicating ACTIVE_QUEUE
 
 ### Sequential dependency queue
 
 1. PR #100 — queue state machine
-   - Files: `docs/QUEUE_STATE_MACHINE.md`
    - Blocker: unresolved review comments
-   - Fix before merge:
+   - Fix:
      - use `state: HOLD` + blocker/reason, not `HOLD_HIGH` / `HOLD_USER` as canonical states
      - restrict stale transition to queued-without-evidence cases
-   - Action: fix first, then merge first
+   - Action: fix first, then merge
 
 2. PR #95 — command guard / validator
-   - Files: command dispatch workflow, PR validate workflow, `AGENTS.md`, `package.json`, validator script
    - Risk: MEDIUM governance/tooling
-   - Action: integrate/coordinate with #101 before final merge
+   - Blockers:
+     - remove custom `pr-validate` status publisher
+     - coordinate with #101 on command-dispatch workflow
+   - Action: fix #95 before merge
 
 3. PR #101 — dispatch overwrite protection
-   - Files: command dispatch workflow
    - Blocker: removes manual `@codex` trigger guidance while workflow does not auto-post `@codex`
    - Action: fold into #95 if practical; otherwise rebase/fix after #95
 
 4. PR #99 — read-only maintenance audit
-   - Files: maintenance audit workflow/script, `package.json`
    - Blocker: overlaps #95 on `package.json`
    - Action: update/rebase/recheck after #95; keep strictly read-only
 
 Correct sequence:
 
 ```text
-#103 if clean and independent
+#103 / #105 if still clean and independent
 #100 fix -> merge
-#95 + #101 integration decision
-#95 merge after dispatch overwrite policy is correct
-#101 close as superseded or rebase/fix/merge after #95
+#95 fix custom status + coordinate #101
+#95 merge after dispatch policy is correct
+#101 close superseded or rebase/fix/merge after #95
 #99 update/rebase/recheck -> merge
 ```
 
@@ -100,10 +129,10 @@ Correct sequence:
 
 P0:
 
-- Reflect PR #103 in active queue.
+- Fix #95 custom `pr-validate` status publisher.
 - Fix #100 state names and stale semantics.
 - Resolve #95/#101 command-dispatch overlap.
-- Preserve manual `@codex` trigger guidance while preventing command issue overwrite.
+- Preserve manual `@codex` trigger guidance while preventing issue overwrite.
 - Keep #99 read-only and recheck it after #95.
 
 P1:
@@ -128,7 +157,7 @@ HOLD/HIGH:
 - automatic branch deletion
 - automatic issue close
 
-## Next reporting rule
+## Reporting rule
 
 For every future queue update, report only:
 
