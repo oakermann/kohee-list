@@ -15,6 +15,15 @@ Source split:
 - `docs/CODEX_AUTOMATION_STATUS.md` = historical automation status/reference
 - `docs/CODEX_WORKFLOW.md` = legacy Codex/local workflow reference unless updated
 
+## Routing hint
+
+Use tracks as routing hints, not blockers:
+
+- `MOBILE_TRACK`: ChatGPT/GitHub connector can plan, review, update docs/queue, inspect PRs/checks, and handle safe GitHub edits.
+- `LOCAL_TRACK`: local Codex should execute because the task needs local tests, `gh`, `wrangler`, Cloudflare, webhook checks, secrets/private-key handling, or deeper local debugging.
+
+If a `MOBILE_TRACK` task hits local-tool or secret-dependent requirements, move it to `LOCAL_TRACK` instead of forcing progress.
+
 ## Operating rules
 
 - Use GitHub evidence only: PR URL, head SHA, changed files, checks, review threads, workflow results, issue state, merged state.
@@ -54,97 +63,35 @@ Do not:
 - CSV direct approved publishing is blocked by candidate staging.
 - Current main weakness is automation/control-plane maturity, not cafe runtime functionality.
 
-## Current GitHub settings state
-
-- Required checks now show native GitHub Actions sources: `pr-validate` and `verify`.
-- Settings-side cleanup is done enough for now.
-- Remaining required-check risk is code-side: PR #95 must not add custom commit status context `pr-validate`.
-
 ## Current automation blocker
 
-Status: DEPLOYED for GitHub App Worker Phase 2 dry-run Worker; webhook delivery awaits GitHub App URL correction if it still points at the old host.
-Blocker: GitHub App webhook URL must use the actual account endpoint if not already updated.
-Next action: set GitHub App webhook URL to `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, then trigger a harmless issue/comment event.
-Evidence: dry-run Worker health passed at `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health`; no production KOHEE deploy was run.
+Track: `LOCAL_TRACK`
+Status: GitHub App Worker Phase 2 dry-run Worker deployed; webhook delivery verification still pending.
+Blocker: GitHub App webhook URL must use actual account endpoint if not already updated, then a harmless event must be delivered.
+Next action: set webhook URL to `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, trigger issue/comment event, confirm delivery 200 and dry-run log.
+Evidence: health passed at `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health`; no production KOHEE deploy was run.
 
-## Current open PR queue
+## Current PR queue
 
-### Independent / clean candidates
-
-- PR #103 — structured dry-run worker logs
-  - Files: `automation/github-app-worker/src/index.mjs`, `automation/github-app-worker/test/dry-run.test.mjs`
-  - Status: checks seen passing, no review threads seen
-  - Risk: LOW/MEDIUM dry-run automation only
-  - Action: merge candidate if still clean
-
-- PR #105 — ops governance follow-up plans
-  - Status: checks seen passing, no review threads seen
-  - Risk: LOW docs/governance
-  - Action: merge candidate if still clean and not duplicative
-
-### Sequential dependency queue
-
-1. PR #100 — queue state machine
-   - Files: `docs/QUEUE_STATE_MACHINE.md`
-   - Blocker: unresolved review comments
-   - Fix before merge:
-     - use `state: HOLD` + blocker/reason, not `HOLD_HIGH` / `HOLD_USER` as canonical states
-     - restrict stale transition to queued-without-evidence cases
-   - Action: fix first, then merge
-
-2. PR #95 — command guard / validator
-   - Files: command dispatch workflow, PR validate workflow, `AGENTS.md`, `package.json`, validator script
-   - Risk: MEDIUM governance/tooling
-   - Must fix before merge:
-     - remove custom `pr-validate` commit status publishing
-     - remove `statuses: write`
-     - remove `github.rest.repos.createCommitStatus(...)`
-     - keep native GitHub Actions check-run only
-     - coordinate/fold #101 overwrite protection
-   - Action: fix, recheck, then merge after #100
-
-3. PR #101 — dispatch overwrite protection
-   - Files: command dispatch workflow
-   - Blocker: removes manual `@codex` trigger guidance while workflow does not auto-post `@codex`
-   - Required fix:
-     - keep create-only/no-overwrite behavior
-     - restore manual `@codex` trigger guidance in issue body and workflow summary
-     - preserve PR evidence guard
-   - Action: fold into #95 if practical; otherwise rebase/fix after #95
-
-4. PR #99 — read-only maintenance audit
-   - Files: maintenance audit workflow/script, `package.json`
-   - Blocker: overlaps #95 on `package.json`
-   - Action: update/rebase/recheck after #95; keep strictly read-only
-
-Correct sequence:
-
-```text
-#103/#105 if still clean and independent
-#100 fix -> merge
-#95 fix custom status + coordinate #101 -> merge
-#101 close as superseded or rebase/fix/merge after #95
-#99 update/rebase/recheck -> merge
-```
+Track: `MOBILE_TRACK`
+Status: no open PR expected after Phase 2 evidence merges.
+Next action: before any new work, confirm open PR count and route task to `MOBILE_TRACK` or `LOCAL_TRACK` as appropriate.
+Evidence: latest merged evidence PRs include dry-run endpoint and log records.
 
 ## Cleanup targets
 
-P0:
+P0/P1:
 
-- Fix #100 state names and stale semantics.
-- Fix #95 by removing custom `pr-validate` commit status publishing.
-- Resolve #95/#101 command-dispatch overlap.
-- Preserve manual `@codex` trigger guidance while preventing command issue overwrite.
-- Keep #99 read-only and recheck it after #95.
-
-P1:
-
-- Mark `CODEX_WORKFLOW.md` as legacy/local Codex reference and remove Codex-main wording.
-- Remove volatile current-state lists from `KOHEE_MASTER_CONTEXT.md`; keep them in ACTIVE_QUEUE.
-- Reduce `CODEX_AUTOMATION_STATUS.md` to historical/reference status and avoid repeating active policy.
-- Improve maintenance audit with KOHEE_STATUS comment parsing.
-- Add explicit ACTIVE_QUEUE/docs overlap detection to maintenance audit.
-- Clean handler-internal legacy manager permissions without touching D1/schema.
+- Confirm Phase 2 webhook delivery.
+- Design Phase 3 safe issue-comment bridge.
+- Rebuild command validator without custom commit statuses.
+- Rebuild command dispatch create-only/no-overwrite behavior while preserving manual `@codex` guidance.
+- Implement read-only maintenance audit.
+- Rewrite queue state machine if still needed.
+- Retry handler-internal manager cleanup without touching D1/schema.
+- Continue admin review console Phase 2/3/4.
+- Mark `CODEX_WORKFLOW.md` as legacy/local Codex reference.
+- Reduce `CODEX_AUTOMATION_STATUS.md` to historical/reference status.
 
 HOLD/HIGH:
 
