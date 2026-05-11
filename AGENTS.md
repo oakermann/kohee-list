@@ -60,6 +60,15 @@ For issue-triggered Codex work, Codex should report `PATCH_READY`, `DONE_NO_DEPL
 
 Codex must not report `PR_OPEN` from `make_pr` metadata, local commits, branch names, or task-local output without an actual GitHub PR URL.
 
+## Execution track hint
+
+Use execution tracks as a lightweight routing hint, not as a blocker.
+
+- `MOBILE_TRACK`: outside/mobile work where ChatGPT can plan, review, inspect GitHub evidence, update docs/queue, and handle safe GitHub edits through the connector.
+- `LOCAL_TRACK`: home/PC work where local Codex should execute because the task needs local repo tests, `gh`, `wrangler`, Cloudflare, webhook delivery checks, private-key/secret handling, or deeper local debugging.
+
+If the track is obvious, proceed without ceremony. If a `MOBILE_TRACK` task hits local-tool or secret-dependent requirements, move it to `LOCAL_TRACK` instead of forcing progress.
+
 ## Evidence rule
 
 Before ChatGPT reports completion to the user, ChatGPT must verify actual GitHub state:
