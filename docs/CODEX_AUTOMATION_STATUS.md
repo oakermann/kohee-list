@@ -8,14 +8,14 @@ This document is no longer the active queue or primary automation policy.
 Use these sources first:
 
 ```text
-KOHEE_MASTER_CONTEXT.md = long-term policy and invariants
-KOHEE_ACTIVE_QUEUE.md = current state, blockers, next actions
-DESIGN_REVIEW_LOG.md = design decisions
-WORK_SESSION_LOG.md = GitHub execution evidence
-LOCAL_CODEX_AUDIT_LOG.md = local Codex evidence
+docs/KOHEE_MASTER_CONTEXT.md = long-term policy and invariants
+docs/KOHEE_ACTIVE_QUEUE.md = current state, blockers, next actions
+docs/audits/DESIGN_REVIEW_LOG.md = design decisions
+docs/audits/WORK_SESSION_LOG.md = GitHub execution evidence
+docs/audits/LOCAL_CODEX_AUDIT_LOG.md = local Codex evidence
 ```
 
-If this file conflicts with `KOHEE_MASTER_CONTEXT.md` or `KOHEE_ACTIVE_QUEUE.md`, follow those newer files.
+If this file conflicts with `docs/KOHEE_MASTER_CONTEXT.md` or `docs/KOHEE_ACTIVE_QUEUE.md`, follow those newer files.
 
 ## Current baseline summary
 
