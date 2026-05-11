@@ -82,7 +82,7 @@ jobs:
 
       - name: Verify health endpoint
         run: |
-          curl --fail --silent --show-error https://kohee-github-app-worker-dry-run.workers.dev/health
+          curl --fail --silent --show-error https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health
 
       - name: Write summary
         if: always()
@@ -91,7 +91,7 @@ jobs:
             echo "## GitHub App Worker dry-run deploy"
             echo ""
             echo "- Worker: kohee-github-app-worker-dry-run"
-            echo "- Endpoint: https://kohee-github-app-worker-dry-run.workers.dev"
+            echo "- Endpoint: https://kohee-github-app-worker-dry-run.gabefinder.workers.dev"
             echo "- Webhook path: /github/webhook"
             echo "- Mode: dry-run only"
             echo "- Bot enabled flag: false"
