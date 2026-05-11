@@ -75,7 +75,7 @@ P0/P1:
 - Defer all-review export until status-specific/submission exports are stable.
 - Defer admin UI CSV button wiring until review console/export flows are stable.
 - Strengthen `audit:kohee` only from useful observed WARNs; avoid noisy blocking rules.
-- Keep LOW-only auto-merge deferred until automation/check/review loop is stable over more PRs.
+- Keep broader LOW-only auto-merge automation deferred until the automation/check/review loop is stable over more PRs; existing manual use of native auto-merge for verified safe PRs remains allowed.
 - Mark `CODEX_WORKFLOW.md` as legacy/local Codex reference.
 - Reduce `CODEX_AUTOMATION_STATUS.md` to historical/reference status.
 
