@@ -9,6 +9,9 @@ Source split:
 
 - `docs/KOHEE_MASTER_CONTEXT.md` = long-term policy and invariants
 - `docs/KOHEE_ACTIVE_QUEUE.md` = current queue and blockers
+- `docs/audits/DESIGN_REVIEW_LOG.md` = design/review decisions and rationale
+- `docs/audits/WORK_SESSION_LOG.md` = ChatGPT GitHub execution evidence
+- `docs/audits/LOCAL_CODEX_AUDIT_LOG.md` = local Codex audits, fixes, and local verification
 - `docs/CODEX_AUTOMATION_STATUS.md` = historical automation status/reference
 - `docs/CODEX_WORKFLOW.md` = legacy Codex/local workflow reference unless updated
 
