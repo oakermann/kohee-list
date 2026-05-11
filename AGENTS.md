@@ -5,9 +5,11 @@ This repo is KOHEE LIST.
 Read these first, in order:
 
 1. `docs/KOHEE_MASTER_CONTEXT.md`
-2. `kohee.contract.json`
-3. `docs/CODEX_AUTOMATION_STATUS.md`
-4. `docs/CODEX_WORKFLOW.md`
+2. `docs/KOHEE_ACTIVE_QUEUE.md`
+3. `docs/LOCAL_CODEX_RUNBOOK.md` when running local Codex work
+4. `kohee.contract.json`
+5. `docs/CODEX_AUTOMATION_STATUS.md`
+6. `docs/CODEX_WORKFLOW.md`
 
 `docs/KOHEE_MASTER_CONTEXT.md` is the current source of truth for automation, lifecycle, CSV, deployment, risk, and backlog rules. If older docs conflict with it, follow the master context unless the user gives a newer explicit instruction.
 
@@ -59,6 +61,14 @@ GitHub evidence wins. Codex self-reports are status notes, not final truth.
 For issue-triggered Codex work, Codex should report `PATCH_READY`, `DONE_NO_DEPLOY`, `HOLD_USER_APPROVAL`, or `HOLD_HIGH_RISK` unless it has an actual GitHub PR URL.
 
 Codex must not report `PR_OPEN` from `make_pr` metadata, local commits, branch names, or task-local output without an actual GitHub PR URL.
+
+## Local Codex start
+
+For home/PC work, local Codex should start from GitHub state instead of a long pasted prompt.
+
+Read `docs/LOCAL_CODEX_RUNBOOK.md`, then pick the first ready `LOCAL_TRACK` task from `docs/KOHEE_ACTIVE_QUEUE.md`, issue `#23`, and open PRs marked `HOLD_LOCAL_REQUIRED`.
+
+After work, local Codex must record a short result in `docs/audits/LOCAL_CODEX_AUDIT_LOG.md` and on the target PR or issue `#23`.
 
 ## Execution track hint
 
