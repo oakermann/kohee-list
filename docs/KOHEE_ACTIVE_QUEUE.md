@@ -42,36 +42,36 @@ If a `MOBILE_TRACK` task hits local-tool or secret-dependent requirements, move 
 - Public `/data` invariant remains: `status = 'approved' AND deleted_at IS NULL`.
 - Auth/session/security has token hashing, CSRF, required `SESSION_SECRET`, rate limits, and audit scrubbing.
 - CSV direct approved publishing is blocked by candidate staging.
-- Current main weaknesses: automation/control-plane maturity and admin review UX.
+- Current main weaknesses: automation/control-plane maturity, legacy manager cleanup, and admin review UX.
 
-## Current automation blocker
+## Current blockers
+
+### PR #118 legacy manager/pick removal
 
 Track: `LOCAL_TRACK`
-Status: GitHub App Worker Phase 2 dry-run Worker deployed; webhook delivery verification still pending.
-Blocker: GitHub App webhook URL must use actual account endpoint if not already updated, then a harmless event must be delivered.
-Next action: set webhook URL to `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, trigger issue/comment event, confirm delivery 200 and dry-run log.
+Status: `HOLD_LOCAL_REQUIRED`
+Blocker: `scripts/test-unit.mjs` still has legacy direct-handler tests that expect manager-role handler calls to return 200.
+Next action: rework `scripts/test-unit.mjs` expectations around manager direct-handler calls, preserve route-level manager denial, then rerun full local verification.
+Evidence: `https://github.com/oakermann/kohee-list/pull/118`
+
+### Phase 2 webhook delivery
+
+Track: `LOCAL_TRACK`
+Status: deployed dry-run Worker; delivery verification pending.
+Blocker: GitHub App webhook URL must use the actual account endpoint if not already updated, then a harmless event must be delivered.
+Next action: trigger issue/comment event, confirm GitHub App delivery 200, and confirm Worker dry-run decision log.
 Evidence: health passed at `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health`; no production KOHEE deploy was run.
-
-## Current MOBILE_TRACK docs PR work
-
-Status: ready for PR review.
-Next action: merge the docs/governance PR if checks pass and review threads are clear.
-Evidence:
-
-- `docs/GITHUB_APP_WORKER_PHASE3_PLAN.md`
-- `docs/QUEUE_STATE_MACHINE.md`
-- `docs/DOCUMENT_ROLE_CLEANUP_PLAN.md`
 
 ## Cleanup targets
 
 P0/P1:
 
+- Finish PR #118 locally: manager direct-handler test rewrite, manager_pick removal verification, no D1 migration.
 - Confirm Phase 2 webhook delivery.
 - Implement Phase 3 safe issue-comment bridge only after Phase 2 delivery evidence is stable.
 - Rebuild command validator without custom commit statuses.
 - Rebuild command dispatch create-only/no-overwrite behavior while preserving manual `@codex` guidance.
 - Implement read-only maintenance audit.
-- Retry handler-internal manager cleanup without touching D1/schema.
 - Continue admin review console Phase 2/3/4.
 - Add submissions review CSV export Phase 2.
 - Defer all-review export until status-specific/submission exports are stable.
@@ -83,6 +83,7 @@ P0/P1:
 HOLD/HIGH:
 
 - D1/schema manager role CHECK removal
+- manager_pick DB column removal
 - resetCsv transaction/staging redesign
 - evidence/category verification DB
 - auth/session/security redesign
