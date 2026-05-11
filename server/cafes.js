@@ -47,7 +47,6 @@ export function toCafeResponse(row) {
     instagram: cleanUrl(row.instagram),
     category: parseJsonArray(row.category),
     oakerman_pick: !!row.oakerman_pick,
-    manager_pick: !!row.manager_pick,
     updated_at: row.updated_at,
   };
 }
@@ -66,7 +65,7 @@ export async function getData(req, env) {
   return withGuard(req, env, async () => {
     const rows = await env.DB.prepare(
       `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-        oakerman_pick, manager_pick, updated_at
+        oakerman_pick, updated_at
        FROM cafes
        WHERE status = 'approved'
         AND deleted_at IS NULL
@@ -80,7 +79,7 @@ export async function getData(req, env) {
 export async function listCafes(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const url = new URL(req.url);
     const lifecycle = String(url.searchParams.get("lifecycle") || "active");
@@ -93,7 +92,7 @@ export async function listCafes(req, env) {
 
     const rows = await env.DB.prepare(
       `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-        oakerman_pick, manager_pick, updated_at, status, deleted_at, hidden_at, hidden_by
+        oakerman_pick, updated_at, status, deleted_at, hidden_at, hidden_by
        FROM cafes
        ${where}
        ORDER BY updated_at DESC`,
@@ -112,23 +111,7 @@ export async function getNotice(req, env) {
   });
 }
 
-export function applyPickPermission(role, payload, existing = {}) {
-  if (role === "admin") {
-    return {
-      oakerman_pick: normalizeBool(payload.oakerman_pick),
-      manager_pick: normalizeBool(payload.manager_pick),
-    };
-  }
-
-  return {
-    // Managers may manage manager_pick, but they must not overwrite oakerman_pick.
-    oakerman_pick: normalizeBool(existing.oakerman_pick),
-    manager_pick: normalizeBool(payload.manager_pick),
-  };
-}
-
-export function normalizeCafePayload(payload, role, existing = {}) {
-  const picks = applyPickPermission(role, payload, existing);
+export function normalizeCafePayload(payload) {
   return {
     name: cleanText(payload.name, 120),
     address: cleanText(payload.address, 200),
@@ -139,18 +122,17 @@ export function normalizeCafePayload(payload, role, existing = {}) {
     beanShop: cleanUrl(payload.beanShop),
     instagram: cleanUrl(payload.instagram),
     category: JSON.stringify(parseCafeCategories(payload.category)),
-    oakerman_pick: picks.oakerman_pick,
-    manager_pick: picks.manager_pick,
+    oakerman_pick: normalizeBool(payload.oakerman_pick),
   };
 }
 
 export async function addCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
-    const payload = normalizeCafePayload(body, user.role);
+    const payload = normalizeCafePayload(body);
     if (!payload.name || !payload.address || !payload.desc)
       throw new HttpError(400, "name/address/desc required");
 
@@ -160,8 +142,8 @@ export async function addCafe(req, env) {
     await env.DB.prepare(
       `INSERT INTO cafes(
         id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-        oakerman_pick, manager_pick, status, created_by, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        oakerman_pick, status, created_by, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -175,7 +157,6 @@ export async function addCafe(req, env) {
         payload.instagram,
         payload.category,
         payload.oakerman_pick,
-        payload.manager_pick,
         status,
         user.user_id,
         updatedAt,
@@ -203,7 +184,7 @@ export async function addCafe(req, env) {
 export async function editCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
     const id = cleanText(body.id, 80);
@@ -214,7 +195,7 @@ export async function editCafe(req, env) {
       .first();
     if (!exists) throw new HttpError(404, "Cafe not found");
 
-    const payload = normalizeCafePayload(body, user.role, exists);
+    const payload = normalizeCafePayload(body);
     if (!payload.name || !payload.address || !payload.desc)
       throw new HttpError(400, "name/address/desc required");
 
@@ -222,7 +203,7 @@ export async function editCafe(req, env) {
     await env.DB.prepare(
       `UPDATE cafes SET
         name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, manager_pick = ?, updated_at = ?
+        oakerman_pick = ?, updated_at = ?
        WHERE id = ?`,
     )
       .bind(
@@ -236,7 +217,6 @@ export async function editCafe(req, env) {
         payload.instagram,
         payload.category,
         payload.oakerman_pick,
-        payload.manager_pick,
         updatedAt,
         id,
       )
