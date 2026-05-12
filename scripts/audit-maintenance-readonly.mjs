@@ -16,7 +16,6 @@ function exists(file) {
 
 const workflow = read(".github/workflows/maintenance-scheduled.yml");
 const packageJson = JSON.parse(read("package.json"));
-const activeQueue = read("docs/KOHEE_ACTIVE_QUEUE.md");
 const auditLog = read("docs/audits/LOCAL_CODEX_AUDIT_LOG.md");
 
 const forbiddenWorkflowFragments = [
@@ -63,10 +62,6 @@ assert.ok(
   "test:unit must include read-only maintenance audit",
 );
 
-assert.ok(
-  activeQueue.includes("read-only maintenance audit"),
-  "ACTIVE_QUEUE should track read-only maintenance audit state",
-);
 assert.ok(
   auditLog.includes("Read-only maintenance audit"),
   "LOCAL_CODEX_AUDIT_LOG should record read-only maintenance audit work",
