@@ -16,6 +16,12 @@ Purpose: current blockers and next actions only.
 - GitHub is the source of truth: PRs, checks, review threads, issue #23, and logs.
 - Urgent product bugs override automation.
 - If there is no urgent product bug, automation implementation is the top priority.
+- The target is an automation platform: finish the shared automation/control layer first, then let that layer manage KOHEE, news app, blog/status site, internal handover app, and future projects.
+- Local Codex is the default executor for eligible LOW/MEDIUM implementation work.
+- HIGH/HOLD work must stop for owner approval before implementation.
+- ChatGPT acts as planner/reviewer/queue maintainer and MERGE/FIX/HOLD/NEXT judge.
+- GitHub remains the shared command board and evidence ledger for all projects.
+- Cloudflare/GitHub App Worker handles webhook/status bridge and later approved coordination, not unrestricted execution.
 - Local Codex should use one git worktree per active independent lane.
 - Parallel work must not touch the same file, shared test, workflow, or risk area.
 - Phase 3 comment/status bridge comes before Phase 4 native GitHub auto-merge.
