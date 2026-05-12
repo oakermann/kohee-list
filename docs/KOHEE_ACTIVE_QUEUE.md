@@ -22,6 +22,30 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
+### PR #128 commercial codebase gap audit
+
+Status: merged
+Track: `LOCAL_TRACK`
+Evidence: `https://github.com/oakermann/kohee-list/pull/128`
+Merge commit: `93c70636bb044cf291b8831872dd35a9251fcc04`
+Result: added audit-only commercial codebase gap report under `docs/audits/`. PR Validate and Validate passed before merge.
+
+### PR #129 public smoke retired manager_pick guard
+
+Status: merged
+Track: `LOCAL_TRACK`
+Evidence: `https://github.com/oakermann/kohee-list/pull/129`
+Merge commit: `e27321e9fb88b49ef5e8912fdf787e6bf54cf23d`
+Result: tightened smoke/audit tooling so retired `manager_pick` cannot return to the public smoke allowlist unnoticed. No runtime public `/data` implementation changed.
+
+### PR #130 smoke command safety runbook
+
+Status: merged
+Track: `LOCAL_TRACK`
+Evidence: `https://github.com/oakermann/kohee-list/pull/130`
+Merge commit: `bd4851361f07c9d77f09f7d7efdf0162bc5dabfe`
+Result: documented read-only smoke commands versus the approval-required production-adjacent full smoke command.
+
 ### PR #118 legacy manager / manager_pick removal
 
 Status: merged
@@ -39,13 +63,27 @@ Result: GitHub App `issue_comment` delivery reached the dry-run Worker and emitt
 
 ## Current blockers
 
-### 1. Commercial codebase gap audit
+### 1. Remote merged branch cleanup
 
-Status: queued
+Status: `HOLD_USER_APPROVAL`
 Track: `LOCAL_TRACK`
-Evidence: issue `#23` task queue comment.
-Blocker: not started.
-Next action: create an audit-only Draft PR with one report under `docs/audits/`.
+Evidence: issue `#23` status comment `4429263918`; issue `#94` governance follow-up.
+Blocker: deleting remote branches is intentionally not automatic.
+Verified merged remote branch candidates:
+
+- `origin/chatgpt/dispatch-overwrite-protection`
+- `origin/chatgpt/fix-webhook-secret-name`
+- `origin/codex/add-kohee-command-dispatch-workflow`
+- `origin/codex/fix-issue-#36-github-pr-handling`
+- `origin/codex/improve-kohee-command-dispatch-workflow`
+- `origin/docs-role`
+- `origin/docs-role-clean`
+- `origin/docs-role-cleanup`
+- `origin/phase3-plan-docs`
+- `origin/queue-state-docs`
+- `origin/role-server`
+
+Next action: if the owner explicitly approves branch deletion, delete only the verified merged remote branches above and record the command evidence. Otherwise leave them as candidates only.
 
 ## Next work after blockers
 
