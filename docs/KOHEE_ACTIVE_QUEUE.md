@@ -23,6 +23,7 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
+- GitHub dependency review audit: completed as LOW audit-only docs; recommendation is an optional, path-filtered, read-only dependency-review workflow in a separate LOW PR if accepted.
 - Cloudflare Worker observability audit: completed as LOW audit-only docs; recommendation is a separate LOW config-only PR to add Workers Logs config, with no deploy in the audit.
 - PR #155 Phase 4B classifier review fix from PR #153: merged, PR checks passed, and the PR #153 P1/P2 review threads were resolved with #155 evidence.
 - Phase 4B native auto-merge dry-run classifier: merged in PR #153; follow-up review fix completed in PR #155. Native auto-merge enablement remains HOLD.
@@ -51,35 +52,28 @@ Decision: repository hygiene only; do not let this block Phase 3/4 automation im
 
 ## Next work
 
-### 1. GitHub dependency review audit
-
-Risk: LOW audit-only
-Track: `LOCAL_TRACK`
-Lane: DEPLOY_SAFETY / SUPPLY_CHAIN
-Scope: inspect whether dependency-review-action is useful for KOHEE PRs. Propose workflow changes only if low-noise and compatible with current rulesets.
-
-### 2. Phase 5A local Codex worker runbook hardening
+### 1. Phase 5A local Codex worker runbook hardening
 
 Risk: LOW/MEDIUM docs/tooling
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: harden local worker runbook and stop/kill-switch/worktree rules. No daemon or unattended loop yet.
 
-### 3. Phase 6A reusable automation audit
+### 2. Phase 6A reusable automation audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: classify reusable vs project-specific automation components. No extraction yet.
 
-### 4. Admin review console Phase 2/3
+### 3. Admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 5. Submissions review CSV Phase 2
+### 4. Submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
