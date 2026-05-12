@@ -292,3 +292,14 @@ Changes: added `docs/audits/2026-05-13-worker-observability-audit.md`; refreshed
 Tests: pending local checks and GitHub PR checks for this audit PR.
 Unresolved: add Workers Logs config in a separate LOW config-only PR if accepted; do not deploy from this audit.
 Next action: open and verify the audit PR, then continue to GitHub dependency review audit after this PR is green/merged externally.
+
+## 2026-05-13 - GitHub dependency review audit
+
+Scope: LOW audit-only review of `actions/dependency-review-action`; no workflow, ruleset, deploy, D1/schema, auth/session/security, CSV import/reset, public `/data`, GitHub write, issue close, branch delete, direct merge bot, or native auto-merge enablement changes.
+Base: `main` at `84180ba7567df32c3244bf5f8c3004cfa0d99582`.
+Commands: inspected AGENTS, ACTIVE_QUEUE, LOCAL_CODEX_RUNBOOK, issue #23, open PRs, PR #157 merge evidence, GitHub dependency review docs/action docs, package manifests, PR/Validate workflows, CODEOWNERS, and changed-area detection.
+Findings: dependency review is available because the repo is public, but KOHEE currently has only one devDependency and most automation PRs do not change dependency manifests. A path-filtered read-only dependency review workflow would be low-noise if added later; making it required or adding PR comments now is not recommended.
+Changes: added `docs/audits/2026-05-13-github-dependency-review-audit.md`; refreshed `docs/KOHEE_ACTIVE_QUEUE.md` to move next work to Phase 5A local Codex worker runbook hardening.
+Tests: pending local checks and GitHub PR checks for this audit PR.
+Unresolved: optional follow-up LOW workflow PR can add `.github/workflows/dependency-review.yml`; do not change rulesets from this audit.
+Next action: open and verify the audit PR, then continue to Phase 5A local Codex worker runbook hardening after this PR is green/merged externally.
