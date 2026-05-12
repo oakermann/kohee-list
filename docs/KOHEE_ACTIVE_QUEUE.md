@@ -23,7 +23,7 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
-- Phase 4A native auto-merge readiness audit: local audit complete; PR/check evidence pending.
+- PR #148 Phase 4A native auto-merge readiness audit: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #146 Phase 3A dry-run KOHEE_STATUS parser: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #141 maintenance audit stable invariants: merged, checks passed.
 - PR #136 read-only maintenance audit: merged, checks passed.
