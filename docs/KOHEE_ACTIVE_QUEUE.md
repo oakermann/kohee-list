@@ -19,6 +19,7 @@ Purpose: current blockers and next actions only.
 - The target is an automation platform: finish the shared automation/control layer first, then let that layer manage KOHEE, news app, blog/status site, internal handover app, and future projects.
 - Before continuing deeper automation, explicitly separate automation-platform rules from KOHEE-project rules so Local Codex and ChatGPT do not treat KOHEE product work as the automation platform itself.
 - KOHEE is the first managed project and testbed, not the whole automation platform.
+- Keep the automation platform organized like a commercial codebase: small modules, explicit contracts, stable schemas, clear ownership boundaries, narrow PRs, low-noise checks, and minimal duplicated policy text.
 - Local Codex is the default executor for eligible LOW/MEDIUM implementation work.
 - HIGH/HOLD work must stop for owner approval before implementation.
 - ChatGPT acts as planner/reviewer/queue maintainer and MERGE/FIX/HOLD/NEXT judge.
@@ -68,57 +69,84 @@ Risk: LOW docs/governance
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: define the automation platform boundary before deeper Phase 5/6 work. Separate shared automation contracts, queue schema, status schema, worker rules, and Local Codex execution rules from KOHEE-specific product rules such as public `/data`, CSV lifecycle, cafe/admin UI, and D1 policy. No extraction or runtime change yet.
+Commercial cleanup acceptance:
+- Produce a concise boundary document or section that separates shared automation core from KOHEE project policy.
+- Identify the future folder/doc shape for shared automation contracts, project contracts, worker/runbook docs, and per-project queues.
+- Avoid broad refactors or file moves in this step.
+- Keep duplicated policy text low and point to source-of-truth docs where possible.
 
-### 2. Phase 5A local Codex worker runbook hardening
+### 2. Automation status schema draft
+
+Risk: LOW docs/schema draft
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: draft the common automation status schema needed by queue, issue #23, PR bodies, Local Codex reports, Worker decisions, and the future control board. This should be a design/schema draft first; no board implementation yet.
+Commercial cleanup acceptance:
+- Define fields such as project, task_id, state, risk, lane, owner, current_pr, blocker, stop_reason, next_action, and evidence_links.
+- Keep it reusable across KOHEE, news app, blog/status site, and internal handover app.
+- Do not force every existing doc to migrate in this step.
+
+### 3. Automation backlog separation
+
+Risk: LOW docs/governance
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: separate automation-platform backlog from KOHEE product backlog so Codex does not interleave platform foundation work with admin console, CSV, or future app implementation.
+Commercial cleanup acceptance:
+- Keep ACTIVE_QUEUE short and current.
+- Move durable platform backlog items to a stable automation backlog doc if useful.
+- Keep KOHEE product backlog below the automation lane.
+
+### 4. Phase 5A local Codex worker runbook hardening
 
 Risk: LOW/MEDIUM docs/tooling
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: harden local worker runbook, local prerequisites, worktree rules, task-pick rules, stop conditions, owner approval handoff, and kill-switch expectations. No daemon or unattended loop yet.
 
-### 3. Phase 5B local task picker dry-run
+### 5. Phase 5B local task picker dry-run
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: add a local dry-run task picker that reads GitHub state and prints the next eligible LOW/MEDIUM task without executing changes. No background loop yet.
 
-### 4. Approval notification bridge design
+### 6. Approval notification bridge design
 
 Risk: LOW audit/design
 Track: `LOCAL_TRACK`
 Lane: AUTOMATION_CONNECTIVITY / GOVERNANCE
 Scope: design how HIGH/HOLD/FIX_REQUIRED status reaches the owner without manual polling. Start with GitHub mention/notification behavior; compare later PWA/Web Push only as a future option.
 
-### 5. Phase 4C native auto-merge owner approval pack
+### 7. Phase 4C native auto-merge owner approval pack
 
 Risk: HIGH until explicitly approved
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / DEPLOY_SAFETY
 Scope: prepare an approval checklist for enabling native GitHub auto-merge on eligible LOW PRs only. Do not enable it without explicit owner approval.
 
-### 6. Phase 5C local controlled worker loop owner approval pack
+### 8. Phase 5C local controlled worker loop owner approval pack
 
 Risk: HIGH until explicitly approved
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: prepare the controlled local worker loop approval checklist and safety gates. Do not enable unattended execution without explicit owner approval.
 
-### 7. Phase 6A reusable automation audit
+### 9. Phase 6A reusable automation audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: classify reusable vs project-specific automation components. No extraction yet.
 
-### 8. Phase 6B project automation prep templates
+### 10. Phase 6B project automation prep templates
 
 Risk: LOW docs/templates
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: prepare reusable AGENTS/ACTIVE_QUEUE/RUNBOOK/contract template guidance for KOHEE follow-up projects before feature work resumes.
 
-### 9. Automation control board design
+### 11. Automation control board design
 
 Risk: LOW design-first
 Track: `LOCAL_TRACK`
@@ -127,21 +155,21 @@ Scope: design the task/status board after the automation layer can feed it. The 
 
 ## Project work after automation lane
 
-### 10. KOHEE admin review console Phase 2/3
+### 12. KOHEE admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 11. KOHEE submissions review CSV Phase 2
+### 13. KOHEE submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
 Lane: CSV_PIPELINE
 Scope: audit/design first; no reviewed CSV apply until explicitly approved.
 
-### 12. Future project prep
+### 14. Future project prep
 
 Risk: LOW/MEDIUM depending on project
 Track: `LOCAL_TRACK`
