@@ -26,10 +26,9 @@ Purpose: current blockers and next actions only.
 
 Status: merged
 Track: `LOCAL_TRACK`
-Evidence: `https://github.com/oakermann/kohee-list/pull/136`
-Merge commit: `9570b9e28cf6838c99a7e005a3230d307d88f9f8`
-Result: scheduled maintenance was narrowed to a read-only audit with no issue writes, CSV backup/export, or artifact upload. The audit runs through `npm run audit:maintenance` and is covered by `npm run test:unit`.
-Follow-up: review feedback found that `scripts/audit-maintenance-readonly.mjs` asserts transient ACTIVE_QUEUE text; fix this before broader automation work.
+Evidence: https://github.com/oakermann/kohee-list/pull/136 merged as `9570b9e28cf6838c99a7e005a3230d307d88f9f8`; PR checks passed after PR body evidence correction; main Validate and Deploy passed on merge commit, with Deploy skipping Pages/Worker deploy and smoke steps.
+Result: scheduled maintenance is narrowed to a read-only audit with no issue writes, CSV backup/export, or artifact upload. The audit runs through `npm run audit:maintenance` and is covered by `npm run test:unit`.
+Follow-up: `scripts/audit-maintenance-readonly.mjs` still asserts ACTIVE_QUEUE text; remove that transient queue assertion before broader automation work.
 
 ### PR #134 command validator
 
