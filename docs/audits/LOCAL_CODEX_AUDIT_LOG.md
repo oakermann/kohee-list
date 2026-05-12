@@ -156,6 +156,6 @@ Base: `main` at `b4f5a5257b0af5c5787c82b886b4ca3b61dc0576`
 Commands: inspected KOHEE command templates, dispatch workflow, existing PR evidence check, and test runner.
 Findings: command validator work should stay inside normal GitHub Actions checks and must not publish custom commit status contexts.
 Changes: added `scripts/validate-kohee-command.mjs` and wired it into `npm run test:unit`. The validator checks KOHEE_COMMAND schema fields, state/risk/lane/HOLD vocabulary, dispatch create-only behavior, PR evidence fields, and absence of custom commit status publishing APIs in workflow/script/automation code.
-Tests: pending.
+Tests: PR #134 PR Validate and Validate passed before merge.
 Unresolved: read-only maintenance audit remains the next non-destructive governance item after this validator PR.
-Next action: run local checks, open PR, verify PR Validate / Validate, then merge if no review blockers.
+Next action: correct ACTIVE_QUEUE from pending PR to merged evidence, then continue to read-only maintenance audit.
