@@ -12,7 +12,14 @@ Status: active routing note
 
 ## Operating default
 
-Local Codex should prefer **parallel independent LOW lanes** instead of serial one-task operation.
+Local Codex should prefer **parallel independent LOW lanes** instead of serial one-task operation only after recorded blockers are checked.
+
+Blocker gate:
+
+- Inspect issue `#23`, open PRs marked `HOLD_LOCAL_REQUIRED`, and `docs/KOHEE_ACTIVE_QUEUE.md` current blockers before selecting work.
+- If a recorded blocker exists, work only on that blocker and do not start parallel LOW lanes.
+- If the blocker requires owner approval, report HOLD and stop instead of starting unrelated work.
+- Parallel LOW work is allowed only when no recorded blocker is active or the active queue explicitly routes around it.
 
 Default behavior:
 
@@ -34,10 +41,12 @@ Do not use stale historical tasks from this runbook as the first task. This file
 
 Current preferred pattern:
 
-1. Identify the next LOW `LOCAL_TRACK` tasks.
-2. Group independent audit/docs/tooling tasks into parallel worktrees when safe.
-3. Keep MEDIUM tasks separate unless explicitly scoped.
-4. HOLD all HIGH/HOLD tasks and report instead of implementing.
+1. Inspect issue `#23`, `HOLD_LOCAL_REQUIRED` PRs, and active queue blockers.
+2. If a blocker is recorded, work only that blocker or report HOLD.
+3. If no blocker is active, identify the next LOW `LOCAL_TRACK` tasks.
+4. Group independent audit/docs/tooling tasks into parallel worktrees when safe.
+5. Keep MEDIUM tasks separate unless explicitly scoped.
+6. HOLD all HIGH/HOLD tasks and report instead of implementing.
 
 ## Local workflow per lane
 
@@ -120,6 +129,7 @@ Use this when the owner wants unattended night work without enabling a daemon:
 AGENTS.md, docs/KOHEE_ACTIVE_QUEUE.md, docs/LOCAL_CODEX_RUNBOOK.md 기준으로 병렬 가능한 LOW LOCAL_TRACK 작업을 최대 2개까지 독립 worktree로 진행해.
 
 조건:
+- 먼저 issue #23, HOLD_LOCAL_REQUIRED PR, ACTIVE_QUEUE current blockers를 확인해. 기록된 blocker가 있으면 병렬 작업을 시작하지 말고 그 blocker만 처리하거나 HOLD 보고해.
 - 각 작업은 별도 worktree/branch/PR로 분리
 - 같은 파일/같은 공유 테스트/같은 workflow/같은 risk area를 건드리면 병렬 중단 후 1개만 진행
 - MEDIUM은 명확히 scoped된 경우만 단독 진행
