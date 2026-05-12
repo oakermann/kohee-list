@@ -82,3 +82,14 @@ Changes: PR #111 aligned the GitHub Actions secret/app login; PR #112 corrected 
 Tests: deploy workflow run `25649073122` passed; local release verification passed before PRs.
 Unresolved: GitHub App delivery was not observed in Worker tail after the #23 test comment, likely because the GitHub App webhook URL still needs the actual account endpoint.
 Next action: set GitHub App webhook URL to `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, then redeliver or create another harmless issue/comment event.
+
+## 2026-05-12 - PR #118 manager removal test repair
+
+Scope: PR #118 legacy manager / manager_pick removal blocker.
+Base: PR #118 head `046fa5b8e2d583551cbb4813f785ccee9c67a340`
+Commands: `gh pr view 118`, `gh run view 25666142683 --log-failed`, `npm run test:unit`, required local verification.
+Findings: PR #118 runtime behavior denied manager submission approval with 403; tests still expected legacy manager success and old `manager_pick` binding/header positions.
+Changes: updated `scripts/test-unit.mjs` expectations only; kept `scripts/test-manager-role-removal.mjs` route-level manager denial unchanged.
+Tests: `check:deploy-sync` pass; `test:unit` pass; `audit:kohee` pass; `verify:release` pass; `git diff --check` pass.
+Unresolved: none expected if PR checks pass.
+Next action: push PR #118 branch and verify GitHub checks.
