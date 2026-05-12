@@ -203,3 +203,14 @@ Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from pending Phase 3A work to co
 Tests: this docs-only evidence refresh requires PR checks before merge.
 Unresolved: Phase 3B status-comment writes remain HOLD/user-approved; Phase 4A is audit-only and must not enable auto-merge.
 Next action: open and verify the docs-only evidence PR, then continue to Phase 4A readiness audit.
+
+## 2026-05-12 - Phase 4A native auto-merge readiness audit
+
+Scope: LOW audit-only; no auto-merge enablement, direct merge, branch delete, issue close, deploy, secrets, D1/schema, auth/session, CSV, public `/data`, server runtime, frontend runtime, or GitHub App write behavior change.
+Base: `main` at `131e2c3c7c9f8f4b9a40bfe3e0bac5c77bfb2e47`.
+Commands: inspected `docs/PHASE4_NATIVE_AUTOMERGE_DESIGN.md`, Worker policy/config, GitHub workflows, evidence scripts, repository metadata, public ruleset API, and recent PR #147 check evidence.
+Findings: repository native auto-merge is available and `protect-main` is active with required `pr-validate` and `verify` checks plus review-thread resolution. Current Worker auto-merge output is dry-run only and flags remain disabled. KOHEE is not ready to enable auto-merge because Phase 4B LOW-only classifier tests and live PR evidence checks are still missing.
+Changes: added `docs/audits/2026-05-12-phase4a-native-automerge-readiness-audit.md`; refreshed `docs/KOHEE_ACTIVE_QUEUE.md` to move next work to Phase 4B dry-run classifier tests.
+Tests: pending for this PR; local verification should run `npm run check:deploy-sync`, `npm run test:unit`, `npm run audit:kohee`, and `git diff --check`.
+Unresolved: Phase 4C native auto-merge enablement remains HIGH/HOLD and requires explicit owner approval.
+Next action: open and verify this audit PR, then implement Phase 4B dry-run classifier tests only.

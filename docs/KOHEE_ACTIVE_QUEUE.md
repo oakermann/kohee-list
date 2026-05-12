@@ -23,6 +23,7 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
+- Phase 4A native auto-merge readiness audit: local audit complete; PR/check evidence pending.
 - PR #146 Phase 3A dry-run KOHEE_STATUS parser: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #141 maintenance audit stable invariants: merged, checks passed.
 - PR #136 read-only maintenance audit: merged, checks passed.
@@ -45,12 +46,12 @@ Decision: repository hygiene only; do not let this block Phase 3 implementation.
 
 ## Next work
 
-### 1. Phase 4A native auto-merge readiness audit
+### 1. Phase 4B native auto-merge dry-run classifier tests
 
-Risk: LOW audit-only
+Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / DEPLOY_SAFETY
-Scope: inspect GitHub repo settings/checks/ruleset assumptions from evidence and report readiness only. Do not enable auto-merge.
+Scope: add dry-run classifier tests only for LOW native auto-merge eligibility. Do not enable auto-merge, direct merge, issue close, branch delete, deploy, secrets, D1/schema, auth/session, CSV, or public `/data` changes.
 
 ### 2. Cloudflare Worker observability audit
 
