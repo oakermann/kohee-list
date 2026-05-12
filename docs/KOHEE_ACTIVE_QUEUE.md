@@ -30,17 +30,16 @@ Evidence: `https://github.com/oakermann/kohee-list/pull/118`
 Merge commit: `0e4eb8324c2e36b9bdeedd4538a29d4c68a76114`
 Result: legacy manager direct-handler unit-test blocker was repaired without restoring manager behavior. PR Validate and Validate passed on PR head `a030933fcd81683d52607847f8d70c7c1b9a4211` before merge.
 
+### Phase 2 webhook delivery
+
+Status: verified dry-run delivery
+Track: `LOCAL_TRACK`
+Evidence: issue `#23` comment `4428758548` produced Worker delivery `e9755cd0-4ddd-11f1-9dde-08393d66756c`.
+Result: GitHub App `issue_comment` delivery reached the dry-run Worker and emitted `decision=OBSERVE`, `wouldDo=["record_status"]`, `botEnabled=false`, `dryRun=true`.
+
 ## Current blockers
 
-### 1. Phase 2 webhook delivery
-
-Status: delivery verification pending
-Track: `LOCAL_TRACK`
-Evidence: `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/health` passed earlier.
-Blocker: GitHub App delivery 200 and Worker dry-run log still need local/account-side verification.
-Next action: trigger a harmless event, confirm GitHub App delivery 200, confirm Worker dry-run decision log.
-
-### 2. Commercial codebase gap audit
+### 1. Commercial codebase gap audit
 
 Status: queued
 Track: `LOCAL_TRACK`

@@ -115,3 +115,14 @@ Changes: no runtime change; appended this audit record only.
 Tests: live dry-run Worker health passed; tail connection succeeded.
 Unresolved: GitHub App webhook delivery still does not appear to reach the dry-run Worker after the settings update.
 Next action: inspect GitHub App Recent deliveries for the latest issue_comment events and redeliver from GitHub App settings; record HTTP status/body if delivery fails.
+
+## 2026-05-12 - GitHub App Worker issue_comment delivery verified
+
+Scope: Phase 2 dry-run webhook delivery verification after the issue_comment event setting was enabled.
+Base: `main` at `4d42c2db3a59e3ca150a0968fe277b6febdf7fe1`
+Commands: dry-run Worker `/health`, `wrangler tail kohee-github-app-worker-dry-run`, local `gh issue comment 23`.
+Findings: issue #23 comment `4428758548` reached the dry-run Worker as delivery `e9755cd0-4ddd-11f1-9dde-08393d66756c`; Worker emitted `decision=OBSERVE`, `wouldDo=["record_status"]`, `reasons=["no codex status marker detected"]`, `botEnabled=false`, `dryRun=true`.
+Changes: no runtime change; appended this audit record and refreshed the active queue.
+Tests: live dry-run Worker health passed; tail connection succeeded; webhook delivery logged successfully.
+Unresolved: Phase 2 remains dry-run only; no issue comments, issue close, auto-merge, or repo writes are enabled.
+Next action: continue to the commercial codebase gap audit or Phase 3 planning; do not enable writes without explicit approval.
