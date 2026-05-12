@@ -208,7 +208,7 @@ export function classifyPullRequest({
   const fileClassification = classifyChangedFiles(files);
   const topicMatches = detectHighRiskTopics(body);
   const status = parseKoheeStatusBlock(body);
-  const risk = status?.risk || parseRisk(body);
+  const risk = status ? status.risk || "UNKNOWN" : parseRisk(body);
   const mode = status?.mode || "";
   const reasons = [];
 
@@ -230,7 +230,11 @@ export function classifyPullRequest({
   if (risk === "UNKNOWN") reasons.push("KOHEE_STATUS risk is missing");
   if (risk !== "LOW")
     reasons.push("auto-merge dry-run eligibility is LOW-only");
-  if (!status.lane) reasons.push("KOHEE_STATUS lane is missing");
+  if (!status.lane) {
+    reasons.push("KOHEE_STATUS lane is missing");
+  } else if (!STATUS_LANES.has(status.lane)) {
+    reasons.push(`unsupported KOHEE_STATUS lane: ${status.lane}`);
+  }
   if (!AUTO_MERGE_MODES.has(mode)) {
     reasons.push(`unsupported KOHEE_STATUS mode: ${mode || "(missing)"}`);
   }
