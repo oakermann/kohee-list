@@ -104,3 +104,14 @@ Changes: no runtime change; appended this audit record only.
 Tests: PR #124 Validate/Deploy passed before this check; live dry-run Worker health passed.
 Unresolved: GitHub App webhook delivery still appears not connected to the dry-run Worker.
 Next action: verify the GitHub App webhook URL is `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, then redeliver the issue_comment event from GitHub App settings and confirm a Worker dry-run decision log.
+
+## 2026-05-12 - GitHub App Worker webhook delivery retry
+
+Scope: Phase 2 dry-run webhook delivery retry after user reported webhook settings were updated.
+Base: `main` at `6ab480335e3573781f5489cea1d1c95ece65aa23`
+Commands: dry-run Worker `/health`, `wrangler tail kohee-github-app-worker-dry-run`, harmless issue #23 comments through GitHub connector and local `gh`.
+Findings: dry-run Worker health still returns `ok=true`, `dryRun=true`, `botEnabled=false`; Wrangler tail connected successfully. Connector-created comment `4428615101` and local `gh` comment `4428631465` were posted while tail was connected, but no Worker dry-run decision log appeared.
+Changes: no runtime change; appended this audit record only.
+Tests: live dry-run Worker health passed; tail connection succeeded.
+Unresolved: GitHub App webhook delivery still does not appear to reach the dry-run Worker after the settings update.
+Next action: inspect GitHub App Recent deliveries for the latest issue_comment events and redeliver from GitHub App settings; record HTTP status/body if delivery fails.
