@@ -113,8 +113,8 @@ When a future deployment is explicitly approved, use this order:
 2. Keep KOHEE_BOT_ENABLED=false and KOHEE_BOT_DRY_RUN=true.
 3. Send a signed mock webhook request.
 4. Confirm /health returns dryRun=true.
-5. Confirm a safe PR payload returns SAFE_AUTO_MERGE_ELIGIBLE.
-6. Confirm a schema/migration/auth/public-data payload returns HOLD_HIGH_RISK.
+5. Confirm a safe LOW PR payload returns AUTO_MERGE_ELIGIBLE_DRY_RUN.
+6. Confirm a schema/migration/auth/public-data payload returns AUTO_MERGE_REJECT.
 7. Confirm a bot-authored payload returns IGNORE_SELF_EVENT.
 8. Confirm no GitHub write action happened.
 ```

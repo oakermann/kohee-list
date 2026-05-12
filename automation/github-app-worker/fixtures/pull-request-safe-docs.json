@@ -10,13 +10,33 @@
     },
     "pull_request": {
       "number": 101,
-      "body": "Risk: LOW\nLane: GOVERNANCE\nDocs-only dry-run fixture.",
-      "draft": false
+      "body": "KOHEE_STATUS:\n  state: PR_OPEN\n  risk: LOW\n  lane: GOVERNANCE\n  mode: docs-only\n  active_pr: https://github.com/oakermann/kohee-list/pull/101\n  head_sha: abc123\n  evidence:\n    pr_url: https://github.com/oakermann/kohee-list/pull/101",
+      "draft": false,
+      "base": {
+        "ref": "main"
+      },
+      "head": {
+        "sha": "abc123",
+        "repo": {
+          "full_name": "oakermann/kohee-list"
+        }
+      },
+      "mergeable": true
     },
     "kohee": {
-      "changed_files": [
-        "docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"
-      ]
+      "changed_files": ["docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"],
+      "checks": [
+        {
+          "name": "pr-validate",
+          "conclusion": "success"
+        },
+        {
+          "name": "verify",
+          "conclusion": "success"
+        }
+      ],
+      "unresolved_review_threads": 0,
+      "requested_changes": 0
     }
   }
 }

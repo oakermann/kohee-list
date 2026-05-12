@@ -96,18 +96,18 @@ Start with the smallest useful permission set.
 
 ### Permission matrix
 
-| Permission | Phase 1 dry-run | Phase 2 comments | Phase 4 auto-merge | Rationale |
-|---|---:|---:|---:|---|
-| Metadata | read | read | read | Required by GitHub Apps. |
-| Contents | read | read | read | Read changed files and denylist matches. Never write in this design. |
-| Issues | read | write | write | Read batch/command issues; later comment/close completed or duplicate issues. |
-| Pull requests | read | read | write | Read PR state and changed files; later enable native auto-merge only for safe PRs. |
-| Checks | read | read | read | Confirm check status before any merge-related decision. |
-| Actions | read | read | read | Inspect workflow_run status when needed. |
-| Administration | none | none | none | Not needed; branch protection must remain external. |
-| Secrets | none | none | none | Never manage secrets from this bot. |
-| Deployments | none | none | none | No deploy behavior in this design. |
-| Contents write | none | none | none | Explicitly forbidden unless a separate HIGH-risk design is approved. |
+| Permission     | Phase 1 dry-run | Phase 2 comments | Phase 4 auto-merge | Rationale                                                                          |
+| -------------- | --------------: | ---------------: | -----------------: | ---------------------------------------------------------------------------------- |
+| Metadata       |            read |             read |               read | Required by GitHub Apps.                                                           |
+| Contents       |            read |             read |               read | Read changed files and denylist matches. Never write in this design.               |
+| Issues         |            read |            write |              write | Read batch/command issues; later comment/close completed or duplicate issues.      |
+| Pull requests  |            read |             read |              write | Read PR state and changed files; later enable native auto-merge only for safe PRs. |
+| Checks         |            read |             read |               read | Confirm check status before any merge-related decision.                            |
+| Actions        |            read |             read |               read | Inspect workflow_run status when needed.                                           |
+| Administration |            none |             none |               none | Not needed; branch protection must remain external.                                |
+| Secrets        |            none |             none |               none | Never manage secrets from this bot.                                                |
+| Deployments    |            none |             none |               none | No deploy behavior in this design.                                                 |
+| Contents write |            none |             none |               none | Explicitly forbidden unless a separate HIGH-risk design is approved.               |
 
 Required for Phase 1 dry-run:
 
@@ -354,7 +354,7 @@ Safe PR:
   "ok": true,
   "dryRun": true,
   "event": "pull_request.opened",
-  "decision": "SAFE_AUTO_MERGE_ELIGIBLE",
+  "decision": "AUTO_MERGE_ELIGIBLE_DRY_RUN",
   "wouldDo": ["enable_native_auto_merge"]
 }
 ```
@@ -366,9 +366,9 @@ High-risk PR:
   "ok": true,
   "dryRun": true,
   "event": "pull_request.opened",
-  "decision": "HOLD_HIGH_RISK",
+  "decision": "AUTO_MERGE_REJECT",
   "reasons": ["changed file: schema.sql"],
-  "wouldDo": ["comment_hold_user_approval"]
+  "wouldDo": ["comment_hold_or_observe"]
 }
 ```
 

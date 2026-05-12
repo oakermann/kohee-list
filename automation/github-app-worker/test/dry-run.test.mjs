@@ -56,6 +56,46 @@ function assertDryRunLog(json, expectedDecision) {
   assert.ok(json.dryRunLog.deliveryId);
 }
 
+function koheeStatus({
+  risk = "LOW",
+  lane = "GOVERNANCE",
+  mode = "docs-only",
+  headSha = "abc123",
+  pr = 101,
+} = {}) {
+  return [
+    "KOHEE_STATUS:",
+    "  state: PR_OPEN",
+    `  risk: ${risk}`,
+    `  lane: ${lane}`,
+    `  mode: ${mode}`,
+    `  active_pr: https://github.com/oakermann/kohee-list/pull/${pr}`,
+    `  head_sha: ${headSha}`,
+    "  evidence:",
+    `    pr_url: https://github.com/oakermann/kohee-list/pull/${pr}`,
+  ].join("\n");
+}
+
+function successfulChecks() {
+  return [
+    { name: "pr-validate", conclusion: "success" },
+    { name: "verify", conclusion: "success" },
+  ];
+}
+
+function eligiblePullRequest(overrides = {}) {
+  return {
+    body: koheeStatus(overrides.status || {}),
+    files: ["docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"],
+    baseRef: "main",
+    headRepo: "oakermann/kohee-list",
+    headSha: overrides.status?.headSha || "abc123",
+    mergeable: true,
+    checks: successfulChecks(),
+    ...overrides,
+  };
+}
+
 assert.equal(isAllowedRepository(payload(), "oakermann/kohee-list"), true);
 assert.equal(isAllowedRepository(payload(), "other/repo"), false);
 assert.equal(
@@ -80,35 +120,114 @@ const healthJson = await health.json();
 assert.equal(healthJson.dryRun, true);
 
 const safePr = classifyPullRequest({
-  body: "Risk: LOW\nLane: GOVERNANCE\nDocs-only change.",
-  files: ["docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"],
+  ...eligiblePullRequest(),
 });
-assert.equal(safePr.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
+assert.equal(safePr.decision, "AUTO_MERGE_ELIGIBLE_DRY_RUN");
 
 const unknownRiskDocsPr = classifyPullRequest({
   body: "Lane: GOVERNANCE\nDocs-only change.",
   files: ["docs/example.md"],
 });
-assert.equal(unknownRiskDocsPr.decision, "HOLD_HIGH_RISK");
+assert.equal(unknownRiskDocsPr.decision, "AUTO_MERGE_OBSERVE");
 assert.match(
   unknownRiskDocsPr.reasons.join(" "),
-  /does not declare LOW or MEDIUM/,
+  /does not contain KOHEE_STATUS/,
 );
 
 const highRiskPr = classifyPullRequest({
-  body: "Risk: MEDIUM\nLane: GOVERNANCE",
+  body: koheeStatus({ risk: "LOW", mode: "docs-only" }),
   files: ["schema.sql"],
+  headSha: "abc123",
+  checks: successfulChecks(),
 });
-assert.equal(highRiskPr.decision, "HOLD_HIGH_RISK");
+assert.equal(highRiskPr.decision, "AUTO_MERGE_REJECT");
 assert.deepEqual(highRiskPr.highRiskFiles, ["schema.sql"]);
 
 const draftPr = classifyPullRequest({
-  body: "Risk: LOW\nLane: GOVERNANCE",
+  body: koheeStatus(),
   draft: true,
   files: ["docs/example.md"],
+  headSha: "abc123",
+  checks: successfulChecks(),
 });
-assert.equal(draftPr.decision, "HOLD_HIGH_RISK");
+assert.equal(draftPr.decision, "AUTO_MERGE_REJECT");
 assert.match(draftPr.reasons.join(" "), /draft/);
+
+const mediumRiskPr = classifyPullRequest({
+  ...eligiblePullRequest({ status: { risk: "MEDIUM" } }),
+});
+assert.equal(mediumRiskPr.decision, "AUTO_MERGE_REJECT");
+assert.match(mediumRiskPr.reasons.join(" "), /LOW-only/);
+
+const malformedModePr = classifyPullRequest({
+  ...eligiblePullRequest({ status: { mode: "mixed" } }),
+});
+assert.equal(malformedModePr.decision, "AUTO_MERGE_REJECT");
+assert.match(
+  malformedModePr.reasons.join(" "),
+  /unsupported KOHEE_STATUS mode/,
+);
+
+const failingCheckPr = classifyPullRequest({
+  ...eligiblePullRequest({
+    checks: [
+      { name: "pr-validate", conclusion: "success" },
+      { name: "verify", conclusion: "failure" },
+    ],
+  }),
+});
+assert.equal(failingCheckPr.decision, "AUTO_MERGE_REJECT");
+assert.match(failingCheckPr.reasons.join(" "), /failing checks: verify/);
+
+const missingCheckPr = classifyPullRequest({
+  ...eligiblePullRequest({
+    checks: [{ name: "pr-validate", conclusion: "success" }],
+  }),
+});
+assert.equal(missingCheckPr.decision, "AUTO_MERGE_REJECT");
+assert.match(
+  missingCheckPr.reasons.join(" "),
+  /missing successful required checks: verify/,
+);
+
+const unresolvedReviewPr = classifyPullRequest({
+  ...eligiblePullRequest({ unresolvedReviewThreads: 1 }),
+});
+assert.equal(unresolvedReviewPr.decision, "AUTO_MERGE_HOLD");
+assert.match(unresolvedReviewPr.reasons.join(" "), /unresolved review threads/);
+
+const requestedChangesPr = classifyPullRequest({
+  ...eligiblePullRequest({ requestedChanges: 1 }),
+});
+assert.equal(requestedChangesPr.decision, "AUTO_MERGE_HOLD");
+assert.match(requestedChangesPr.reasons.join(" "), /requested changes reviews/);
+
+const mergeConflictPr = classifyPullRequest({
+  ...eligiblePullRequest({ mergeable: false }),
+});
+assert.equal(mergeConflictPr.decision, "AUTO_MERGE_REJECT");
+assert.match(mergeConflictPr.reasons.join(" "), /not mergeable/);
+
+const wrongBasePr = classifyPullRequest({
+  ...eligiblePullRequest({ baseRef: "release" }),
+});
+assert.equal(wrongBasePr.decision, "AUTO_MERGE_REJECT");
+assert.match(wrongBasePr.reasons.join(" "), /base branch is not main/);
+
+const wrongHeadRepoPr = classifyPullRequest({
+  ...eligiblePullRequest({ headRepo: "fork/kohee-list" }),
+});
+assert.equal(wrongHeadRepoPr.decision, "AUTO_MERGE_REJECT");
+assert.match(
+  wrongHeadRepoPr.reasons.join(" "),
+  /head repository is not allowed/,
+);
+
+const mismatchedHeadShaPr = classifyPullRequest({
+  ...eligiblePullRequest({ headSha: "def456" }),
+});
+assert.equal(mismatchedHeadShaPr.decision, "AUTO_MERGE_REJECT");
+assert.match(mismatchedHeadShaPr.reasons.join(" "), /head_sha does not match/);
 
 assert.equal(
   classifyCodexComment(
@@ -189,13 +308,24 @@ const decision = decideWebhookAction(
   payload({
     pull_request: {
       number: 65,
-      body: "Risk: LOW\nLane: GOVERNANCE\nDocs-only change.",
+      body: koheeStatus({ pr: 65 }),
       draft: false,
+      base: { ref: "main" },
+      head: {
+        sha: "abc123",
+        repo: { full_name: "oakermann/kohee-list" },
+      },
+      mergeable: true,
     },
-    kohee: { changed_files: ["docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"] },
+    kohee: {
+      changed_files: ["docs/GITHUB_APP_WORKER_AUTOMATION_PLAN.md"],
+      checks: successfulChecks(),
+      unresolved_review_threads: 0,
+      requested_changes: 0,
+    },
   }),
 );
-assert.equal(decision.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
+assert.equal(decision.decision, "AUTO_MERGE_ELIGIBLE_DRY_RUN");
 assert.deepEqual(decision.wouldDo, ["enable_native_auto_merge"]);
 
 const statusDecision = decideWebhookAction(
@@ -250,10 +380,19 @@ const webhookResponse = await handleRequest(
     payload({
       pull_request: {
         number: 66,
-        body: "Risk: MEDIUM\nLane: GOVERNANCE",
+        body: koheeStatus({ risk: "LOW", mode: "docs-only", pr: 66 }),
         draft: false,
+        base: { ref: "main" },
+        head: {
+          sha: "abc123",
+          repo: { full_name: "oakermann/kohee-list" },
+        },
+        mergeable: true,
       },
-      kohee: { changed_files: ["migrations/0006_test.sql"] },
+      kohee: {
+        changed_files: ["migrations/0006_test.sql"],
+        checks: successfulChecks(),
+      },
     }),
   ),
   env,
@@ -261,9 +400,9 @@ const webhookResponse = await handleRequest(
 assert.equal(webhookResponse.status, 200);
 const webhookJson = await webhookResponse.json();
 assert.equal(webhookJson.dryRun, true);
-assert.equal(webhookJson.decision, "HOLD_HIGH_RISK");
+assert.equal(webhookJson.decision, "AUTO_MERGE_REJECT");
 assert.deepEqual(webhookJson.wouldDo, ["comment_hold_or_observe"]);
-assertDryRunLog(webhookJson, "HOLD_HIGH_RISK");
+assertDryRunLog(webhookJson, "AUTO_MERGE_REJECT");
 assert.deepEqual(webhookJson.dryRunLog.highRiskFiles, [
   "migrations/0006_test.sql",
 ]);

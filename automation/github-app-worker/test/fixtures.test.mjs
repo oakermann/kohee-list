@@ -21,14 +21,14 @@ async function decideFixture(name) {
 }
 
 const safeDocs = await decideFixture("pull-request-safe-docs.json");
-assert.equal(safeDocs.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
+assert.equal(safeDocs.decision, "AUTO_MERGE_ELIGIBLE_DRY_RUN");
 assert.deepEqual(safeDocs.wouldDo, ["enable_native_auto_merge"]);
 assert.equal(safeDocs.pullRequest, 101);
 
 const highRiskSchema = await decideFixture(
   "pull-request-high-risk-schema.json",
 );
-assert.equal(highRiskSchema.decision, "HOLD_HIGH_RISK");
+assert.equal(highRiskSchema.decision, "AUTO_MERGE_REJECT");
 assert.deepEqual(highRiskSchema.highRiskFiles, ["schema.sql"]);
 assert.deepEqual(highRiskSchema.wouldDo, ["comment_hold_or_observe"]);
 
@@ -49,7 +49,7 @@ const { stdout } = await execFileAsync(process.execPath, [
   "automation/github-app-worker/fixtures/pull-request-safe-docs.json",
 ]);
 const simulated = JSON.parse(stdout);
-assert.equal(simulated.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
+assert.equal(simulated.decision, "AUTO_MERGE_ELIGIBLE_DRY_RUN");
 assert.equal(simulated.dryRun, true);
 
 console.log("[github-app-worker-fixtures] ok");

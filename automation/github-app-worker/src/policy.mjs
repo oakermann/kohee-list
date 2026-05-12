@@ -74,6 +74,14 @@ const STATUS_HOLD_BLOCKERS = new Set([
 const STATUS_ISSUE_ALLOWLIST = new Set([23]);
 const REPO_PR_URL =
   /^https:\/\/github\.com\/oakermann\/kohee-list\/pull\/(\d+)$/i;
+const AUTO_MERGE_MODES = new Set([
+  "docs-only",
+  "tooling-only",
+  "audit-only",
+  "test-only",
+]);
+const REQUIRED_AUTO_MERGE_CHECKS = ["pr-validate", "verify"];
+const AUTO_MERGE_ALLOWED_HEAD_REPOS = new Set(["oakermann/kohee-list"]);
 
 function normalizeFile(path) {
   return String(path || "").replace(/^\/+/, "");
@@ -143,20 +151,93 @@ export function parseRisk(text) {
   return "UNKNOWN";
 }
 
+function checkName(check) {
+  return String(check?.name || check?.context || check?.check_name || "");
+}
+
+function checkConclusion(check) {
+  return String(check?.conclusion || check?.state || check?.status || "");
+}
+
+function hasSuccessfulCheck(checks, requiredName) {
+  return checks.some(
+    (check) =>
+      checkName(check).toLowerCase() === requiredName.toLowerCase() &&
+      checkConclusion(check).toLowerCase() === "success",
+  );
+}
+
+function failedChecks(checks) {
+  return checks
+    .filter((check) => {
+      const conclusion = checkConclusion(check).toLowerCase();
+      return (
+        conclusion && !["success", "skipped", "neutral"].includes(conclusion)
+      );
+    })
+    .map(checkName)
+    .filter(Boolean);
+}
+
+function matchesDeclaredMode(mode, fileClassification) {
+  if (mode === "docs-only") return fileClassification.allDocs;
+  if (mode === "test-only") return fileClassification.allTests;
+  if (mode === "tooling-only") return fileClassification.allTooling;
+  if (mode === "audit-only") {
+    return (
+      fileClassification.allDocs ||
+      fileClassification.allTests ||
+      fileClassification.allTooling
+    );
+  }
+  return false;
+}
+
 export function classifyPullRequest({
   body = "",
   draft = false,
   files = [],
+  baseRef = "main",
+  headRepo = "oakermann/kohee-list",
+  headSha = "",
+  mergeable = true,
+  checks = [],
+  unresolvedReviewThreads = 0,
+  requestedChanges = 0,
 } = {}) {
   const fileClassification = classifyChangedFiles(files);
   const topicMatches = detectHighRiskTopics(body);
-  const risk = parseRisk(body);
+  const status = parseKoheeStatusBlock(body);
+  const risk = status?.risk || parseRisk(body);
+  const mode = status?.mode || "";
   const reasons = [];
 
   if (draft) reasons.push("PR is draft");
-  if (risk === "UNKNOWN")
-    reasons.push("PR body does not declare LOW or MEDIUM risk");
-  if (risk === "HIGH") reasons.push("PR body declares HIGH risk");
+  if (!status) {
+    return {
+      decision: "AUTO_MERGE_OBSERVE",
+      risk,
+      mode,
+      reasons: ["PR body does not contain KOHEE_STATUS"],
+      ...fileClassification,
+    };
+  }
+  if (baseRef !== "main") reasons.push(`base branch is not main: ${baseRef}`);
+  if (!AUTO_MERGE_ALLOWED_HEAD_REPOS.has(headRepo)) {
+    reasons.push(`head repository is not allowed: ${headRepo || "(missing)"}`);
+  }
+  if (mergeable === false) reasons.push("PR is not mergeable");
+  if (risk === "UNKNOWN") reasons.push("KOHEE_STATUS risk is missing");
+  if (risk !== "LOW")
+    reasons.push("auto-merge dry-run eligibility is LOW-only");
+  if (!status.lane) reasons.push("KOHEE_STATUS lane is missing");
+  if (!AUTO_MERGE_MODES.has(mode)) {
+    reasons.push(`unsupported KOHEE_STATUS mode: ${mode || "(missing)"}`);
+  }
+  if (!status.head_sha) reasons.push("KOHEE_STATUS head_sha is missing");
+  if (headSha && status.head_sha && headSha !== status.head_sha) {
+    reasons.push(`KOHEE_STATUS head_sha does not match actual head SHA`);
+  }
   if (fileClassification.hasHighRiskFiles) {
     reasons.push(
       `high-risk changed files: ${fileClassification.highRiskFiles.join(", ")}`,
@@ -170,34 +251,61 @@ export function classifyPullRequest({
 
   if (!safeCategory)
     reasons.push("changed files are not docs/test/tooling-only");
-  if (topicMatches.length && risk !== "LOW") {
+  if (
+    AUTO_MERGE_MODES.has(mode) &&
+    !matchesDeclaredMode(mode, fileClassification)
+  ) {
+    reasons.push(`changed files do not match declared mode: ${mode}`);
+  }
+  if (topicMatches.length) {
     reasons.push("body includes high-risk topic keywords");
+  }
+  const missingChecks = REQUIRED_AUTO_MERGE_CHECKS.filter(
+    (requiredName) => !hasSuccessfulCheck(checks, requiredName),
+  );
+  if (missingChecks.length) {
+    reasons.push(
+      `missing successful required checks: ${missingChecks.join(", ")}`,
+    );
+  }
+  const failures = failedChecks(checks);
+  if (failures.length) reasons.push(`failing checks: ${failures.join(", ")}`);
+  if (Number(unresolvedReviewThreads) > 0) {
+    return {
+      decision: "AUTO_MERGE_HOLD",
+      risk,
+      mode,
+      reasons: [`unresolved review threads: ${unresolvedReviewThreads}`],
+      ...fileClassification,
+    };
+  }
+  if (Number(requestedChanges) > 0) {
+    return {
+      decision: "AUTO_MERGE_HOLD",
+      risk,
+      mode,
+      reasons: [`requested changes reviews: ${requestedChanges}`],
+      ...fileClassification,
+    };
   }
 
   if (reasons.length) {
     return {
-      decision: "HOLD_HIGH_RISK",
+      decision: "AUTO_MERGE_REJECT",
       risk,
+      mode,
       reasons,
       ...fileClassification,
     };
   }
 
-  if (["LOW", "MEDIUM"].includes(risk) && safeCategory) {
-    return {
-      decision: "SAFE_AUTO_MERGE_ELIGIBLE",
-      risk,
-      reasons: [
-        "explicit LOW/MEDIUM docs/test/tooling-only changes outside denylist",
-      ],
-      ...fileClassification,
-    };
-  }
-
   return {
-    decision: "OBSERVE",
+    decision: "AUTO_MERGE_ELIGIBLE_DRY_RUN",
     risk,
-    reasons: ["no matching dry-run automation rule"],
+    mode,
+    reasons: [
+      "LOW KOHEE_STATUS with successful required checks and no review blockers",
+    ],
     ...fileClassification,
   };
 }
@@ -355,6 +463,13 @@ export function decideWebhookAction(eventName, payload) {
       body: pullRequest.body || "",
       draft: Boolean(pullRequest.draft),
       files,
+      baseRef: pullRequest.base?.ref || "main",
+      headRepo: pullRequest.head?.repo?.full_name || "oakermann/kohee-list",
+      headSha: pullRequest.head?.sha || "",
+      mergeable: pullRequest.mergeable,
+      checks: payload?.kohee?.checks || [],
+      unresolvedReviewThreads: payload?.kohee?.unresolved_review_threads || 0,
+      requestedChanges: payload?.kohee?.requested_changes || 0,
     });
     return {
       ok: true,
@@ -363,7 +478,7 @@ export function decideWebhookAction(eventName, payload) {
       pullRequest: pullRequest.number || null,
       ...classification,
       wouldDo:
-        classification.decision === "SAFE_AUTO_MERGE_ELIGIBLE"
+        classification.decision === "AUTO_MERGE_ELIGIBLE_DRY_RUN"
           ? ["enable_native_auto_merge"]
           : ["comment_hold_or_observe"],
     };

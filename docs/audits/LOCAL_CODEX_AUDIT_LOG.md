@@ -247,3 +247,14 @@ Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from pending Phase 3A parser fix
 Tests: this docs-only evidence refresh requires PR checks before merge.
 Unresolved: Phase 4B native auto-merge classifier tests remain next; Phase 4C native auto-merge enablement remains HOLD/user-approved.
 Next action: open and verify the docs-only evidence PR, then continue to Phase 4B dry-run classifier tests only.
+
+## 2026-05-12 - Phase 4B native auto-merge classifier tests
+
+Scope: MEDIUM GitHub App Worker dry-run classifier hardening only; no native auto-merge enablement, direct merge, issue close, branch deletion, deploy, secrets, D1/schema, auth/session, CSV, public `/data`, or production KOHEE runtime changes.
+Base: `main` at `54ac6c206ffd8196a086ec88571d5aca48ec1c64`.
+Commands: switched back to `main`, fast-forwarded from origin, switched to `phase4b-automerge-classifier-tests-20260512`, inspected Phase 4 design, Worker policy/tests, fixtures, and active queue.
+Findings: the dry-run pull-request classifier still allowed broad LOW/MEDIUM safe docs/test/tooling eligibility and did not require canonical `KOHEE_STATUS`, matching head SHA, required checks, review-thread evidence, mergeability, or allowed head repository evidence.
+Changes: narrowed auto-merge dry-run eligibility to LOW-only canonical `KOHEE_STATUS` PRs with declared mode, matching head SHA, main base, allowed head repo, safe file class, successful `pr-validate` and `verify` checks, no failing checks, no unresolved review threads, and no requested-changes reviews. Added regression coverage through direct classifier tests, signed webhook tests, and fixture simulation tests. Updated dry-run docs/examples and active queue.
+Tests: pending full local and GitHub PR verification for this branch.
+Unresolved: Phase 4C native auto-merge enablement remains HOLD/user-approved.
+Next action: run full local checks, open PR, and verify GitHub checks/review threads before merge.
