@@ -8,71 +8,39 @@ on:
 permissions:
   contents: read
   actions: read
-  issues: write
 
 jobs:
   maintenance:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
+          cache: npm
 
-      - name: Run safe maintenance
-        shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File .\scripts\auto-maintenance.ps1
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Upload maintenance artifacts
+      - name: Run read-only maintenance audit
+        run: npm run audit:maintenance
+
+      - name: Write maintenance summary
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: maintenance-${{ github.run_number }}
-          path: backups/cafes-*.csv
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Create or update failure issue
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const title = "Automation failure: Maintenance Scheduled";
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
-            const body = [
-              "Scheduled maintenance workflow failed.",
-              "",
-              `- Workflow: ${context.workflow}`,
-              `- Run: ${runUrl}`,
-              `- Commit: ${context.sha}`,
-              `- Actor: ${context.actor}`
-            ].join("\n");
-
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner,
-              repo,
-              state: "open"
-            });
-
-            const existing = issues.find((issue) => issue.title === title);
-            if (existing) {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: existing.number,
-                body
-              });
-            } else {
-              await github.rest.issues.create({
-                owner,
-                repo,
-                title,
-                body
-              });
-            }
+        run: |
+          {
+            echo "## KOHEE maintenance audit"
+            echo ""
+            echo "- state: ${{ job.status }}"
+            echo "- mode: read-only"
+            echo "- risk: LOW"
+            echo "- lane: GOVERNANCE"
+            echo "- issue_write_enabled: false"
+            echo "- csv_backup_enabled: false"
+            echo "- artifact_upload_enabled: false"
+            echo "- run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"

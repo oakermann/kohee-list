@@ -22,6 +22,13 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
+### PR #136 read-only maintenance audit
+
+Status: pending PR
+Track: `LOCAL_TRACK`
+Evidence: pending GitHub PR
+Result: scheduled maintenance is being narrowed to a read-only audit with no issue writes, CSV backup/export, or artifact upload. The audit runs through `npm run audit:maintenance` and is covered by `npm run test:unit`.
+
 ### PR #134 command validator
 
 Status: merged
@@ -103,12 +110,11 @@ Next action: if the owner explicitly approves branch deletion, delete only the v
 
 ## Next work after blockers
 
-1. read-only maintenance audit
-2. Phase 3 safe issue-comment bridge
-3. Phase 4 native auto-merge enablement for safe PRs only
-4. admin review console Phase 2/3
-5. submissions review CSV Phase 2
-6. audit:kohee useful WARN strengthening
+1. Phase 3 safe issue-comment bridge
+2. Phase 4 native auto-merge enablement for safe PRs only
+3. admin review console Phase 2/3
+4. submissions review CSV Phase 2
+5. audit:kohee useful WARN strengthening
 
 ## HOLD / do not start without approval
 
