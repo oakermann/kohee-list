@@ -219,6 +219,20 @@ const unsupportedIssueDecision = decideWebhookAction(
 );
 assert.equal(unsupportedIssueDecision.decision, "REJECT");
 
+const unsupportedIssueMalformedStatusDecision = decideWebhookAction(
+  "issue_comment",
+  payload({
+    action: "created",
+    issue: { number: 99 },
+    comment: { body: "KOHEE_STATUS:\n  state: PR_OPEN" },
+  }),
+);
+assert.equal(unsupportedIssueMalformedStatusDecision.decision, "REJECT");
+assert.match(
+  unsupportedIssueMalformedStatusDecision.reasons.join(" "),
+  /issue is not allowed/,
+);
+
 const ignoredIssueActionDecision = decideWebhookAction(
   "issue_comment",
   payload({

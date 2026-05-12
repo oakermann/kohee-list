@@ -338,6 +338,15 @@ export function classifyKoheeStatusComment(body, issueNumber) {
   };
 }
 
+function isUnsupportedIssueStatusRejection(classification) {
+  return (
+    classification?.decision === "REJECT" &&
+    classification.reasons?.some((reason) =>
+      /issue is not allowed for KOHEE_STATUS recording/.test(reason),
+    )
+  );
+}
+
 export function decideWebhookAction(eventName, payload) {
   if (eventName === "pull_request") {
     const pullRequest = payload?.pull_request || {};
@@ -382,12 +391,14 @@ export function decideWebhookAction(eventName, payload) {
     const isLegacyStatusShape =
       !statusClassification.status?.risk && !statusClassification.status?.lane;
     const classification =
-      statusClassification.decision === "OBSERVE" ||
-      (statusClassification.decision === "REJECT" &&
-        legacyClassification.decision !== "OBSERVE" &&
-        isLegacyStatusShape)
+      statusClassification.decision === "OBSERVE"
         ? legacyClassification
-        : statusClassification;
+        : statusClassification.decision === "REJECT" &&
+            legacyClassification.decision !== "OBSERVE" &&
+            isLegacyStatusShape &&
+            !isUnsupportedIssueStatusRejection(statusClassification)
+          ? legacyClassification
+          : statusClassification;
     return {
       ok: true,
       dryRun: true,

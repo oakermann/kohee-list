@@ -225,3 +225,14 @@ Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from pending Phase 4A work to co
 Tests: this docs-only evidence refresh requires PR checks before merge.
 Unresolved: Phase 4C native auto-merge enablement remains HIGH/HOLD and requires explicit owner approval.
 Next action: open and verify the docs-only evidence PR, then continue to Phase 4B dry-run classifier tests only.
+
+## 2026-05-12 - Phase 3A unsupported issue parser fix
+
+Scope: MEDIUM GitHub App Worker dry-run parser fix only; no GitHub writes, issue close, auto-merge enablement, direct merge, branch delete, deploy, D1/schema, auth/session, CSV, public `/data`, or production KOHEE runtime changes.
+Base: `main` at `af3f1ce223d72412bcc5d5209cd57a31fadc8887` after PR #150 corrected the active queue.
+Commands: inspected PR #150 task-list correction, Worker policy fallback logic, dry-run tests, and fixture tests.
+Findings: unsupported issue numbers were rejected by canonical `KOHEE_STATUS` parsing, but the issue-comment dispatcher could fall back to legacy Codex marker classification when the malformed status lacked risk/lane and also contained old markers such as `PR_OPEN`.
+Changes: blocked legacy fallback for unsupported-issue `KOHEE_STATUS` rejections; added a regression test for malformed `KOHEE_STATUS` on issue #99; updated malformed unsupported-issue fixtures to expect `REJECT`.
+Tests: `node automation/github-app-worker/test/dry-run.test.mjs` passed; `node automation/github-app-worker/test/fixtures.test.mjs` passed; `check:deploy-sync` passed; `test:unit` passed; `audit:kohee` passed; `git diff --check` passed.
+Unresolved: Phase 4B native auto-merge classifier tests remain next after this parser fix is verified.
+Next action: run full local checks, open PR, and verify GitHub checks/review threads before merge.
