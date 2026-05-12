@@ -281,3 +281,14 @@ Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from PR #153 `FIX_REQUIRED` to W
 Tests: docs-only evidence refresh; local checks and PR checks are required before merge.
 Unresolved: Phase 4C native auto-merge enablement remains HOLD; no native auto-merge, direct merge, branch deletion, issue close, deploy, D1/schema, auth/session, CSV import/reset, or public `/data` behavior was changed.
 Next action: open and verify the docs-only evidence PR, then continue to Cloudflare Worker observability audit.
+
+## 2026-05-13 - Cloudflare Worker observability audit
+
+Scope: LOW audit-only review of dry-run GitHub App Worker observability; no deploy, secret, workflow execution, D1/schema, auth/session/security, CSV import/reset, public `/data`, GitHub write, issue close, branch delete, direct merge bot, or native auto-merge enablement changes.
+Base: `main` at `c1208660b636b79e4b2578d36b716a39083ef76d`.
+Commands: inspected ACTIVE_QUEUE, LOCAL_CODEX_RUNBOOK, PR #156 merge/check evidence, Cloudflare Workers Logs/Wrangler observability docs, dry-run Worker wrangler config/example config, Worker structured logging, deploy workflow, and Worker README.
+Findings: the dry-run Worker emits structured JSON decision logs, but `automation/github-app-worker/wrangler.toml` and `automation/github-app-worker/wrangler.example.toml` do not explicitly enable Workers Logs with `[observability]`.
+Changes: added `docs/audits/2026-05-13-worker-observability-audit.md`; refreshed `docs/KOHEE_ACTIVE_QUEUE.md` to move next work to GitHub dependency review audit.
+Tests: pending local checks and GitHub PR checks for this audit PR.
+Unresolved: add Workers Logs config in a separate LOW config-only PR if accepted; do not deploy from this audit.
+Next action: open and verify the audit PR, then continue to GitHub dependency review audit after this PR is green/merged externally.
