@@ -271,6 +271,26 @@ if (/status\s*=\s*'approved'[\s\S]*deleted_at\s+IS\s+NULL/.test(fav)) {
   );
 }
 
+const smokeCheck = read("scripts/smoke-check.mjs");
+const publicCafeKeysBlock =
+  smokeCheck.match(
+    /const PUBLIC_CAFE_KEYS = new Set\(\[([\s\S]*?)\]\);/,
+  )?.[1] || "";
+const forbiddenPublicKeysBlock =
+  smokeCheck.match(
+    /const FORBIDDEN_PUBLIC_KEYS = new Set\(\[([\s\S]*?)\]\);/,
+  )?.[1] || "";
+if (/"manager_pick"/.test(publicCafeKeysBlock)) {
+  fail("scripts/smoke-check.mjs still allows retired public key manager_pick");
+} else {
+  ok("retired manager_pick is not allowed in public smoke data shape");
+}
+if (/"manager_pick"/.test(forbiddenPublicKeysBlock)) {
+  ok("retired manager_pick is explicitly forbidden in public smoke data shape");
+} else {
+  fail("scripts/smoke-check.mjs does not explicitly forbid manager_pick");
+}
+
 for (const file of ["assets/index.js", "assets/mypage.js"]) {
   const content = read(file);
   if (!content) continue;
