@@ -27,7 +27,6 @@ const PUBLIC_CAFE_KEYS = new Set([
   "instagram",
   "category",
   "oakerman_pick",
-  "manager_pick",
   "updated_at",
 ]);
 
@@ -39,6 +38,7 @@ const FORBIDDEN_PUBLIC_KEYS = new Set([
   "delete_reason",
   "hidden_by",
   "internalMemo",
+  "manager_pick",
   "rejected_by",
   "selectionReason",
   "sourceUrls",
