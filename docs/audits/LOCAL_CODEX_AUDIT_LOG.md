@@ -137,3 +137,14 @@ Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` with merged PR #128/#129/#130 ev
 Tests: pending in this PR; prior final main verification passed `check:deploy-sync`, `test:unit`, `audit:kohee`, `git diff --check`, GitHub Validate/Deploy, and read-only live smoke.
 Unresolved: remote merged branches remain until the owner explicitly approves deletion.
 Next action: verify this docs-only PR and merge after PR Validate / Validate pass.
+
+## 2026-05-12 - Command dispatch create-only guard
+
+Scope: LOW/MEDIUM governance workflow hardening for KOHEE command dispatch only.
+Base: `main` at `cf43df845588fb01cb8999b742f47f17faa58ac6`
+Commands: inspected `.github/workflows/kohee-command-dispatch.yml`, policy guard tests, and active queue.
+Findings: dispatch still had create-or-update behavior for matching open KOHEE command issues, which could overwrite an active command ledger.
+Changes: changed dispatch behavior to create-only; matching open command issues now fail the workflow instead of being updated. Added a policy guard so `github.rest.issues.update` cannot return unnoticed. Manual Codex trigger guidance remains.
+Tests: pending.
+Unresolved: command validator remains the next governance item.
+Next action: run local checks, open PR, verify PR Validate / Validate, then merge if no review blockers.

@@ -22,6 +22,13 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
+### PR #132 command dispatch create-only/no-overwrite
+
+Status: pending PR
+Track: `LOCAL_TRACK`
+Evidence: pending GitHub PR
+Result: command dispatch workflow is being narrowed so it creates a new KOHEE command issue or fails on an existing matching open command, instead of overwriting command issue content. Manual `@codex` guidance is preserved.
+
 ### PR #128 commercial codebase gap audit
 
 Status: merged
@@ -87,14 +94,13 @@ Next action: if the owner explicitly approves branch deletion, delete only the v
 
 ## Next work after blockers
 
-1. command dispatch create-only/no-overwrite
-2. command validator
-3. read-only maintenance audit
-4. Phase 3 safe issue-comment bridge
-5. Phase 4 native auto-merge enablement for safe PRs only
-6. admin review console Phase 2/3
-7. submissions review CSV Phase 2
-8. audit:kohee useful WARN strengthening
+1. command validator
+2. read-only maintenance audit
+3. Phase 3 safe issue-comment bridge
+4. Phase 4 native auto-merge enablement for safe PRs only
+5. admin review console Phase 2/3
+6. submissions review CSV Phase 2
+7. audit:kohee useful WARN strengthening
 
 ## HOLD / do not start without approval
 
