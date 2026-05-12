@@ -1,7 +1,4 @@
-const HIGH_RISK_PATH_PREFIXES = [
-  "migrations/",
-  ".github/workflows/",
-];
+const HIGH_RISK_PATH_PREFIXES = ["migrations/", ".github/workflows/"];
 
 const HIGH_RISK_EXACT_PATHS = new Set([
   "schema.sql",
@@ -36,6 +33,48 @@ const SAFE_DOC_PREFIXES = ["docs/", ".github/ISSUE_TEMPLATE/"];
 const SAFE_TEST_PREFIXES = ["test/", "tests/", "scripts/test-"];
 const SAFE_TOOLING_PREFIXES = ["scripts/", "automation/github-app-worker/"];
 
+const STATUS_STATES = new Set([
+  "QUEUED",
+  "QUEUED_STALE",
+  "WORKING",
+  "PR_OPEN",
+  "REVIEWING",
+  "FIXING",
+  "DEPLOYING",
+  "MERGED_AND_DEPLOYED",
+  "DONE_NO_DEPLOY",
+  "HOLD",
+]);
+
+const STATUS_RISKS = new Set(["LOW", "MEDIUM", "HIGH"]);
+
+const STATUS_LANES = new Set([
+  "GOVERNANCE",
+  "DEPLOY_SAFETY",
+  "PUBLIC_EXPOSURE",
+  "AUTH_ROLE",
+  "LIFECYCLE",
+  "CSV_PIPELINE",
+  "FRONTEND_RENDERING",
+]);
+
+const STATUS_HOLD_BLOCKERS = new Set([
+  "HOLD_HIGH_RISK",
+  "HOLD_USER_APPROVAL",
+  "HOLD_DEPLOY_BLOCKED",
+  "HOLD_SECRET_OR_PERMISSION",
+  "HOLD_PRODUCT_DIRECTION",
+  "HOLD_SCOPE_CONFLICT",
+  "HOLD_VERIFICATION_CONFLICT",
+  "HOLD_REPEATED_FAILURE",
+  "HOLD_CODEX_NO_RESPONSE",
+  "HOLD_CODEX_PR_PUBLISHING",
+]);
+
+const STATUS_ISSUE_ALLOWLIST = new Set([23]);
+const REPO_PR_URL =
+  /^https:\/\/github\.com\/oakermann\/kohee-list\/pull\/(\d+)$/i;
+
 function normalizeFile(path) {
   return String(path || "").replace(/^\/+/, "");
 }
@@ -43,7 +82,9 @@ function normalizeFile(path) {
 function isHighRiskPath(path) {
   const normalized = normalizeFile(path);
   if (HIGH_RISK_EXACT_PATHS.has(normalized)) return true;
-  return HIGH_RISK_PATH_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+  return HIGH_RISK_PATH_PREFIXES.some((prefix) =>
+    normalized.startsWith(prefix),
+  );
 }
 
 function isSafeDocsPath(path) {
@@ -67,11 +108,15 @@ function isSafeToolingPath(path) {
 export function classifyChangedFiles(files = []) {
   const normalizedFiles = files.map(normalizeFile).filter(Boolean);
   const highRiskFiles = normalizedFiles.filter(isHighRiskPath);
-  const allDocs = normalizedFiles.length > 0 && normalizedFiles.every(isSafeDocsPath);
-  const allTests = normalizedFiles.length > 0 && normalizedFiles.every(isSafeTestPath);
+  const allDocs =
+    normalizedFiles.length > 0 && normalizedFiles.every(isSafeDocsPath);
+  const allTests =
+    normalizedFiles.length > 0 && normalizedFiles.every(isSafeTestPath);
   const allTooling =
     normalizedFiles.length > 0 &&
-    normalizedFiles.every((path) => isSafeToolingPath(path) || isSafeTestPath(path));
+    normalizedFiles.every(
+      (path) => isSafeToolingPath(path) || isSafeTestPath(path),
+    );
 
   return {
     files: normalizedFiles,
@@ -98,14 +143,19 @@ export function parseRisk(text) {
   return "UNKNOWN";
 }
 
-export function classifyPullRequest({ body = "", draft = false, files = [] } = {}) {
+export function classifyPullRequest({
+  body = "",
+  draft = false,
+  files = [],
+} = {}) {
   const fileClassification = classifyChangedFiles(files);
   const topicMatches = detectHighRiskTopics(body);
   const risk = parseRisk(body);
   const reasons = [];
 
   if (draft) reasons.push("PR is draft");
-  if (risk === "UNKNOWN") reasons.push("PR body does not declare LOW or MEDIUM risk");
+  if (risk === "UNKNOWN")
+    reasons.push("PR body does not declare LOW or MEDIUM risk");
   if (risk === "HIGH") reasons.push("PR body declares HIGH risk");
   if (fileClassification.hasHighRiskFiles) {
     reasons.push(
@@ -118,7 +168,8 @@ export function classifyPullRequest({ body = "", draft = false, files = [] } = {
     fileClassification.allTests ||
     fileClassification.allTooling;
 
-  if (!safeCategory) reasons.push("changed files are not docs/test/tooling-only");
+  if (!safeCategory)
+    reasons.push("changed files are not docs/test/tooling-only");
   if (topicMatches.length && risk !== "LOW") {
     reasons.push("body includes high-risk topic keywords");
   }
@@ -136,7 +187,9 @@ export function classifyPullRequest({ body = "", draft = false, files = [] } = {
     return {
       decision: "SAFE_AUTO_MERGE_ELIGIBLE",
       risk,
-      reasons: ["explicit LOW/MEDIUM docs/test/tooling-only changes outside denylist"],
+      reasons: [
+        "explicit LOW/MEDIUM docs/test/tooling-only changes outside denylist",
+      ],
       ...fileClassification,
     };
   }
@@ -156,7 +209,10 @@ export function classifyCodexComment(body) {
   );
 
   if (/\bHOLD_USER_APPROVAL\b/.test(text)) {
-    return { decision: "HOLD_USER_APPROVAL", reasons: ["explicit HOLD_USER_APPROVAL"] };
+    return {
+      decision: "HOLD_USER_APPROVAL",
+      reasons: ["explicit HOLD_USER_APPROVAL"],
+    };
   }
   if (/\bHOLD_HIGH_RISK\b/.test(text)) {
     return { decision: "HOLD_HIGH_RISK", reasons: ["explicit HOLD_HIGH_RISK"] };
@@ -175,6 +231,111 @@ export function classifyCodexComment(body) {
   }
 
   return { decision: "OBSERVE", reasons: ["no codex status marker detected"] };
+}
+
+function scalar(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
+}
+
+export function parseKoheeStatusBlock(body) {
+  const lines = String(body || "").split(/\r?\n/);
+  const markerIndex = lines.findIndex((line) =>
+    /^\s*KOHEE_STATUS\s*:\s*$/.test(line),
+  );
+  if (markerIndex < 0) return null;
+
+  const status = {};
+  let parent = null;
+  for (const line of lines.slice(markerIndex + 1)) {
+    if (!line.trim()) continue;
+    if (/^\S/.test(line)) break;
+
+    const match = line.match(/^\s{2,}([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/);
+    if (!match) continue;
+
+    const [, key, value] = match;
+    const indent = line.match(/^\s*/)?.[0].length || 0;
+    if (indent <= 2) {
+      parent = key;
+      if (value.trim()) status[key] = scalar(value);
+      continue;
+    }
+
+    if (parent === "evidence" && key === "pr_url") {
+      status.pr_url = scalar(value);
+    }
+  }
+
+  return status;
+}
+
+function rejectStatus(reason, status = {}) {
+  return {
+    decision: "REJECT",
+    status,
+    reasons: [reason],
+  };
+}
+
+export function classifyKoheeStatusComment(body, issueNumber) {
+  const status = parseKoheeStatusBlock(body);
+  if (!status) {
+    return {
+      decision: "OBSERVE",
+      reasons: ["no kohee status marker detected"],
+    };
+  }
+
+  if (!STATUS_ISSUE_ALLOWLIST.has(Number(issueNumber))) {
+    return rejectStatus(
+      "issue is not allowed for KOHEE_STATUS recording",
+      status,
+    );
+  }
+
+  if (!STATUS_STATES.has(status.state)) {
+    return rejectStatus(
+      `unsupported KOHEE_STATUS state: ${status.state || "(missing)"}`,
+      status,
+    );
+  }
+  if (!STATUS_RISKS.has(status.risk)) {
+    return rejectStatus(
+      `unsupported KOHEE_STATUS risk: ${status.risk || "(missing)"}`,
+      status,
+    );
+  }
+  if (!STATUS_LANES.has(status.lane)) {
+    return rejectStatus(
+      `unsupported KOHEE_STATUS lane: ${status.lane || "(missing)"}`,
+      status,
+    );
+  }
+  if (status.blocker && !STATUS_HOLD_BLOCKERS.has(status.blocker)) {
+    return rejectStatus(
+      `unsupported KOHEE_STATUS blocker: ${status.blocker}`,
+      status,
+    );
+  }
+
+  const prUrl = status.pr_url || status.active_pr || "";
+  if (status.state === "PR_OPEN" && !prUrl) {
+    return rejectStatus(
+      "PR_OPEN requires active_pr or evidence.pr_url",
+      status,
+    );
+  }
+  if (prUrl && !REPO_PR_URL.test(prUrl)) {
+    return rejectStatus("PR URL must belong to oakermann/kohee-list", status);
+  }
+
+  return {
+    decision: "RECORD_STATUS_DRY_RUN",
+    status,
+    reasons: ["accepted KOHEE_STATUS marker"],
+  };
 }
 
 export function decideWebhookAction(eventName, payload) {
@@ -200,7 +361,33 @@ export function decideWebhookAction(eventName, payload) {
   }
 
   if (eventName === "issue_comment") {
-    const classification = classifyCodexComment(payload?.comment?.body || "");
+    if (payload?.action !== "created") {
+      return {
+        ok: true,
+        dryRun: true,
+        event: `issue_comment.${payload?.action || "unknown"}`,
+        issue: payload?.issue?.number || null,
+        decision: "OBSERVE",
+        reasons: ["unsupported issue_comment action"],
+        wouldDo: [],
+      };
+    }
+
+    const commentBody = payload?.comment?.body || "";
+    const statusClassification = classifyKoheeStatusComment(
+      commentBody,
+      payload?.issue?.number,
+    );
+    const legacyClassification = classifyCodexComment(commentBody);
+    const isLegacyStatusShape =
+      !statusClassification.status?.risk && !statusClassification.status?.lane;
+    const classification =
+      statusClassification.decision === "OBSERVE" ||
+      (statusClassification.decision === "REJECT" &&
+        legacyClassification.decision !== "OBSERVE" &&
+        isLegacyStatusShape)
+        ? legacyClassification
+        : statusClassification;
     return {
       ok: true,
       dryRun: true,
@@ -208,9 +395,11 @@ export function decideWebhookAction(eventName, payload) {
       issue: payload?.issue?.number || null,
       ...classification,
       wouldDo:
-        classification.decision === "UNVERIFIED_PR_CLAIM"
-          ? ["comment_unverified_pr_claim"]
-          : ["record_status"],
+        classification.decision === "RECORD_STATUS_DRY_RUN"
+          ? ["record_status_dry_run"]
+          : classification.decision === "UNVERIFIED_PR_CLAIM"
+            ? ["comment_unverified_pr_claim"]
+            : ["record_status"],
     };
   }
 

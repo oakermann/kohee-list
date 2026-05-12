@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import { handleRequest } from "../src/index.mjs";
 import {
   classifyCodexComment,
+  classifyKoheeStatusComment,
   classifyPullRequest,
   decideWebhookAction,
+  parseKoheeStatusBlock,
 } from "../src/policy.mjs";
 import {
   isAllowedRepository,
@@ -61,7 +63,9 @@ assert.equal(
   true,
 );
 assert.equal(
-  isSelfBotActor("chatgpt-codex-connector[bot]", ["kohee-list-automation[bot]"]),
+  isSelfBotActor("chatgpt-codex-connector[bot]", [
+    "kohee-list-automation[bot]",
+  ]),
   false,
 );
 
@@ -86,7 +90,10 @@ const unknownRiskDocsPr = classifyPullRequest({
   files: ["docs/example.md"],
 });
 assert.equal(unknownRiskDocsPr.decision, "HOLD_HIGH_RISK");
-assert.match(unknownRiskDocsPr.reasons.join(" "), /does not declare LOW or MEDIUM/);
+assert.match(
+  unknownRiskDocsPr.reasons.join(" "),
+  /does not declare LOW or MEDIUM/,
+);
 
 const highRiskPr = classifyPullRequest({
   body: "Risk: MEDIUM\nLane: GOVERNANCE",
@@ -104,15 +111,20 @@ assert.equal(draftPr.decision, "HOLD_HIGH_RISK");
 assert.match(draftPr.reasons.join(" "), /draft/);
 
 assert.equal(
-  classifyCodexComment("I called make_pr but no actual GitHub PR URL was returned.").decision,
+  classifyCodexComment(
+    "I called make_pr but no actual GitHub PR URL was returned.",
+  ).decision,
   "OBSERVE",
 );
 assert.equal(
-  classifyCodexComment("PR_OPEN but no actual GitHub PR URL was returned.").decision,
+  classifyCodexComment("PR_OPEN but no actual GitHub PR URL was returned.")
+    .decision,
   "UNVERIFIED_PR_CLAIM",
 );
 assert.equal(
-  classifyCodexComment("HOLD_HIGH_RISK: make_pr unavailable and policy decision needed.").decision,
+  classifyCodexComment(
+    "HOLD_HIGH_RISK: make_pr unavailable and policy decision needed.",
+  ).decision,
   "HOLD_HIGH_RISK",
 );
 assert.equal(
@@ -122,6 +134,54 @@ assert.equal(
 assert.equal(
   classifyCodexComment("HOLD_USER_APPROVAL: policy decision needed.").decision,
   "HOLD_USER_APPROVAL",
+);
+
+const validKoheeStatus = [
+  "KOHEE_STATUS:",
+  "  state: PR_OPEN",
+  "  risk: LOW",
+  "  lane: GOVERNANCE",
+  "  active_pr: https://github.com/oakermann/kohee-list/pull/139",
+  "  head_sha: abc123",
+  "  evidence:",
+  "    pr_url: https://github.com/oakermann/kohee-list/pull/139",
+].join("\n");
+assert.equal(parseKoheeStatusBlock(validKoheeStatus).state, "PR_OPEN");
+assert.equal(
+  classifyKoheeStatusComment(validKoheeStatus, 23).decision,
+  "RECORD_STATUS_DRY_RUN",
+);
+assert.equal(
+  classifyKoheeStatusComment(validKoheeStatus, 99).decision,
+  "REJECT",
+);
+assert.match(
+  classifyKoheeStatusComment(
+    "KOHEE_STATUS:\n  state: PR_OPEN\n  risk: LOW\n  lane: AUTOMATION_CONNECTIVITY\n  active_pr: https://github.com/oakermann/kohee-list/pull/139",
+    23,
+  ).reasons.join(" "),
+  /unsupported KOHEE_STATUS lane/,
+);
+assert.match(
+  classifyKoheeStatusComment(
+    "KOHEE_STATUS:\n  state: PR_OPEN\n  risk: LOW\n  lane: GOVERNANCE",
+    23,
+  ).reasons.join(" "),
+  /PR_OPEN requires/,
+);
+assert.match(
+  classifyKoheeStatusComment(
+    "KOHEE_STATUS:\n  state: DONE_NO_DEPLOY\n  risk: LOW\n  lane: GOVERNANCE\n  evidence:\n    pr_url: https://github.com/other/repo/pull/1",
+    23,
+  ).reasons.join(" "),
+  /oakermann\/kohee-list/,
+);
+assert.equal(
+  classifyKoheeStatusComment(
+    "KOHEE_STATUS:\n  state: HOLD\n  risk: HIGH\n  lane: GOVERNANCE\n  blocker: HOLD_HIGH_RISK",
+    23,
+  ).decision,
+  "RECORD_STATUS_DRY_RUN",
 );
 
 const decision = decideWebhookAction(
@@ -137,6 +197,38 @@ const decision = decideWebhookAction(
 );
 assert.equal(decision.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
 assert.deepEqual(decision.wouldDo, ["enable_native_auto_merge"]);
+
+const statusDecision = decideWebhookAction(
+  "issue_comment",
+  payload({
+    action: "created",
+    issue: { number: 23 },
+    comment: { body: validKoheeStatus },
+  }),
+);
+assert.equal(statusDecision.decision, "RECORD_STATUS_DRY_RUN");
+assert.deepEqual(statusDecision.wouldDo, ["record_status_dry_run"]);
+
+const unsupportedIssueDecision = decideWebhookAction(
+  "issue_comment",
+  payload({
+    action: "created",
+    issue: { number: 99 },
+    comment: { body: validKoheeStatus },
+  }),
+);
+assert.equal(unsupportedIssueDecision.decision, "REJECT");
+
+const ignoredIssueActionDecision = decideWebhookAction(
+  "issue_comment",
+  payload({
+    action: "edited",
+    issue: { number: 23 },
+    comment: { body: validKoheeStatus },
+  }),
+);
+assert.equal(ignoredIssueActionDecision.decision, "OBSERVE");
+assert.deepEqual(ignoredIssueActionDecision.wouldDo, []);
 
 const webhookResponse = await handleRequest(
   await signedWebhookRequest(
@@ -158,10 +250,32 @@ assert.equal(webhookJson.dryRun, true);
 assert.equal(webhookJson.decision, "HOLD_HIGH_RISK");
 assert.deepEqual(webhookJson.wouldDo, ["comment_hold_or_observe"]);
 assertDryRunLog(webhookJson, "HOLD_HIGH_RISK");
-assert.deepEqual(webhookJson.dryRunLog.highRiskFiles, ["migrations/0006_test.sql"]);
+assert.deepEqual(webhookJson.dryRunLog.highRiskFiles, [
+  "migrations/0006_test.sql",
+]);
+
+const statusWebhookResponse = await handleRequest(
+  await signedWebhookRequest(
+    "issue_comment",
+    payload({
+      action: "created",
+      issue: { number: 23 },
+      comment: { body: validKoheeStatus },
+    }),
+  ),
+  env,
+);
+assert.equal(statusWebhookResponse.status, 200);
+const statusWebhookJson = await statusWebhookResponse.json();
+assert.equal(statusWebhookJson.decision, "RECORD_STATUS_DRY_RUN");
+assert.deepEqual(statusWebhookJson.wouldDo, ["record_status_dry_run"]);
+assert.equal(statusWebhookJson.dryRunLog.issue, 23);
 
 const deniedRepoResponse = await handleRequest(
-  await signedWebhookRequest("issues", payload({ repository: { full_name: "other/repo" } })),
+  await signedWebhookRequest(
+    "issues",
+    payload({ repository: { full_name: "other/repo" } }),
+  ),
   env,
 );
 assert.equal(deniedRepoResponse.status, 403);
