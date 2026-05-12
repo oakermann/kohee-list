@@ -42,53 +42,62 @@ Purpose: current blockers and next actions only.
 Status: `HOLD_USER_APPROVAL`
 Track: `LOCAL_TRACK`
 Meaning: old merged remote branches can be cleaned later if the owner approves.
-Decision: repository hygiene only; do not let this block Phase 3 implementation.
+Decision: repository hygiene only; do not let this block Phase 3/4 automation implementation.
 
 ## Next work
 
-### 1. Phase 4B native auto-merge dry-run classifier tests
+### 1. Phase 3A parser review fix from PR #146
+
+Risk: MEDIUM
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / DEPLOY_SAFETY
+Scope: fix the unresolved PR #146 review finding before continuing Phase 4B. Unsupported issue numbers must stay rejected even when a malformed `KOHEE_STATUS` comment also matches older Codex status markers. Add regression tests for the unsupported-issue fallback case.
+Files likely: `automation/github-app-worker/src/policy.mjs`, `automation/github-app-worker/test/dry-run.test.mjs`.
+Hard stop: no GitHub write enablement, issue close, branch delete, auto-merge enablement, deploy, D1/schema, auth/session, CSV, or public `/data` changes.
+
+### 2. Phase 4B native auto-merge dry-run classifier tests
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / DEPLOY_SAFETY
 Scope: add dry-run classifier tests only for LOW native auto-merge eligibility. Do not enable auto-merge, direct merge, issue close, branch delete, deploy, secrets, D1/schema, auth/session, CSV, or public `/data` changes.
 
-### 2. Cloudflare Worker observability audit
+### 3. Cloudflare Worker observability audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: AUTOMATION_CONNECTIVITY / DEPLOY_SAFETY
 Scope: inspect dry-run Worker logging/observability settings and recommend whether to add Cloudflare Workers Logs config. Do not deploy.
 
-### 3. GitHub dependency review audit
+### 4. GitHub dependency review audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: DEPLOY_SAFETY / SUPPLY_CHAIN
 Scope: inspect whether dependency-review-action is useful for KOHEE PRs. Propose workflow changes only if low-noise and compatible with current rulesets.
 
-### 4. Phase 5A local Codex worker runbook hardening
+### 5. Phase 5A local Codex worker runbook hardening
 
 Risk: LOW/MEDIUM docs/tooling
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: harden local worker runbook and stop/kill-switch/worktree rules. No daemon or unattended loop yet.
 
-### 5. Phase 6A reusable automation audit
+### 6. Phase 6A reusable automation audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: classify reusable vs project-specific automation components. No extraction yet.
 
-### 6. Admin review console Phase 2/3
+### 7. Admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 7. Submissions review CSV Phase 2
+### 8. Submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
