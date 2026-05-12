@@ -159,6 +159,37 @@ const mediumRiskPr = classifyPullRequest({
 assert.equal(mediumRiskPr.decision, "AUTO_MERGE_REJECT");
 assert.match(mediumRiskPr.reasons.join(" "), /LOW-only/);
 
+const missingStatusRiskPr = classifyPullRequest({
+  ...eligiblePullRequest({
+    body: [
+      "KOHEE_STATUS:",
+      "  state: PR_OPEN",
+      "  lane: GOVERNANCE",
+      "  mode: docs-only",
+      "  active_pr: https://github.com/oakermann/kohee-list/pull/101",
+      "  head_sha: abc123",
+      "  evidence:",
+      "    pr_url: https://github.com/oakermann/kohee-list/pull/101",
+      "",
+      "Summary: LOW docs-only wording outside the status block.",
+    ].join("\n"),
+  }),
+});
+assert.equal(missingStatusRiskPr.decision, "AUTO_MERGE_REJECT");
+assert.match(
+  missingStatusRiskPr.reasons.join(" "),
+  /KOHEE_STATUS risk is missing/,
+);
+
+const malformedLanePr = classifyPullRequest({
+  ...eligiblePullRequest({ status: { lane: "NOT_A_LANE" } }),
+});
+assert.equal(malformedLanePr.decision, "AUTO_MERGE_REJECT");
+assert.match(
+  malformedLanePr.reasons.join(" "),
+  /unsupported KOHEE_STATUS lane: NOT_A_LANE/,
+);
+
 const malformedModePr = classifyPullRequest({
   ...eligiblePullRequest({ status: { mode: "mixed" } }),
 });

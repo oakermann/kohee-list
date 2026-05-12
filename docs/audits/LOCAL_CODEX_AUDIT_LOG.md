@@ -258,3 +258,14 @@ Changes: narrowed auto-merge dry-run eligibility to LOW-only canonical `KOHEE_ST
 Tests: pending full local and GitHub PR verification for this branch.
 Unresolved: Phase 4C native auto-merge enablement remains HOLD/user-approved.
 Next action: run full local checks, open PR, and verify GitHub checks/review threads before merge.
+
+## 2026-05-12 - PR #153 classifier review fix
+
+Scope: MEDIUM GitHub App Worker dry-run classifier review fix only; no native auto-merge enablement, direct merge, issue close, branch deletion, deploy, secrets, D1/schema, auth/session, CSV, public `/data`, or production KOHEE runtime changes.
+Base: `main` at `abdc2d4560b12919129a6d7e6fc67b67f6e164e9`.
+Commands: inspected PR #153 review threads, issue #23, open PR state, and ACTIVE_QUEUE; opened PR #154 to prioritize the blocker; implemented focused classifier/test follow-up.
+Findings: PR #153 merged with unresolved P1/P2 review threads. The pull-request classifier still derived risk from free-form body text when `KOHEE_STATUS` existed without `risk`, and it only checked that `KOHEE_STATUS lane` was non-empty.
+Changes: changed pull-request classification so canonical status blocks with missing risk remain `UNKNOWN`, and added supported-lane validation before any dry-run eligible decision. Added regression tests for missing status risk with free-form `LOW` text and invalid `NOT_A_LANE`.
+Tests: `node automation/github-app-worker/test/dry-run.test.mjs` passed; `node automation/github-app-worker/test/fixtures.test.mjs` passed; `npm run check:deploy-sync` passed; `npm run test:unit` passed; `npm run audit:kohee` passed; `git diff --check` passed.
+Unresolved: PR #153 review threads should be resolved only after this fix is verified and merged.
+Next action: run local checks, open PR, verify GitHub checks/review threads, then continue to Worker observability audit.
