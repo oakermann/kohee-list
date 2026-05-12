@@ -214,3 +214,14 @@ Changes: added `docs/audits/2026-05-12-phase4a-native-automerge-readiness-audit.
 Tests: pending for this PR; local verification should run `npm run check:deploy-sync`, `npm run test:unit`, `npm run audit:kohee`, and `git diff --check`.
 Unresolved: Phase 4C native auto-merge enablement remains HIGH/HOLD and requires explicit owner approval.
 Next action: open and verify this audit PR, then implement Phase 4B dry-run classifier tests only.
+
+## 2026-05-12 - Phase 4A merge evidence
+
+Scope: docs-only evidence refresh after PR #148.
+Base: `main` at `d4e8e26475b9c64939bd45e95404bd42ebed7b4a`.
+Commands: GitHub PR/check/review-thread reads; GitHub Actions run reads for PR and main push evidence.
+Findings: PR #148 merged with commit `d4e8e26475b9c64939bd45e95404bd42ebed7b4a`; changed files stayed inside docs. PR Validate run `25737646138` passed; Validate run `25737646093` passed; main Validate run `25737720102` passed; main Deploy run `25737720103` passed and skipped Pages/Worker deploy plus smoke steps.
+Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from pending Phase 4A work to completed evidence while keeping Phase 4B dry-run classifier tests as next work.
+Tests: this docs-only evidence refresh requires PR checks before merge.
+Unresolved: Phase 4C native auto-merge enablement remains HIGH/HOLD and requires explicit owner approval.
+Next action: open and verify the docs-only evidence PR, then continue to Phase 4B dry-run classifier tests only.
