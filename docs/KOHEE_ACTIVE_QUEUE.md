@@ -1,6 +1,6 @@
 # KOHEE Active Queue
 
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 Purpose: current blockers and next actions only.
 
 ## Read first
@@ -23,7 +23,8 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
-- Phase 4B native auto-merge dry-run classifier: merged in PR #153, but follow-up review fix is required before moving to the next automation task.
+- PR #155 Phase 4B classifier review fix from PR #153: merged, PR checks passed, and the PR #153 P1/P2 review threads were resolved with #155 evidence.
+- Phase 4B native auto-merge dry-run classifier: merged in PR #153; follow-up review fix completed in PR #155. Native auto-merge enablement remains HOLD.
 - PR #151 Phase 3A parser review fix from PR #146: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #150 task-list correction for Phase 3A parser review fix: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #148 Phase 4A native auto-merge readiness audit: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
@@ -40,16 +41,6 @@ Purpose: current blockers and next actions only.
 
 ## Current blockers
 
-### PR #153 Phase 4B classifier review fix
-
-Status: `FIX_REQUIRED`
-Track: `LOCAL_TRACK`
-Risk: MEDIUM
-Lane: GOVERNANCE / DEPLOY_SAFETY
-Evidence: PR #153 is merged, but GitHub review threads remain unresolved.
-Scope: fix the dry-run classifier only. `KOHEE_STATUS` risk must come from the canonical status block when the block exists, and `KOHEE_STATUS lane` must be validated against the canonical supported lane set.
-Do not touch: native auto-merge enablement, direct merge, issue close, branch delete, deploy/secrets, D1/schema/migrations, auth/session/security, CSV import/reset, or public `/data` behavior.
-
 ### Remote merged branch cleanup
 
 Status: `HOLD_USER_APPROVAL`
@@ -59,54 +50,42 @@ Decision: repository hygiene only; do not let this block Phase 3/4 automation im
 
 ## Next work
 
-### 1. PR #153 Phase 4B classifier review fix
-
-Risk: MEDIUM
-Track: `LOCAL_TRACK`
-Lane: GOVERNANCE / DEPLOY_SAFETY
-Scope: address the unresolved P1/P2 review threads from PR #153 in `automation/github-app-worker/src/policy.mjs` and focused tests. Do not enable native auto-merge or add GitHub write behavior.
-Acceptance:
-- Missing `KOHEE_STATUS risk` must reject even if free-form PR body text contains `LOW`.
-- Invalid `KOHEE_STATUS lane` such as `NOT_A_LANE` must reject and never return `AUTO_MERGE_ELIGIBLE_DRY_RUN`.
-- Add focused regression tests for both review findings.
-- Run `npm run check:deploy-sync`, `npm run test:unit`, `npm run audit:kohee`, and `git diff --check`.
-
-### 2. Cloudflare Worker observability audit
+### 1. Cloudflare Worker observability audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: AUTOMATION_CONNECTIVITY / DEPLOY_SAFETY
 Scope: inspect dry-run Worker logging/observability settings and recommend whether to add Cloudflare Workers Logs config. Do not deploy.
 
-### 3. GitHub dependency review audit
+### 2. GitHub dependency review audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: DEPLOY_SAFETY / SUPPLY_CHAIN
 Scope: inspect whether dependency-review-action is useful for KOHEE PRs. Propose workflow changes only if low-noise and compatible with current rulesets.
 
-### 4. Phase 5A local Codex worker runbook hardening
+### 3. Phase 5A local Codex worker runbook hardening
 
 Risk: LOW/MEDIUM docs/tooling
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: harden local worker runbook and stop/kill-switch/worktree rules. No daemon or unattended loop yet.
 
-### 5. Phase 6A reusable automation audit
+### 4. Phase 6A reusable automation audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: classify reusable vs project-specific automation components. No extraction yet.
 
-### 6. Admin review console Phase 2/3
+### 5. Admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 7. Submissions review CSV Phase 2
+### 6. Submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
