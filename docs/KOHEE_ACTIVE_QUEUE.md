@@ -27,6 +27,7 @@ Purpose: current blockers and next actions only.
 - Phase 3 comment/status bridge comes before Phase 4 native GitHub auto-merge.
 - GitHub Actions/rulesets remain the final gate.
 - Product/project feature work stays below automation until the automation completion lane is finished or explicitly deferred by the owner.
+- A status/control board is required after the automation layer is independent enough to feed it. The board must show current task list, active PRs, why Codex stopped, automation health, HIGH/MEDIUM/LOW risk, HOLD/FIX_REQUIRED items, and direct evidence links.
 
 ## Recently completed
 
@@ -108,23 +109,30 @@ Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: prepare reusable AGENTS/ACTIVE_QUEUE/RUNBOOK/contract template guidance for KOHEE follow-up projects before feature work resumes.
 
+### 8. Automation control board design
+
+Risk: LOW design-first
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: design the task/status board after the automation layer can feed it. The board should show current queue, in-progress local worker jobs, open PRs, check status, review-thread blockers, Codex stop reason, HIGH/MEDIUM/LOW risk, HOLD/FIX_REQUIRED items, and links back to GitHub evidence. Start as read-only; no direct approvals or writes until separately approved.
+
 ## Project work after automation lane
 
-### 8. KOHEE admin review console Phase 2/3
+### 9. KOHEE admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 9. KOHEE submissions review CSV Phase 2
+### 10. KOHEE submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
 Lane: CSV_PIPELINE
 Scope: audit/design first; no reviewed CSV apply until explicitly approved.
 
-### 10. Future project prep
+### 11. Future project prep
 
 Risk: LOW/MEDIUM depending on project
 Track: `LOCAL_TRACK`
@@ -136,6 +144,7 @@ Scope: after the automation lane, prepare per-project automation plans for news 
 - Phase 3B actual GitHub write enablement
 - Phase 4C native auto-merge enablement
 - Phase 5C local controlled worker loop
+- Automation control board write/approval actions
 - D1/schema manager role cleanup
 - manager_pick DB column cleanup
 - resetCsv transaction/staging redesign
