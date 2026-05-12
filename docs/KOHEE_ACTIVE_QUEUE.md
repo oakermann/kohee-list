@@ -24,10 +24,12 @@ Purpose: current blockers and next actions only.
 
 ### PR #136 read-only maintenance audit
 
-Status: pending PR
+Status: merged
 Track: `LOCAL_TRACK`
-Evidence: pending GitHub PR
-Result: scheduled maintenance is being narrowed to a read-only audit with no issue writes, CSV backup/export, or artifact upload. The audit runs through `npm run audit:maintenance` and is covered by `npm run test:unit`.
+Evidence: `https://github.com/oakermann/kohee-list/pull/136`
+Merge commit: `9570b9e28cf6838c99a7e005a3230d307d88f9f8`
+Result: scheduled maintenance was narrowed to a read-only audit with no issue writes, CSV backup/export, or artifact upload. The audit runs through `npm run audit:maintenance` and is covered by `npm run test:unit`.
+Follow-up: review feedback found that `scripts/audit-maintenance-readonly.mjs` asserts transient ACTIVE_QUEUE text; fix this before broader automation work.
 
 ### PR #134 command validator
 
@@ -110,11 +112,41 @@ Next action: if the owner explicitly approves branch deletion, delete only the v
 
 ## Next work after blockers
 
-1. Phase 3 safe issue-comment bridge
-2. Phase 4 native auto-merge enablement for safe PRs only
-3. admin review console Phase 2/3
-4. submissions review CSV Phase 2
-5. audit:kohee useful WARN strengthening
+1. Fix read-only maintenance audit transient queue assertion
+   - Risk: LOW
+   - Track: `LOCAL_TRACK`
+   - Lane: GOVERNANCE / DEPLOY_SAFETY
+   - Scope: remove `KOHEE_ACTIVE_QUEUE.md` transient phrase assertion from `scripts/audit-maintenance-readonly.mjs`; validate stable maintenance workflow/package/audit-log invariants only.
+   - Evidence: Codex review on PR #136 noted the fragile queue-text assertion.
+2. Cloudflare Worker observability audit
+   - Risk: LOW audit-only first
+   - Track: `LOCAL_TRACK`
+   - Lane: AUTOMATION_CONNECTIVITY / DEPLOY_SAFETY
+   - Scope: inspect dry-run Worker logging/observability settings and recommend whether to add Cloudflare Workers Logs config. Do not deploy or change secrets.
+   - Evidence: Cloudflare Workers Logs can collect, store, filter, and analyze Worker logs in the dashboard; Cloudflare also documents real-time logs and tailing for deployed Workers.
+3. GitHub dependency review audit
+   - Risk: LOW audit-only first
+   - Track: `LOCAL_TRACK`
+   - Lane: DEPLOY_SAFETY / SUPPLY_CHAIN
+   - Scope: inspect whether dependency-review-action is useful for KOHEE PRs. Propose workflow changes only if low-noise and compatible with current rulesets.
+4. Phase 3 safe issue-comment bridge
+   - Risk: MEDIUM/HIGH depending on write behavior
+   - Track: `LOCAL_TRACK`
+   - Lane: AUTOMATION_CONNECTIVITY
+   - Scope: design and implement only safe dry-run/status-comment behavior first. No issue close, branch delete, direct merge bot, or ruleset bypass.
+5. Phase 4 native auto-merge enablement for safe PRs only
+   - Risk: HIGH until Phase 3 is proven
+   - Track: `LOCAL_TRACK`
+   - Lane: AUTOMATION_CONNECTIVITY
+   - Scope: audit/design first. Do not enable production writes without explicit approval.
+6. Admin review console Phase 2/3
+7. Submissions review CSV Phase 2
+8. audit:kohee useful WARN strengthening
+9. Artifact attestation audit
+   - Risk: LOW audit-only / MEDIUM if workflow changes are proposed
+   - Track: `LOCAL_TRACK`
+   - Lane: SUPPLY_CHAIN
+   - Scope: later candidate only. GitHub artifact attestations can provide build provenance/integrity, but KOHEE currently has higher-priority governance and automation safety work.
 
 ## HOLD / do not start without approval
 
