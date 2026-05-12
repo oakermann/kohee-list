@@ -3,7 +3,7 @@
 Status: design-first / no production writes
 Date: 2026-05-12
 Owner: ChatGPT design, Local Codex implementation
-Lane: AUTOMATION_CONNECTIVITY / GOVERNANCE
+Lane: GOVERNANCE / DEPLOY_SAFETY
 Risk: MEDIUM by default, HIGH if writes are broadened
 
 ## Goal
@@ -64,19 +64,33 @@ Ignored events:
 
 ## Accepted comment inputs
 
-The Worker may parse comments containing a clear status marker such as:
+The Worker may parse comments containing a clear status marker that uses the current canonical `KOHEE_STATUS` vocabulary from `docs/CODEX_WORKFLOW.md`, `.github/ISSUE_TEMPLATE/kohee_task.md`, and `scripts/validate-kohee-command.mjs`.
+
+Accepted status values must be reused from the shared schema unless that shared schema is updated first:
+
+- `state`: `QUEUED`, `QUEUED_STALE`, `WORKING`, `PR_OPEN`, `REVIEWING`, `FIXING`, `DEPLOYING`, `MERGED_AND_DEPLOYED`, `DONE_NO_DEPLOY`, `HOLD`
+- `risk`: `LOW`, `MEDIUM`, `HIGH`
+- `lane`: `GOVERNANCE`, `DEPLOY_SAFETY`, `PUBLIC_EXPOSURE`, `AUTH_ROLE`, `LIFECYCLE`, `CSV_PIPELINE`, `FRONTEND_RENDERING`
+- `blocker`: `HOLD_HIGH_RISK`, `HOLD_USER_APPROVAL`, `HOLD_DEPLOY_BLOCKED`, `HOLD_SECRET_OR_PERMISSION`, `HOLD_PRODUCT_DIRECTION`, `HOLD_SCOPE_CONFLICT`, `HOLD_VERIFICATION_CONFLICT`, `HOLD_REPEATED_FAILURE`, `HOLD_CODEX_NO_RESPONSE`, `HOLD_CODEX_PR_PUBLISHING`
+
+Example:
 
 ```yaml
 KOHEE_STATUS:
-  state: PR_OPEN | DONE_NO_DEPLOY | HOLD | HOLD_USER_APPROVAL | FIX_REQUIRED | MERGED | NEXT_READY
+  state: PR_OPEN | REVIEWING | FIXING | DONE_NO_DEPLOY | HOLD
   risk: LOW | MEDIUM | HIGH
-  lane: GOVERNANCE | DEPLOY_SAFETY | AUTOMATION_CONNECTIVITY | FRONTEND_RENDERING | CSV_PIPELINE | AUTH_ROLE | SUPPLY_CHAIN
-  pr: https://github.com/oakermann/kohee-list/pull/123
+  lane: GOVERNANCE | DEPLOY_SAFETY | FRONTEND_RENDERING | CSV_PIPELINE | AUTH_ROLE
+  blocker: HOLD_HIGH_RISK | HOLD_USER_APPROVAL | HOLD_SCOPE_CONFLICT
+  active_pr: https://github.com/oakermann/kohee-list/pull/123
   head_sha: abc123
-  evidence: short text or URL
+  evidence:
+    pr_url: https://github.com/oakermann/kohee-list/pull/123
+    notes: short text or URL
 ```
 
 The Worker must reject or ignore ambiguous comments without the `KOHEE_STATUS:` marker.
+
+The Worker must not introduce Phase 3-only `KOHEE_STATUS` states or lanes such as `FIX_REQUIRED`, `MERGED`, `NEXT_READY`, `AUTOMATION_CONNECTIVITY`, or `SUPPLY_CHAIN` unless the shared schema and validator are updated in the same approved change.
 
 ## State machine
 
@@ -117,6 +131,7 @@ The implementation must include guards for:
 - issue allowlist
 - comment marker detection
 - strict state/risk/lane vocabulary
+- canonical `KOHEE_STATUS` vocabulary shared with command templates and validators
 - PR URL must belong to `oakermann/kohee-list`
 - PR number must be parseable when provided
 - HIGH or HOLD states must never trigger follow-up writes beyond safe recording
