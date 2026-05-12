@@ -71,7 +71,6 @@ function cafeCategories(cafe) {
 function cafeTags(cafe) {
   const tags = [];
   if (cafe.oakerman_pick) tags.push("오커맨픽");
-  if (cafe.manager_pick) tags.push("매니저픽");
   cafeCategories(cafe).forEach((tag) => tags.push(CAT_MAP[tag]));
   return tags;
 }

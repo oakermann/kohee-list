@@ -22,7 +22,6 @@ const OPTIONAL_HEADERS = [
   "category",
   "status",
   "oakerman_pick",
-  "manager_pick",
 ];
 const ALLOWED_CATEGORIES = new Set([
   "espresso",
@@ -39,7 +38,7 @@ const ALLOWED_CAFE_STATUSES = new Set([
 ]);
 const DEFAULT_IMPORTED_CAFE_STATUS = "candidate";
 const RESET_ROLLBACK_CAFE_COLUMNS =
-  "id, name, address, desc, lat, lng, signature, beanShop, instagram, category, oakerman_pick, manager_pick, status, hidden_at, hidden_by, deleted_at, deleted_by, delete_reason, updated_at";
+  "id, name, address, desc, lat, lng, signature, beanShop, instagram, category, oakerman_pick, status, hidden_at, hidden_by, deleted_at, deleted_by, delete_reason, updated_at";
 
 export function parseCsvLine(line) {
   const out = [];
@@ -106,7 +105,6 @@ function buildRowBody(cols, idx) {
     category: splitCsvList(rowValue(cols, idx, "category")),
     status: cleanText(rowValue(cols, idx, "status"), 40),
     oakerman_pick: boolCsv(rowValue(cols, idx, "oakerman_pick")),
-    manager_pick: boolCsv(rowValue(cols, idx, "manager_pick")),
   };
 }
 
@@ -301,8 +299,8 @@ async function applyCsvRows(env, user, rows) {
       await env.DB.prepare(
         `INSERT INTO cafes(
           id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-          oakerman_pick, manager_pick, status, hidden_at, hidden_by, created_by, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          oakerman_pick, status, hidden_at, hidden_by, created_by, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           id,
@@ -316,7 +314,6 @@ async function applyCsvRows(env, user, rows) {
           row.payload.instagram,
           row.payload.category,
           row.payload.oakerman_pick,
-          row.payload.manager_pick,
           row.status,
           holdFields.hidden_at,
           holdFields.hidden_by,
@@ -332,7 +329,7 @@ async function applyCsvRows(env, user, rows) {
     await env.DB.prepare(
       `UPDATE cafes SET
         name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, manager_pick = ?, status = ?, hidden_at = ?, hidden_by = ?,
+        oakerman_pick = ?, status = ?, hidden_at = ?, hidden_by = ?,
         deleted_at = NULL, deleted_by = NULL, delete_reason = NULL, updated_at = ?
        WHERE id = ?`,
     )
@@ -347,7 +344,6 @@ async function applyCsvRows(env, user, rows) {
         row.payload.instagram,
         row.payload.category,
         row.payload.oakerman_pick,
-        row.payload.manager_pick,
         row.status,
         holdFields.hidden_at,
         holdFields.hidden_by,
@@ -384,7 +380,6 @@ function resetSnapshotFromCafe(row) {
     instagram: row.instagram,
     category: row.category,
     oakerman_pick: row.oakerman_pick,
-    manager_pick: row.manager_pick,
     status: row.status,
     hidden_at: row.hidden_at,
     hidden_by: row.hidden_by,
@@ -420,7 +415,7 @@ async function rollbackResetCsv(env, user, rows, snapshots) {
     await env.DB.prepare(
       `UPDATE cafes
        SET name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, manager_pick = ?, status = ?, hidden_at = ?, hidden_by = ?,
+        oakerman_pick = ?, status = ?, hidden_at = ?, hidden_by = ?,
         deleted_at = ?, deleted_by = ?, delete_reason = ?, updated_at = ?
        WHERE id = ?`,
     )
@@ -435,7 +430,6 @@ async function rollbackResetCsv(env, user, rows, snapshots) {
         snapshot.instagram,
         snapshot.category,
         snapshot.oakerman_pick,
-        snapshot.manager_pick,
         snapshot.status,
         snapshot.hidden_at,
         snapshot.hidden_by,
@@ -478,7 +472,6 @@ const REVIEW_EXPORT_COLUMNS = [
   "beanShop",
   "instagram",
   "oakerman_pick",
-  "manager_pick",
   "status",
   "updated_at",
 ];
@@ -646,7 +639,7 @@ export async function exportCandidatesReviewCsv(req, env) {
       columns: REVIEW_EXPORT_COLUMNS,
       sql: `SELECT
               id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
-              oakerman_pick, manager_pick, status, updated_at
+              oakerman_pick, status, updated_at
             FROM cafes
             WHERE status = 'candidate' AND deleted_at IS NULL
             ORDER BY updated_at DESC, id ASC`,
@@ -661,7 +654,7 @@ export async function exportHoldReviewCsv(req, env) {
       columns: HOLD_REVIEW_EXPORT_COLUMNS,
       sql: `SELECT
               id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
-              oakerman_pick, manager_pick, status, updated_at, hidden_at, hidden_by
+              oakerman_pick, status, updated_at, hidden_at, hidden_by
             FROM cafes
             WHERE status = 'hidden' AND deleted_at IS NULL AND hidden_at IS NOT NULL
             ORDER BY hidden_at DESC, updated_at DESC, id ASC`,
@@ -676,7 +669,7 @@ export async function exportApprovedReviewCsv(req, env) {
       columns: REVIEW_EXPORT_COLUMNS,
       sql: `SELECT
               id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
-              oakerman_pick, manager_pick, status, updated_at
+              oakerman_pick, status, updated_at
             FROM cafes
             WHERE status = 'approved' AND deleted_at IS NULL
             ORDER BY updated_at DESC, id ASC`,
@@ -693,7 +686,7 @@ export async function exportSubmissionsReviewCsv(req, env) {
       sql: `SELECT
               s.id, s.user_id, u.username, s.name, s.address, s.desc, s.reason,
               s.category, s.signature, s.beanShop, s.instagram,
-              s.oakerman_pick, s.manager_pick, s.status, s.created_at,
+              s.oakerman_pick, s.status, s.created_at,
               s.reviewed_at, s.reviewed_by, reviewer.username AS reviewed_by_username,
               s.reject_reason, s.linked_cafe_id
             FROM submissions s

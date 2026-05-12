@@ -35,7 +35,6 @@ export function toSubmissionResponse(row) {
     reject_reason: row.reject_reason,
     linked_cafe_id: row.linked_cafe_id,
     oakerman_pick: !!row.oakerman_pick,
-    manager_pick: !!row.manager_pick,
     created_at: row.created_at,
   };
 }
@@ -124,32 +123,12 @@ export async function mySubmissions(req, env) {
 export async function getSubmissions(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["manager", "admin"]);
+    requireRole(user, ["admin"]);
 
     const status = new URL(req.url).searchParams.get("status") || "pending";
     const filter = ["pending", "approved", "rejected"].includes(status)
       ? status
       : "pending";
-
-    if (user.role === "manager" && filter !== "pending") {
-      const rows = await env.DB.prepare(
-        `SELECT s.*, u.username, reviewer.username AS reviewed_by_username
-         FROM submissions s
-         JOIN users u ON u.id = s.user_id
-         LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
-         WHERE s.status = ? AND s.reviewed_by = ?
-         ORDER BY COALESCE(s.reviewed_at, s.created_at) DESC`,
-      )
-        .bind(filter, user.user_id)
-        .all();
-
-      return json(
-        { ok: true, items: (rows.results || []).map(toSubmissionResponse) },
-        200,
-        req,
-        env,
-      );
-    }
 
     const rows = await env.DB.prepare(
       `SELECT s.*, u.username, reviewer.username AS reviewed_by_username
@@ -174,7 +153,7 @@ export async function getSubmissions(req, env) {
 export async function approveSubmission(req, env) {
   return withGuard(req, env, async () => {
     const reviewer = await requireAuth(req, env);
-    requireRole(reviewer, ["manager", "admin"]);
+    requireRole(reviewer, ["admin"]);
 
     const body = await readJson(req);
     const submissionId = cleanText(body.submissionId, 80);
@@ -203,23 +182,18 @@ export async function approveSubmission(req, env) {
         .first();
       if (!existingCafe) throw new HttpError(404, "Linked cafe not found");
     } else {
-      const merged = normalizeCafePayload(
-        {
-          name: body.name ?? sub.name,
-          address: body.address ?? sub.address,
-          desc: body.desc ?? sub.desc,
-          lat: body.lat ?? 0,
-          lng: body.lng ?? 0,
-          signature: body.signature ?? parseJsonArray(sub.signature),
-          beanShop: body.beanShop ?? sub.beanShop,
-          instagram: body.instagram ?? sub.instagram,
-          category: body.category ?? parseJsonArray(sub.category),
-          oakerman_pick: body.oakerman_pick,
-          manager_pick: body.manager_pick,
-        },
-        reviewer.role,
-        sub,
-      );
+      const merged = normalizeCafePayload({
+        name: body.name ?? sub.name,
+        address: body.address ?? sub.address,
+        desc: body.desc ?? sub.desc,
+        lat: body.lat ?? 0,
+        lng: body.lng ?? 0,
+        signature: body.signature ?? parseJsonArray(sub.signature),
+        beanShop: body.beanShop ?? sub.beanShop,
+        instagram: body.instagram ?? sub.instagram,
+        category: body.category ?? parseJsonArray(sub.category),
+        oakerman_pick: body.oakerman_pick,
+      });
 
       if (!merged.name || !merged.address || !merged.desc) {
         throw new HttpError(400, "name, address, desc required for approval");
@@ -230,8 +204,8 @@ export async function approveSubmission(req, env) {
       await env.DB.prepare(
         `INSERT INTO cafes(
           id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-          oakerman_pick, manager_pick, status, created_by, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          oakerman_pick, status, created_by, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           linkedCafeId,
@@ -245,7 +219,6 @@ export async function approveSubmission(req, env) {
           merged.instagram,
           merged.category,
           merged.oakerman_pick,
-          merged.manager_pick,
           "candidate",
           reviewer.user_id,
           createdAt,
@@ -287,7 +260,7 @@ export async function approveSubmission(req, env) {
 export async function rejectSubmission(req, env) {
   return withGuard(req, env, async () => {
     const reviewer = await requireAuth(req, env);
-    requireRole(reviewer, ["manager", "admin"]);
+    requireRole(reviewer, ["admin"]);
 
     const body = await readJson(req);
     const submissionId = cleanText(body.submissionId, 80);
@@ -329,7 +302,7 @@ export async function rejectSubmission(req, env) {
 export async function updateSubmission(req, env) {
   return withGuard(req, env, async () => {
     const reviewer = await requireAuth(req, env);
-    requireRole(reviewer, ["manager", "admin"]);
+    requireRole(reviewer, ["admin"]);
 
     const body = await readJson(req);
     const submissionId = cleanText(body.id, 80);
@@ -344,14 +317,14 @@ export async function updateSubmission(req, env) {
     if (existing.status !== "pending")
       throw new HttpError(409, "Only pending can be updated");
 
-    const payload = normalizeCafePayload(body, reviewer.role, existing);
+    const payload = normalizeCafePayload(body);
     if (!payload.name || !payload.address || !payload.desc)
       throw new HttpError(400, "name/address/desc required");
 
     await env.DB.prepare(
       `UPDATE submissions SET
         name = ?, address = ?, desc = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, manager_pick = ?
+        oakerman_pick = ?
        WHERE id = ?`,
     )
       .bind(
@@ -363,7 +336,6 @@ export async function updateSubmission(req, env) {
         payload.instagram,
         payload.category,
         payload.oakerman_pick,
-        payload.manager_pick,
         submissionId,
       )
       .run();
