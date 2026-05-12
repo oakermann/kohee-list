@@ -80,7 +80,7 @@ jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Create or update KOHEE command issue
+      - name: Create KOHEE command issue
         id: upsert
         uses: actions/github-script@v7
         env:
@@ -136,9 +136,11 @@ jobs:
             const body = `${marker}\n\n## Lane\n${lane}\n\n## Risk\n${risk}\n\n## Preset\n${selectedPreset || "(none)"}\n\n## Scope / allowlist (files + functions)\n- Allowed files:\n${yamlList(allowed)}\n- Denied files:\n${yamlList(denied)}\n\n## KOHEE_COMMAND\n\n\`\`\`yaml\nKOHEE_COMMAND:\n  command_id: ${commandId}\n  state: QUEUED\n  risk: ${risk}\n  lane: ${lane}\n  source: GitHub Actions workflow_dispatch\n  owner: codex\n  terminal_state: MERGED_AND_DEPLOYED | DONE_NO_DEPLOY | HOLD\n  user_action_required: ${approvalRequired}\n  task: ${task}\n  acceptance_criteria:\n    - Implement only allowed scope\n    - Run required verification commands\n    - Keep runtime change policy\n  allowed_files:\n${yamlList(allowed)}\n  denied_files:\n${yamlList(denied)}\n  runtime_change_allowed: ${runtimeAllowed}\n  do_not_change:\n${yamlList(denied)}\n  high_risk_hold:\n    - HOLD_HIGH_RISK\n    - HOLD_USER_APPROVAL\n    - HOLD_SCOPE_CONFLICT\n    - HOLD_CODEX_PR_PUBLISHING\n  created_at: ${now}\n  last_updated_at: ${now}\n\`\`\`\n\n## Manual Codex trigger required\n\nCodex Cloud auto-reaction is not guaranteed from bot comments.\n\nPost the following comment manually from a user account:\n\n\`\`\`text\n${manualCodexComment}\n\`\`\`\n\n## Codex trigger behavior\n\nThis workflow intentionally does not post an automatic \`@codex\` bot comment by default because GitHub Actions bot comments may not trigger Codex Cloud and can create noisy duplicate comments.\n\n## PR evidence guard\n\n- Actual GitHub PR URL is required for \`PR_OPEN\`.\n- Commit hash, branch name, local task output, make_pr metadata, or internal draft without a real PR URL is \`UNVERIFIED\`.\n- If PR publishing is blocked, use \`HOLD_CODEX_PR_PUBLISHING\`.\n- GitHub evidence wins over Codex self-reports.\n\n## Dispatch evidence\n\n- workflow_run: ${runUrl}\n`;
             const { data: openIssues } = await github.rest.issues.listForRepo({ owner, repo, state: "open", labels: "codex", per_page: 100 });
             const matched = openIssues.filter((issue) => issue.title.startsWith(`[KOHEE_COMMAND] ${lane} / ${risk}`)).find((issue) => (issue.body || "").includes(marker));
-            const issue = matched
-              ? (await github.rest.issues.update({ owner, repo, issue_number: matched.number, title, body, labels })).data
-              : (await github.rest.issues.create({ owner, repo, title, body, labels })).data;
+            if (matched) {
+              core.setFailed(`Open KOHEE command issue already exists: #${matched.number} ${matched.html_url}. This dispatch is create-only and will not overwrite existing command issues.`);
+              return;
+            }
+            const issue = (await github.rest.issues.create({ owner, repo, title, body, labels })).data;
             core.setOutput("issue_number", String(issue.number));
             core.setOutput("issue_url", issue.html_url);
             core.setOutput("effective_preset", selectedPreset || "(none)");
