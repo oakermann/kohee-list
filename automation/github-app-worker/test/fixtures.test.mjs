@@ -25,18 +25,24 @@ assert.equal(safeDocs.decision, "SAFE_AUTO_MERGE_ELIGIBLE");
 assert.deepEqual(safeDocs.wouldDo, ["enable_native_auto_merge"]);
 assert.equal(safeDocs.pullRequest, 101);
 
-const highRiskSchema = await decideFixture("pull-request-high-risk-schema.json");
+const highRiskSchema = await decideFixture(
+  "pull-request-high-risk-schema.json",
+);
 assert.equal(highRiskSchema.decision, "HOLD_HIGH_RISK");
 assert.deepEqual(highRiskSchema.highRiskFiles, ["schema.sql"]);
 assert.deepEqual(highRiskSchema.wouldDo, ["comment_hold_or_observe"]);
 
-const prOpenWithoutUrl = await decideFixture("issue-comment-pr-open-without-url.json");
-assert.equal(prOpenWithoutUrl.decision, "UNVERIFIED_PR_CLAIM");
-assert.deepEqual(prOpenWithoutUrl.wouldDo, ["comment_unverified_pr_claim"]);
+const prOpenWithoutUrl = await decideFixture(
+  "issue-comment-pr-open-without-url.json",
+);
+assert.equal(prOpenWithoutUrl.decision, "REJECT");
+assert.match(prOpenWithoutUrl.reasons.join(" "), /issue is not allowed/);
 
-const holdWithMakePr = await decideFixture("issue-comment-hold-with-make-pr.json");
-assert.equal(holdWithMakePr.decision, "HOLD_HIGH_RISK");
-assert.deepEqual(holdWithMakePr.wouldDo, ["record_status"]);
+const holdWithMakePr = await decideFixture(
+  "issue-comment-hold-with-make-pr.json",
+);
+assert.equal(holdWithMakePr.decision, "REJECT");
+assert.match(holdWithMakePr.reasons.join(" "), /issue is not allowed/);
 
 const { stdout } = await execFileAsync(process.execPath, [
   "automation/github-app-worker/simulate-fixture.mjs",
