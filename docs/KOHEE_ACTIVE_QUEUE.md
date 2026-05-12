@@ -46,6 +46,7 @@ Decision: repository hygiene only; do not let this block Phase 3 implementation.
 
 ### 1. Phase 3A safe issue-comment bridge dry-run parser and tests
 
+Status: local implementation prepared on `phase3a-kohee-status-parser-20260512`; PR/check evidence pending.
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / DEPLOY_SAFETY

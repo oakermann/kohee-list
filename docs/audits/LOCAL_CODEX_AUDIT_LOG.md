@@ -181,3 +181,14 @@ Changes: removed the transient ACTIVE_QUEUE text assertion while keeping stable 
 Tests: local `node scripts/audit-maintenance-readonly.mjs`, `npm run check:deploy-sync`, `npm run test:unit`, `npm run audit:kohee`, and `git diff --check` passed. PR #141 checks passed. Main Validate and Deploy passed on merge commit `a2ca4cae4663df9a7c39504f62a2dcaf354e3d52`; Deploy skipped Pages/Worker deploy and smoke steps.
 Unresolved: Cloudflare Worker observability audit is the next non-destructive audit-only item.
 Next action: correct ACTIVE_QUEUE from pending PR to merged evidence, then continue to Cloudflare Worker observability audit.
+
+## 2026-05-12 - Phase 3A dry-run KOHEE_STATUS parser
+
+Scope: MEDIUM GitHub App Worker automation only; no GitHub writes, issue close, merge, auto-merge, deploy, D1/schema, auth/session, CSV, public `/data`, or production KOHEE runtime changes.
+Base: `main` after PR #145 was merged.
+Commands: inspected Phase 3 design and Worker policy/tests; `npx prettier --write` on touched Worker files; `npm run check:deploy-sync`; `npm run test:unit`; `npm run audit:kohee`; `git diff --check`.
+Findings: Phase 3A can safely classify canonical `KOHEE_STATUS` comments on issue #23 as `RECORD_STATUS_DRY_RUN`; malformed canonical status is rejected; legacy Codex self-report comments still keep the prior `UNVERIFIED_PR_CLAIM` / HOLD behavior.
+Changes: added canonical `KOHEE_STATUS` parsing and dry-run classification in the GitHub App Worker policy; included issue number in dry-run logs; expanded dry-run tests for accepted, rejected, HOLD, unsupported issue, edited comment, and live signed webhook paths.
+Tests: `check:deploy-sync` passed; `test:unit` passed; `audit:kohee` passed; `git diff --check` passed.
+Unresolved: GitHub PR checks, review threads, and main post-merge deploy/skip evidence still need verification after PR creation.
+Next action: open the Phase 3A PR, verify GitHub evidence, merge only after checks and review threads pass.

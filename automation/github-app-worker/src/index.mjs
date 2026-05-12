@@ -139,6 +139,7 @@ export async function handleWebhookRequest(request, env = {}) {
     repository,
     action: payload?.action || null,
     actor: actor || null,
+    issue: decision.issue || null,
     decision: decision.decision,
     wouldDo: decision.wouldDo || [],
     reasons: decision.reasons || [],
