@@ -24,10 +24,10 @@ Purpose: current blockers and next actions only.
 
 ### PR #141 maintenance audit stable invariants
 
-Status: pending PR
+Status: merged
 Track: `LOCAL_TRACK`
-Evidence: pending GitHub PR
-Result: `scripts/audit-maintenance-readonly.mjs` is being narrowed away from transient ACTIVE_QUEUE text assertions. The audit should validate stable workflow/package/audit-log invariants only.
+Evidence: https://github.com/oakermann/kohee-list/pull/141 merged as `a2ca4cae4663df9a7c39504f62a2dcaf354e3d52`; PR checks passed; main Validate and Deploy passed on merge commit, with Deploy skipping Pages/Worker deploy and smoke steps.
+Result: `scripts/audit-maintenance-readonly.mjs` no longer asserts transient ACTIVE_QUEUE text. The audit validates stable workflow/package/audit-log invariants and required file existence only.
 
 ### PR #136 read-only maintenance audit
 
