@@ -18,8 +18,9 @@ Purpose: current blockers and next actions only.
 - If there is no urgent product bug, automation implementation is the top priority.
 - Local Codex should use one git worktree per active independent lane.
 - Parallel work must not touch the same file, shared test, workflow, or risk area.
-- Phase 3 comment/status bridge comes before Phase 4 native auto-merge.
+- Phase 3 comment/status bridge comes before Phase 4 native GitHub auto-merge.
 - GitHub Actions/rulesets remain the final gate.
+- Product/project feature work stays below automation until the automation completion lane is finished or explicitly deferred by the owner.
 
 ## Recently completed
 
@@ -48,37 +49,81 @@ Purpose: current blockers and next actions only.
 Status: `HOLD_USER_APPROVAL`
 Track: `LOCAL_TRACK`
 Meaning: old merged remote branches can be cleaned later if the owner approves.
-Decision: repository hygiene only; do not let this block Phase 3/4 automation implementation.
+Decision: repository hygiene only; do not let this block automation implementation.
 
-## Next work
+## Next work: automation completion lane
 
 ### 1. Phase 5A local Codex worker runbook hardening
 
 Risk: LOW/MEDIUM docs/tooling
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
-Scope: harden local worker runbook and stop/kill-switch/worktree rules. No daemon or unattended loop yet.
+Scope: harden local worker runbook, local prerequisites, worktree rules, task-pick rules, stop conditions, owner approval handoff, and kill-switch expectations. No daemon or unattended loop yet.
 
-### 2. Phase 6A reusable automation audit
+### 2. Phase 5B local task picker dry-run
+
+Risk: MEDIUM
+Track: `LOCAL_TRACK`
+Lane: LOCAL_WORKER / GOVERNANCE
+Scope: add a local dry-run task picker that reads GitHub state and prints the next eligible LOW/MEDIUM task without executing changes. No background loop yet.
+
+### 3. Approval notification bridge design
+
+Risk: LOW audit/design
+Track: `LOCAL_TRACK`
+Lane: AUTOMATION_CONNECTIVITY / GOVERNANCE
+Scope: design how HIGH/HOLD/FIX_REQUIRED status reaches the owner without manual polling. Start with GitHub mention/notification behavior; compare later PWA/Web Push only as a future option.
+
+### 4. Phase 4C native auto-merge owner approval pack
+
+Risk: HIGH until explicitly approved
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / DEPLOY_SAFETY
+Scope: prepare an approval checklist for enabling native GitHub auto-merge on eligible LOW PRs only. Do not enable it without explicit owner approval.
+
+### 5. Phase 5C local controlled worker loop owner approval pack
+
+Risk: HIGH until explicitly approved
+Track: `LOCAL_TRACK`
+Lane: LOCAL_WORKER / GOVERNANCE
+Scope: prepare the controlled local worker loop approval checklist and safety gates. Do not enable unattended execution without explicit owner approval.
+
+### 6. Phase 6A reusable automation audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: classify reusable vs project-specific automation components. No extraction yet.
 
-### 3. Admin review console Phase 2/3
+### 7. Phase 6B project automation prep templates
+
+Risk: LOW docs/templates
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: prepare reusable AGENTS/ACTIVE_QUEUE/RUNBOOK/contract template guidance for KOHEE follow-up projects before feature work resumes.
+
+## Project work after automation lane
+
+### 8. KOHEE admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 4. Submissions review CSV Phase 2
+### 9. KOHEE submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
 Lane: CSV_PIPELINE
 Scope: audit/design first; no reviewed CSV apply until explicitly approved.
+
+### 10. Future project prep
+
+Risk: LOW/MEDIUM depending on project
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: after the automation lane, prepare per-project automation plans for news app, blog/status site, and internal handover app before product implementation.
 
 ## HOLD / do not start without approval
 
