@@ -126,3 +126,14 @@ Changes: no runtime change; appended this audit record and refreshed the active 
 Tests: live dry-run Worker health passed; tail connection succeeded; webhook delivery logged successfully.
 Unresolved: Phase 2 remains dry-run only; no issue comments, issue close, auto-merge, or repo writes are enabled.
 Next action: continue to the commercial codebase gap audit or Phase 3 planning; do not enable writes without explicit approval.
+
+## 2026-05-12 - Branch cleanup queue hygiene
+
+Scope: LOW governance queue refresh after PRs #128, #129, and #130 were verified and merged.
+Base: `main` at `bd4851361f07c9d77f09f7d7efdf0162bc5dabfe`
+Commands: GitHub connector PR/issue reads, `gh run list`, `git branch -r --merged origin/main`, final read-only smoke and local checks from the prior audit pass.
+Findings: open PRs were 0; issue #23 remained the active control issue; issue #94 remained the governance follow-up. Remote merged branch candidates existed, but automatic branch deletion is a HOLD item and was not performed.
+Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` with merged PR #128/#129/#130 evidence and moved remote branch cleanup to `HOLD_USER_APPROVAL`.
+Tests: pending in this PR; prior final main verification passed `check:deploy-sync`, `test:unit`, `audit:kohee`, `git diff --check`, GitHub Validate/Deploy, and read-only live smoke.
+Unresolved: remote merged branches remain until the owner explicitly approves deletion.
+Next action: verify this docs-only PR and merge after PR Validate / Validate pass.
