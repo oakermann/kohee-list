@@ -162,11 +162,11 @@ Next action: correct ACTIVE_QUEUE from pending PR to merged evidence, then conti
 
 ## 2026-05-12 - Read-only maintenance audit
 
-Scope: LOW governance/deploy-safety workflow narrowing for scheduled maintenance.
+Scope: MEDIUM governance/deploy-safety workflow narrowing for scheduled maintenance.
 Base: `main` at `faec7cc85262e7a5e0616a108e7035f8edf1df2c`
 Commands: inspected `scripts/auto-maintenance.ps1`, `.github/workflows/maintenance-scheduled.yml`, scheduled audit bridge, and active queue.
 Findings: the scheduled maintenance workflow ran `auto-maintenance.ps1`, which can export CSV backup artifacts and create/update failure issues. That is too broad for the queued read-only maintenance audit.
 Changes: added `scripts/audit-maintenance-readonly.mjs`, exposed `npm run audit:maintenance`, wired it into `npm run test:unit`, and narrowed `.github/workflows/maintenance-scheduled.yml` to read-only permissions and read-only audit execution.
-Tests: pending.
+Tests: local `node scripts/audit-maintenance-readonly.mjs`, `npm run check:deploy-sync`, `npm run audit:kohee`, `git diff --check`, and `npm run test:unit` passed. PR #136 PR checks passed after PR body evidence correction. Main Validate and Deploy passed on merge commit `9570b9e28cf6838c99a7e005a3230d307d88f9f8`; Deploy skipped Pages/Worker deploy and smoke steps.
 Unresolved: Phase 3 safe issue-comment bridge remains the next non-destructive governance item.
-Next action: run local checks, open PR, verify PR Validate / Validate, then merge if no review blockers.
+Next action: correct ACTIVE_QUEUE from pending PR to merged evidence, then continue to Phase 3 safe issue-comment bridge.
