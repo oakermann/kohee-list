@@ -192,3 +192,14 @@ Changes: added canonical `KOHEE_STATUS` parsing and dry-run classification in th
 Tests: `check:deploy-sync` passed; `test:unit` passed; `audit:kohee` passed; `git diff --check` passed.
 Unresolved: GitHub PR checks, review threads, and main post-merge deploy/skip evidence still need verification after PR creation.
 Next action: open the Phase 3A PR, verify GitHub evidence, merge only after checks and review threads pass.
+
+## 2026-05-12 - Phase 3A merge evidence
+
+Scope: docs-only evidence refresh after PR #146.
+Base: `main` at `a319463f162656d94434a40b0d1bf0e05f426426`.
+Commands: GitHub PR/check/review-thread reads; GitHub Actions run reads for PR and main push evidence.
+Findings: PR #146 merged with commit `a319463f162656d94434a40b0d1bf0e05f426426`; changed files stayed inside `automation/github-app-worker/**` and docs; PR Validate run `25736240302` passed; PR Validate run `25736240241` passed; main Validate run `25736342234` passed; main Deploy run `25736342211` passed and skipped Pages/Worker deploy plus smoke steps.
+Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from pending Phase 3A work to completed evidence and moved next automation work to Phase 4A readiness audit.
+Tests: this docs-only evidence refresh requires PR checks before merge.
+Unresolved: Phase 3B status-comment writes remain HOLD/user-approved; Phase 4A is audit-only and must not enable auto-merge.
+Next action: open and verify the docs-only evidence PR, then continue to Phase 4A readiness audit.
