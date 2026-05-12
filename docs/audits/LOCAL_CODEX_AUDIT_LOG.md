@@ -274,6 +274,7 @@ Next action: run local checks, open PR, verify GitHub checks/review threads, the
 
 Scope: docs-only evidence refresh after PR #155.
 Base: `main` at `b75589661a57a5a7374f6a6d704e431d87bfa3f2`.
+PR: https://github.com/oakermann/kohee-list/pull/156.
 Commands: read AGENTS, ACTIVE_QUEUE, LOCAL_CODEX_RUNBOOK, issue #23 comments, open PRs, PR #153/#155 metadata, PR review threads, and PR #155 workflow evidence from GitHub.
 Findings: PR #155 merged the PR #153 classifier review fix with merge commit `b75589661a57a5a7374f6a6d704e431d87bfa3f2`; PR #155 head `7447bffac44c4f5a7f943a897e51a31235f53aa9` had successful PR Validate runs `25743159363` and `25743159442`; PR #155 had no review threads; PR #153 P1/P2 review threads are resolved after #155 evidence.
 Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from PR #153 `FIX_REQUIRED` to Worker observability audit as the next task, and recorded PR #155 merge evidence.
