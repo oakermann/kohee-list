@@ -269,3 +269,14 @@ Changes: changed pull-request classification so canonical status blocks with mis
 Tests: `node automation/github-app-worker/test/dry-run.test.mjs` passed; `node automation/github-app-worker/test/fixtures.test.mjs` passed; `npm run check:deploy-sync` passed; `npm run test:unit` passed; `npm run audit:kohee` passed; `git diff --check` passed.
 Unresolved: PR #153 review threads should be resolved only after this fix is verified and merged.
 Next action: run local checks, open PR, verify GitHub checks/review threads, then continue to Worker observability audit.
+
+## 2026-05-13 - PR #155 merge evidence
+
+Scope: docs-only evidence refresh after PR #155.
+Base: `main` at `b75589661a57a5a7374f6a6d704e431d87bfa3f2`.
+Commands: read AGENTS, ACTIVE_QUEUE, LOCAL_CODEX_RUNBOOK, issue #23 comments, open PRs, PR #153/#155 metadata, PR review threads, and PR #155 workflow evidence from GitHub.
+Findings: PR #155 merged the PR #153 classifier review fix with merge commit `b75589661a57a5a7374f6a6d704e431d87bfa3f2`; PR #155 head `7447bffac44c4f5a7f943a897e51a31235f53aa9` had successful PR Validate runs `25743159363` and `25743159442`; PR #155 had no review threads; PR #153 P1/P2 review threads are resolved after #155 evidence.
+Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from PR #153 `FIX_REQUIRED` to Worker observability audit as the next task, and recorded PR #155 merge evidence.
+Tests: docs-only evidence refresh; local checks and PR checks are required before merge.
+Unresolved: Phase 4C native auto-merge enablement remains HOLD; no native auto-merge, direct merge, branch deletion, issue close, deploy, D1/schema, auth/session, CSV import/reset, or public `/data` behavior was changed.
+Next action: open and verify the docs-only evidence PR, then continue to Cloudflare Worker observability audit.
