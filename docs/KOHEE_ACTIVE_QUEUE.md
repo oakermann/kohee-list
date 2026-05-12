@@ -22,6 +22,7 @@ Purpose: current blockers and next actions only.
 - Keep the automation platform organized like a commercial codebase: small modules, explicit contracts, stable schemas, clear ownership boundaries, narrow PRs, low-noise checks, and minimal duplicated policy text.
 - Separate the automation platform into its own repository only after the boundary/schema/backlog/template steps are documented. Do not move working runtime automation code blindly.
 - Preferred future repo name: `dev-automation-platform`, unless the owner chooses another name.
+- Treat the platform as a control plane: every managed project must declare a contract, status schema, queue, checks, restricted operations, and owner-approval path before automation manages it.
 - Local Codex is the default executor for eligible LOW/MEDIUM implementation work.
 - HIGH/HOLD work must stop for owner approval before implementation.
 - ChatGPT acts as planner/reviewer/queue maintainer and MERGE/FIX/HOLD/NEXT judge.
@@ -33,6 +34,7 @@ Purpose: current blockers and next actions only.
 - GitHub Actions/rulesets remain the final gate.
 - Product/project feature work stays below automation until the automation completion lane is finished or explicitly deferred by the owner.
 - A status/control board is required after the automation layer is independent enough to feed it. The board must show current task list, active PRs, why Codex stopped, automation health, HIGH/MEDIUM/LOW risk, HOLD/FIX_REQUIRED items, and direct evidence links.
+- Enterprise-grade cleanup means predictable contracts, reproducible evidence, explicit recovery playbooks, low-noise checks, and no hidden/manual state that only lives in chat.
 
 ## Recently completed
 
@@ -88,7 +90,18 @@ Commercial cleanup acceptance:
 - Keep it reusable across KOHEE, news app, blog/status site, and internal handover app.
 - Do not force every existing doc to migrate in this step.
 
-### 3. Automation backlog separation
+### 3. Automation state machine and transition policy
+
+Risk: LOW docs/schema draft
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: define allowed state transitions for automation tasks so Codex, Worker, ChatGPT, and the future control board agree on what can move from QUEUED to WORKING, PR_OPEN, CHECKS_FAILED, FIX_REQUIRED, HOLD_OWNER_APPROVAL, MERGE_READY, MERGED, DONE, or ABORTED.
+Commercial cleanup acceptance:
+- Document invalid transitions and required evidence for each transition.
+- Make HIGH/HOLD transitions require owner approval before implementation resumes.
+- Keep this as documentation first.
+
+### 4. Automation backlog separation
 
 Risk: LOW docs/governance
 Track: `LOCAL_TRACK`
@@ -99,7 +112,7 @@ Commercial cleanup acceptance:
 - Move durable platform backlog items to a stable automation backlog doc if useful.
 - Keep KOHEE product backlog below the automation lane.
 
-### 4. Repo split preparation for `dev-automation-platform`
+### 5. Repo split preparation for `dev-automation-platform`
 
 Risk: LOW docs/planning
 Track: `LOCAL_TRACK`
@@ -111,7 +124,7 @@ Commercial cleanup acceptance:
 - State that KOHEE remains the first managed project and must keep KOHEE-specific product rules in its own repo.
 - Do not create cross-repo dependencies until schemas/templates are stable.
 
-### 5. Shared template seed plan
+### 6. Shared template seed plan
 
 Risk: LOW docs/templates
 Track: `LOCAL_TRACK`
@@ -121,79 +134,131 @@ Commercial cleanup acceptance:
 - Include templates for AGENTS, ACTIVE_QUEUE, LOCAL_CODEX_RUNBOOK, project contract, risk/lane policy, and status reporting.
 - Keep templates generic and parameterized so KOHEE-specific public `/data`, CSV, D1, and cafe policy do not leak into future projects.
 
-### 6. Phase 5A local Codex worker runbook hardening
+### 7. Project onboarding checklist
+
+Risk: LOW docs/templates
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: define the checklist for adding a new project under the automation platform.
+Commercial cleanup acceptance:
+- Include project contract, risk/lane map, restricted paths/operations, required checks, queue location, owner approval policy, deploy policy, and control-board registration.
+- Include examples for KOHEE, news app, blog/status site, and internal handover app.
+- Do not start product implementation from this checklist task.
+
+### 8. Automation budget and retry guard
+
+Risk: LOW docs/governance
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / DEPLOY_SAFETY
+Scope: define limits for GitHub Actions reruns, Worker log volume, Codex night-run PR count, max parallel work, and repeated failure handling.
+Commercial cleanup acceptance:
+- Include rules such as max parallel 2, max retry 1 before HOLD, stale queue detection, and budget/usage review points.
+- Keep it policy-only first.
+
+### 9. Automation incident and recovery playbook
+
+Risk: LOW docs/governance
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / DEPLOY_SAFETY
+Scope: document what to do if automation misclassifies work, queues the wrong task, creates conflicting PRs, or produces stale evidence.
+Commercial cleanup acceptance:
+- Include pause-local-worker guidance, stop-condition checks, PR cleanup guidance, queue correction flow, and evidence collection steps.
+- Keep it documentation-only first.
+
+### 10. Control board data-source mapping
+
+Risk: LOW design-first
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: define what the future read-only control board reads from GitHub, issue #23, ACTIVE_QUEUE, Actions checks, review threads, Worker dry-run logs, and Local Codex reports.
+Commercial cleanup acceptance:
+- Map each board field to a source of truth.
+- Include current task, in-progress jobs, open PRs, checks, blockers, stop reason, risk, lane, and evidence links.
+- No UI implementation yet.
+
+### 11. Phase 5A local Codex worker runbook hardening
 
 Risk: LOW/MEDIUM docs/tooling
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: harden local worker runbook, local prerequisites, worktree rules, task-pick rules, stop conditions, owner approval handoff, and kill-switch expectations. No daemon or unattended loop yet.
 
-### 7. Phase 5B local task picker dry-run
+### 12. Phase 5B local task picker dry-run
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: add a local dry-run task picker that reads GitHub state and prints the next eligible LOW/MEDIUM task without executing changes. No background loop yet.
 
-### 8. Approval notification bridge design
+### 13. Approval notification bridge design
 
 Risk: LOW audit/design
 Track: `LOCAL_TRACK`
 Lane: AUTOMATION_CONNECTIVITY / GOVERNANCE
 Scope: design how HIGH/HOLD/FIX_REQUIRED status reaches the owner without manual polling. Start with GitHub mention/notification behavior; compare later PWA/Web Push only as a future option.
 
-### 9. Phase 4C native auto-merge owner approval pack
+### 14. Phase 4C native auto-merge owner approval pack
 
 Risk: HIGH until explicitly approved
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / DEPLOY_SAFETY
 Scope: prepare an approval checklist for enabling native GitHub auto-merge on eligible LOW PRs only. Do not enable it without explicit owner approval.
 
-### 10. Phase 5C local controlled worker loop owner approval pack
+### 15. Phase 5C local controlled worker loop owner approval pack
 
 Risk: HIGH until explicitly approved
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: prepare the controlled local worker loop approval checklist and safety gates. Do not enable unattended execution without explicit owner approval.
 
-### 11. Phase 6A reusable automation audit
+### 16. Phase 6A reusable automation audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: classify reusable vs project-specific automation components. No extraction yet.
 
-### 12. Phase 6B project automation prep templates
+### 17. Phase 6B project automation prep templates
 
 Risk: LOW docs/templates
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: prepare reusable AGENTS/ACTIVE_QUEUE/RUNBOOK/contract template guidance for KOHEE follow-up projects before feature work resumes.
 
-### 13. Automation control board design
+### 18. Automation control board design
 
 Risk: LOW design-first
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: design the task/status board after the automation layer can feed it. The board should show current queue, in-progress local worker jobs, open PRs, check status, review-thread blockers, Codex stop reason, HIGH/MEDIUM/LOW risk, HOLD/FIX_REQUIRED items, and links back to GitHub evidence. Start as read-only; no direct approvals or writes until separately approved.
 
+### 19. Platform maturity gate review
+
+Risk: LOW audit/review
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: review whether the automation platform is ready to manage project implementation work again.
+Commercial cleanup acceptance:
+- Require boundary, schema, backlog split, repo split plan, template seed, onboarding checklist, incident playbook, and control-board data mapping to exist.
+- Explicitly list what remains HOLD before project feature work resumes.
+
 ## Project work after automation lane
 
-### 14. KOHEE admin review console Phase 2/3
+### 20. KOHEE admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 15. KOHEE submissions review CSV Phase 2
+### 21. KOHEE submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
 Lane: CSV_PIPELINE
 Scope: audit/design first; no reviewed CSV apply until explicitly approved.
 
-### 16. Future project prep
+### 22. Future project prep
 
 Risk: LOW/MEDIUM depending on project
 Track: `LOCAL_TRACK`
@@ -207,6 +272,7 @@ Scope: after the automation lane, prepare per-project automation plans for news 
 - Phase 5C local controlled worker loop
 - Automation control board write/approval actions
 - Cross-repo automation code migration before boundary/schema/template docs are stable
+- New project onboarding before project contract and risk policy exist
 - D1/schema manager role cleanup
 - manager_pick DB column cleanup
 - resetCsv transaction/staging redesign
