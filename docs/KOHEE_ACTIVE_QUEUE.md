@@ -23,6 +23,7 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
+- PR #146 Phase 3A dry-run KOHEE_STATUS parser: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #141 maintenance audit stable invariants: merged, checks passed.
 - PR #136 read-only maintenance audit: merged, checks passed.
 - PR #134 command validator: merged, checks passed.
@@ -44,66 +45,49 @@ Decision: repository hygiene only; do not let this block Phase 3 implementation.
 
 ## Next work
 
-### 1. Phase 3A safe issue-comment bridge dry-run parser and tests
-
-Status: local implementation prepared on `phase3a-kohee-status-parser-20260512`; PR/check evidence pending.
-Risk: MEDIUM
-Track: `LOCAL_TRACK`
-Lane: GOVERNANCE / DEPLOY_SAFETY
-Scope: implement only the dry-run parser/status classifier from `docs/PHASE3_SAFE_ISSUE_COMMENT_BRIDGE.md`; parse canonical `KOHEE_STATUS`, classify `OBSERVE` / `RECORD_STATUS_DRY_RUN` / `HOLD` / `REJECT`, and add Worker fixture tests.
-Hard stop: no production write behavior or product-data behavior changes.
-Parallel: do not run in parallel with other `automation/github-app-worker/**` work.
-
-### 2. Phase 3A queue/report docs follow-up
-
-Risk: LOW
-Track: `LOCAL_TRACK`
-Lane: GOVERNANCE
-Scope: after Phase 3A parser PR merges, update ACTIVE_QUEUE, LOCAL_CODEX_AUDIT_LOG, and operator reporting examples.
-
-### 3. Phase 4A native auto-merge readiness audit
+### 1. Phase 4A native auto-merge readiness audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / DEPLOY_SAFETY
 Scope: inspect GitHub repo settings/checks/ruleset assumptions from evidence and report readiness only. Do not enable auto-merge.
 
-### 4. Cloudflare Worker observability audit
+### 2. Cloudflare Worker observability audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: AUTOMATION_CONNECTIVITY / DEPLOY_SAFETY
 Scope: inspect dry-run Worker logging/observability settings and recommend whether to add Cloudflare Workers Logs config. Do not deploy.
 
-### 5. GitHub dependency review audit
+### 3. GitHub dependency review audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: DEPLOY_SAFETY / SUPPLY_CHAIN
 Scope: inspect whether dependency-review-action is useful for KOHEE PRs. Propose workflow changes only if low-noise and compatible with current rulesets.
 
-### 6. Phase 5A local Codex worker runbook hardening
+### 4. Phase 5A local Codex worker runbook hardening
 
 Risk: LOW/MEDIUM docs/tooling
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: harden local worker runbook and stop/kill-switch/worktree rules. No daemon or unattended loop yet.
 
-### 7. Phase 6A reusable automation audit
+### 5. Phase 6A reusable automation audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: classify reusable vs project-specific automation components. No extraction yet.
 
-### 8. Admin review console Phase 2/3
+### 6. Admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 9. Submissions review CSV Phase 2
+### 7. Submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
