@@ -145,6 +145,6 @@ Base: `main` at `cf43df845588fb01cb8999b742f47f17faa58ac6`
 Commands: inspected `.github/workflows/kohee-command-dispatch.yml`, policy guard tests, and active queue.
 Findings: dispatch still had create-or-update behavior for matching open KOHEE command issues, which could overwrite an active command ledger.
 Changes: changed dispatch behavior to create-only; matching open command issues now fail the workflow instead of being updated. Added a policy guard so `github.rest.issues.update` cannot return unnoticed. Manual Codex trigger guidance remains.
-Tests: pending.
+Tests: PR #132 PR Validate and Validate passed before merge; main Validate and Deploy passed after merge.
 Unresolved: command validator remains the next governance item.
-Next action: run local checks, open PR, verify PR Validate / Validate, then merge if no review blockers.
+Next action: correct ACTIVE_QUEUE from pending PR to merged evidence, then continue to command validator or read-only maintenance audit.

@@ -24,10 +24,11 @@ Purpose: current blockers and next actions only.
 
 ### PR #132 command dispatch create-only/no-overwrite
 
-Status: pending PR
+Status: merged
 Track: `LOCAL_TRACK`
-Evidence: pending GitHub PR
-Result: command dispatch workflow is being narrowed so it creates a new KOHEE command issue or fails on an existing matching open command, instead of overwriting command issue content. Manual `@codex` guidance is preserved.
+Evidence: `https://github.com/oakermann/kohee-list/pull/132`
+Merge commit: `6f00354f62cfd2b9dc93c40fd3e39b65de7985b1`
+Result: command dispatch workflow now creates a new KOHEE command issue or fails on an existing matching open command, instead of overwriting command issue content. Manual `@codex` guidance is preserved.
 
 ### PR #128 commercial codebase gap audit
 
