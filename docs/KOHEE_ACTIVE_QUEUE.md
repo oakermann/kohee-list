@@ -24,10 +24,11 @@ Purpose: current blockers and next actions only.
 
 ### PR #134 command validator
 
-Status: pending PR
+Status: merged
 Track: `LOCAL_TRACK`
-Evidence: pending GitHub PR
-Result: command validator is being rebuilt as a local/CI test without custom commit statuses. It checks KOHEE_COMMAND schema fields, state/risk/lane/HOLD vocabulary, dispatch create-only behavior, PR evidence fields, and absence of custom commit status publishing APIs.
+Evidence: `https://github.com/oakermann/kohee-list/pull/134`
+Merge commit: `3aaa7f874f1da63cd4b6a65f40d99c1b18f1d4ef`
+Result: command validator now runs as a local/CI test without custom commit statuses. It checks KOHEE_COMMAND schema fields, state/risk/lane/HOLD vocabulary, dispatch create-only behavior, PR evidence fields, and absence of custom commit status publishing APIs.
 
 ### PR #132 command dispatch create-only/no-overwrite
 
