@@ -22,6 +22,13 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
+### PR #134 command validator
+
+Status: pending PR
+Track: `LOCAL_TRACK`
+Evidence: pending GitHub PR
+Result: command validator is being rebuilt as a local/CI test without custom commit statuses. It checks KOHEE_COMMAND schema fields, state/risk/lane/HOLD vocabulary, dispatch create-only behavior, PR evidence fields, and absence of custom commit status publishing APIs.
+
 ### PR #132 command dispatch create-only/no-overwrite
 
 Status: merged
@@ -95,13 +102,12 @@ Next action: if the owner explicitly approves branch deletion, delete only the v
 
 ## Next work after blockers
 
-1. command validator
-2. read-only maintenance audit
-3. Phase 3 safe issue-comment bridge
-4. Phase 4 native auto-merge enablement for safe PRs only
-5. admin review console Phase 2/3
-6. submissions review CSV Phase 2
-7. audit:kohee useful WARN strengthening
+1. read-only maintenance audit
+2. Phase 3 safe issue-comment bridge
+3. Phase 4 native auto-merge enablement for safe PRs only
+4. admin review console Phase 2/3
+5. submissions review CSV Phase 2
+6. audit:kohee useful WARN strengthening
 
 ## HOLD / do not start without approval
 
