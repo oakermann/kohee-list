@@ -23,7 +23,7 @@ Purpose: current blockers and next actions only.
 
 ## Recently completed
 
-- Phase 3A parser review fix from PR #146: local fix complete; PR/check evidence pending.
+- PR #151 Phase 3A parser review fix from PR #146: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #150 task-list correction for Phase 3A parser review fix: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #148 Phase 4A native auto-merge readiness audit: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.
 - PR #146 Phase 3A dry-run KOHEE_STATUS parser: merged, PR checks passed, main Validate/Deploy passed; Deploy skipped Pages/Worker deploy and smoke steps.

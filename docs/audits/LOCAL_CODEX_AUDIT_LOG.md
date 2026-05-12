@@ -236,3 +236,14 @@ Changes: blocked legacy fallback for unsupported-issue `KOHEE_STATUS` rejections
 Tests: `node automation/github-app-worker/test/dry-run.test.mjs` passed; `node automation/github-app-worker/test/fixtures.test.mjs` passed; `check:deploy-sync` passed; `test:unit` passed; `audit:kohee` passed; `git diff --check` passed.
 Unresolved: Phase 4B native auto-merge classifier tests remain next after this parser fix is verified.
 Next action: run full local checks, open PR, and verify GitHub checks/review threads before merge.
+
+## 2026-05-12 - Phase 3A parser fix merge evidence
+
+Scope: docs-only evidence refresh after PR #151.
+Base: `main` at `2af5a34f89a55e31d06886f847d29d27fb00f141`.
+Commands: GitHub PR/check/review-thread reads; GitHub Actions run reads for PR and main push evidence.
+Findings: PR #151 merged with commit `2af5a34f89a55e31d06886f847d29d27fb00f141`; changed files stayed inside `automation/github-app-worker/**` and docs. PR Validate run `25739500809` passed; Validate run `25739500802` passed; main Validate run `25739599678` passed; main Deploy run `25739599655` passed and skipped Pages/Worker deploy plus smoke steps.
+Changes: refreshed `docs/KOHEE_ACTIVE_QUEUE.md` from pending Phase 3A parser fix evidence to completed evidence while keeping Phase 4B dry-run classifier tests as next work.
+Tests: this docs-only evidence refresh requires PR checks before merge.
+Unresolved: Phase 4B native auto-merge classifier tests remain next; Phase 4C native auto-merge enablement remains HOLD/user-approved.
+Next action: open and verify the docs-only evidence PR, then continue to Phase 4B dry-run classifier tests only.
