@@ -20,6 +20,8 @@ Purpose: current blockers and next actions only.
 - Before continuing deeper automation, explicitly separate automation-platform rules from KOHEE-project rules so Local Codex and ChatGPT do not treat KOHEE product work as the automation platform itself.
 - KOHEE is the first managed project and testbed, not the whole automation platform.
 - Keep the automation platform organized like a commercial codebase: small modules, explicit contracts, stable schemas, clear ownership boundaries, narrow PRs, low-noise checks, and minimal duplicated policy text.
+- Separate the automation platform into its own repository only after the boundary/schema/backlog/template steps are documented. Do not move working runtime automation code blindly.
+- Preferred future repo name: `dev-automation-platform`, unless the owner chooses another name.
 - Local Codex is the default executor for eligible LOW/MEDIUM implementation work.
 - HIGH/HOLD work must stop for owner approval before implementation.
 - ChatGPT acts as planner/reviewer/queue maintainer and MERGE/FIX/HOLD/NEXT judge.
@@ -97,56 +99,78 @@ Commercial cleanup acceptance:
 - Move durable platform backlog items to a stable automation backlog doc if useful.
 - Keep KOHEE product backlog below the automation lane.
 
-### 4. Phase 5A local Codex worker runbook hardening
+### 4. Repo split preparation for `dev-automation-platform`
+
+Risk: LOW docs/planning
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: prepare a safe repo-split plan for a future `dev-automation-platform` repository. No code move yet.
+Commercial cleanup acceptance:
+- Define the target repo purpose, initial README, docs, schemas, templates, and example managed-project layout.
+- List what stays in `kohee-list` versus what can later move to the platform repo.
+- State that KOHEE remains the first managed project and must keep KOHEE-specific product rules in its own repo.
+- Do not create cross-repo dependencies until schemas/templates are stable.
+
+### 5. Shared template seed plan
+
+Risk: LOW docs/templates
+Track: `LOCAL_TRACK`
+Lane: GOVERNANCE / AUTOMATION_PLATFORM
+Scope: prepare the seed contents for reusable project templates before creating or populating the new repo.
+Commercial cleanup acceptance:
+- Include templates for AGENTS, ACTIVE_QUEUE, LOCAL_CODEX_RUNBOOK, project contract, risk/lane policy, and status reporting.
+- Keep templates generic and parameterized so KOHEE-specific public `/data`, CSV, D1, and cafe policy do not leak into future projects.
+
+### 6. Phase 5A local Codex worker runbook hardening
 
 Risk: LOW/MEDIUM docs/tooling
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: harden local worker runbook, local prerequisites, worktree rules, task-pick rules, stop conditions, owner approval handoff, and kill-switch expectations. No daemon or unattended loop yet.
 
-### 5. Phase 5B local task picker dry-run
+### 7. Phase 5B local task picker dry-run
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: add a local dry-run task picker that reads GitHub state and prints the next eligible LOW/MEDIUM task without executing changes. No background loop yet.
 
-### 6. Approval notification bridge design
+### 8. Approval notification bridge design
 
 Risk: LOW audit/design
 Track: `LOCAL_TRACK`
 Lane: AUTOMATION_CONNECTIVITY / GOVERNANCE
 Scope: design how HIGH/HOLD/FIX_REQUIRED status reaches the owner without manual polling. Start with GitHub mention/notification behavior; compare later PWA/Web Push only as a future option.
 
-### 7. Phase 4C native auto-merge owner approval pack
+### 9. Phase 4C native auto-merge owner approval pack
 
 Risk: HIGH until explicitly approved
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / DEPLOY_SAFETY
 Scope: prepare an approval checklist for enabling native GitHub auto-merge on eligible LOW PRs only. Do not enable it without explicit owner approval.
 
-### 8. Phase 5C local controlled worker loop owner approval pack
+### 10. Phase 5C local controlled worker loop owner approval pack
 
 Risk: HIGH until explicitly approved
 Track: `LOCAL_TRACK`
 Lane: LOCAL_WORKER / GOVERNANCE
 Scope: prepare the controlled local worker loop approval checklist and safety gates. Do not enable unattended execution without explicit owner approval.
 
-### 9. Phase 6A reusable automation audit
+### 11. Phase 6A reusable automation audit
 
 Risk: LOW audit-only
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: classify reusable vs project-specific automation components. No extraction yet.
 
-### 10. Phase 6B project automation prep templates
+### 12. Phase 6B project automation prep templates
 
 Risk: LOW docs/templates
 Track: `LOCAL_TRACK`
 Lane: GOVERNANCE / AUTOMATION_PLATFORM
 Scope: prepare reusable AGENTS/ACTIVE_QUEUE/RUNBOOK/contract template guidance for KOHEE follow-up projects before feature work resumes.
 
-### 11. Automation control board design
+### 13. Automation control board design
 
 Risk: LOW design-first
 Track: `LOCAL_TRACK`
@@ -155,21 +179,21 @@ Scope: design the task/status board after the automation layer can feed it. The 
 
 ## Project work after automation lane
 
-### 12. KOHEE admin review console Phase 2/3
+### 14. KOHEE admin review console Phase 2/3
 
 Risk: MEDIUM
 Track: `LOCAL_TRACK`
 Lane: FRONTEND_RENDERING
 Scope: compact review console UX only; no API behavior change.
 
-### 13. KOHEE submissions review CSV Phase 2
+### 15. KOHEE submissions review CSV Phase 2
 
 Risk: HIGH until scoped
 Track: `LOCAL_TRACK`
 Lane: CSV_PIPELINE
 Scope: audit/design first; no reviewed CSV apply until explicitly approved.
 
-### 14. Future project prep
+### 16. Future project prep
 
 Risk: LOW/MEDIUM depending on project
 Track: `LOCAL_TRACK`
@@ -182,6 +206,7 @@ Scope: after the automation lane, prepare per-project automation plans for news 
 - Phase 4C native auto-merge enablement
 - Phase 5C local controlled worker loop
 - Automation control board write/approval actions
+- Cross-repo automation code migration before boundary/schema/template docs are stable
 - D1/schema manager role cleanup
 - manager_pick DB column cleanup
 - resetCsv transaction/staging redesign
