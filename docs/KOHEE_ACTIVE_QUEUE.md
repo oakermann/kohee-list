@@ -24,10 +24,10 @@ Purpose: current blockers and next actions only.
 
 ### PR #136 read-only maintenance audit
 
-Status: pending PR
+Status: merged
 Track: `LOCAL_TRACK`
-Evidence: pending GitHub PR
-Result: scheduled maintenance is being narrowed to a read-only audit with no issue writes, CSV backup/export, or artifact upload. The audit runs through `npm run audit:maintenance` and is covered by `npm run test:unit`.
+Evidence: https://github.com/oakermann/kohee-list/pull/136 merged as `9570b9e28cf6838c99a7e005a3230d307d88f9f8`; PR checks passed after PR body evidence correction; main Validate and Deploy passed on merge commit, with Deploy skipping Pages/Worker deploy and smoke steps.
+Result: scheduled maintenance is narrowed to a read-only audit with no issue writes, CSV backup/export, or artifact upload. The audit runs through `npm run audit:maintenance` and is covered by `npm run test:unit`.
 
 ### PR #134 command validator
 
