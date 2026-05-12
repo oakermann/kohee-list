@@ -93,3 +93,14 @@ Changes: updated `scripts/test-unit.mjs` expectations only; kept `scripts/test-m
 Tests: `check:deploy-sync` pass; `test:unit` pass; `audit:kohee` pass; `verify:release` pass; `git diff --check` pass.
 Unresolved: none expected if PR checks pass.
 Next action: push PR #118 branch and verify GitHub checks.
+
+## 2026-05-12 - GitHub App Worker webhook delivery check
+
+Scope: Phase 2 dry-run webhook delivery verification; no production KOHEE Worker, Pages, D1, issue-close, or auto-merge changes.
+Base: `main` at `3b7c9aa2959d136fc0ba1f9d7afc89594801c0d6`
+Commands: `wrangler tail kohee-github-app-worker-dry-run`, dry-run Worker `/health`, harmless issue #23 comments.
+Findings: dry-run Worker health returns `ok=true`, `dryRun=true`, `botEnabled=false`; Wrangler tail connects successfully. Two harmless issue_comment events were posted while tail was connected, but no Worker dry-run decision log appeared.
+Changes: no runtime change; appended this audit record only.
+Tests: PR #124 Validate/Deploy passed before this check; live dry-run Worker health passed.
+Unresolved: GitHub App webhook delivery still appears not connected to the dry-run Worker.
+Next action: verify the GitHub App webhook URL is `https://kohee-github-app-worker-dry-run.gabefinder.workers.dev/github/webhook`, then redeliver the issue_comment event from GitHub App settings and confirm a Worker dry-run decision log.
