@@ -178,6 +178,6 @@ Base: `main` at `90e8f747259a1737a0293b155ec7c6631028b7c2`
 Commands: inspected `scripts/audit-maintenance-readonly.mjs`, `docs/KOHEE_ACTIVE_QUEUE.md`, and previous PR #136/#137 evidence.
 Findings: the read-only maintenance audit still asserted transient `KOHEE_ACTIVE_QUEUE.md` phrase text, so normal queue movement could break the audit even when the maintenance workflow remained safe.
 Changes: removed the transient ACTIVE_QUEUE text assertion while keeping stable workflow/package/audit-log checks and required file existence checks.
-Tests: pending.
+Tests: local `node scripts/audit-maintenance-readonly.mjs`, `npm run check:deploy-sync`, `npm run test:unit`, `npm run audit:kohee`, and `git diff --check` passed. PR #141 checks passed. Main Validate and Deploy passed on merge commit `a2ca4cae4663df9a7c39504f62a2dcaf354e3d52`; Deploy skipped Pages/Worker deploy and smoke steps.
 Unresolved: Cloudflare Worker observability audit is the next non-destructive audit-only item.
-Next action: run local checks, open PR, verify PR checks/review threads, then merge if no blockers.
+Next action: correct ACTIVE_QUEUE from pending PR to merged evidence, then continue to Cloudflare Worker observability audit.
