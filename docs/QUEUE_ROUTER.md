@@ -1,7 +1,7 @@
 # Queue Router
 
 Last updated: 2026-05-13
-Purpose: tell ChatGPT, Codex, and Local Codex which lane and operating rail are active.
+Purpose: tell ChatGPT, Cloudflare/GitHub App automation, and Local Codex which lane and operating rail are active.
 
 ## Active lane
 
@@ -11,7 +11,13 @@ Purpose: tell ChatGPT, Codex, and Local Codex which lane and operating rail are 
 
 - `docs/AUTOMATION_OPERATOR_RAIL.md`
 
-This is the active `진행` rail. When the user says `진행`, Codex should not wait for a fresh long prompt. Codex should read the rail, inspect GitHub evidence, choose the next safe task, open/update one PR, report, and stop.
+This is the active project-factory rail for `진행` mode.
+
+Fixed operating model:
+
+```text
+User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
+```
 
 ## Active execution queue
 
@@ -31,13 +37,21 @@ Reference/backlog only unless the active rail or active queue asks for them:
 - `docs/AUTOMATION_PLATFORM_6B*.md`
 - `docs/AUTOMATION_PLATFORM_6C_MATURITY_GATE.md`
 
+## Rule for ChatGPT
+
+ChatGPT interprets the user direction, chooses or normalizes the next task, and creates or requests a task packet. ChatGPT must not turn the user into the Codex prompt carrier.
+
+## Rule for Cloudflare/GitHub App
+
+Cloudflare Worker/GitHub App is the online execution arm. It records task packets and evidence in GitHub, updates issue/PR comments/status, and later performs allowed LOW/MEDIUM merge actions after evidence gates pass.
+
 ## Rule for Local Codex
 
-Local Codex must follow `docs/AUTOMATION_OPERATOR_RAIL.md` and `docs/queues/AUTOMATION_PLATFORM.md` while the active lane is `AUTOMATION_PLATFORM`.
+Local Codex reads the GitHub task packet and performs the actual local repo work. Local Codex must follow `docs/AUTOMATION_OPERATOR_RAIL.md` and `docs/queues/AUTOMATION_PLATFORM.md` while the active lane is `AUTOMATION_PLATFORM`.
 
 Do not start `docs/queues/KOHEE_PRODUCT.md` unless:
 
-1. the automation platform maturity gate passes, or
+1. the automation platform can safely manage product work, or
 2. the owner/ChatGPT explicitly defers the automation lane for an urgent product bug.
 
 ## Current non-blocking hold
