@@ -1,0 +1,8 @@
+[
+  {
+    "id": 2301,
+    "author": "chatgpt-orchestrator",
+    "created_at": "2026-05-13T00:00:00Z",
+    "body": "TASK_PACKET:\ntask_id: issue-23-bridge-dry-run\nproject: KOHEE LIST\nlane: AUTOMATION_PLATFORM\nrisk: MEDIUM\nmode: dry-run\ngoal: Select exactly one active issue #23 task packet without GitHub writes.\nallowed_files: scripts/issue-task-bridge.mjs, scripts/test-issue-task-bridge.mjs\nforbidden_areas: D1/schema/migration, auth/session/security, CSV import/reset, public data behavior, deploy/secrets\nchecks: npm run test:unit, node scripts/issue-task-bridge.mjs scripts/fixtures/issue-23-comments-one-active.json, git diff --check\nstop_condition: bridge returns SELECT_TASK_DRY_RUN or a HOLD/FIX_REQUIRED report\nreport_format: Status / Blocker / Next action / Evidence\nmerge_policy: strict-evidence-gate\nexpires_at: 2999-01-01T00:00:00Z"
+  }
+]
