@@ -1,0 +1,12 @@
+TASK_PACKET:
+task_id: overnight-task-packet-invalid
+project: KOHEE LIST
+lane: AUTOMATION_PLATFORM
+mode: parser-test
+goal: Demonstrate missing required field handling.
+allowed_files: scripts/task-packet.mjs
+forbidden_areas: D1/schema/migration, auth/session/security, CSV import/reset, public data behavior, deploy/secrets
+checks: npm run test:unit
+stop_condition: parser returns FIX_REQUIRED
+report_format: Status / Blocker / Next action / Evidence
+merge_policy: strict-evidence-gate

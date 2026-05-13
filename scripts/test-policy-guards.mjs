@@ -68,4 +68,6 @@ assert.equal(
 assert.ok(commandDispatch.includes("github.rest.issues.create"));
 assert.ok(commandDispatch.includes("Manual Codex trigger required"));
 
+await import("./test-task-packet.mjs");
+
 console.log("[policy-guards] ok");

@@ -1,0 +1,15 @@
+TASK_PACKET:
+task_id: overnight-task-packet-v1
+project: KOHEE LIST
+lane: AUTOMATION_PLATFORM
+risk: MEDIUM
+mode: parser-test
+goal: Add TASK_PACKET v1 parser and validation tests.
+allowed_files: scripts/task-packet.mjs, scripts/test-task-packet.mjs, scripts/fixtures/task-packet-valid.txt
+forbidden_areas: D1/schema/migration, auth/session/security, CSV import/reset, public data behavior, deploy/secrets
+checks: npm run test:unit, node scripts/task-packet.mjs scripts/fixtures/task-packet-valid.txt, git diff --check
+stop_condition: scoped PR opened and evidence reported
+report_format: Status / Blocker / Next action / Evidence
+merge_policy: strict-evidence-gate
+created_at: 2026-05-13T00:00:00Z
+expires_at: 2999-01-01T00:00:00Z
