@@ -46,6 +46,7 @@ The ten-point automation design is mapped into the existing Phase 5 / Phase 6 or
     - Workflow permission review.
     - Action-pinning review plan.
     - High-risk workflow-pattern audit plan.
+    - Protected environment approval gate design.
     - Provenance/attestation/SLSA-lite feasibility.
     - OpenSSF Scorecard or equivalent baseline review.
     - Dependency-change gate.
@@ -152,6 +153,7 @@ Expected output:
 - Webhook idempotency and redelivery design.
 - Task lease and heartbeat design.
 - Reusable workflow baseline.
+- Protected environment approval gate design.
 - Supply-chain and CI/CD posture bundle.
 - Recovery and rollback auditability bundle.
 - Required evidence that auditability fields are captured somewhere concrete before maturity gate pass.
