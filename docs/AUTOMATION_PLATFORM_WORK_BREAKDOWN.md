@@ -6,7 +6,7 @@ Risk: LOW docs/governance
 
 This document separates the automation-platform work by work nature and by execution order.
 
-The goal is to stop treating the queue as one long undifferentiated list. `docs/AUTOMATION_ACTIVE_QUEUE.md` is the active automation execution queue. `docs/KOHEE_PRODUCT_QUEUE.md` is the paused KOHEE product queue. This document explains what kind of automation work each item is and why the order exists.
+The goal is to stop treating the queue as one long undifferentiated list. `docs/queues/AUTOMATION_PLATFORM.md` is the active automation execution queue. `docs/queues/KOHEE_PRODUCT.md` is the paused KOHEE product queue. This document explains what kind of automation work each item is and why the order exists.
 
 No runtime behavior, repo settings, workflow settings, deployment, credential, D1/schema, auth/session, CSV, or public `/data` behavior is changed by this document.
 
@@ -160,7 +160,7 @@ Output:
 - Product work resumes under the automation platform instead of bypassing it
 
 Queue location:
-- Product work lives in `docs/KOHEE_PRODUCT_QUEUE.md`.
+- Product work lives in `docs/queues/KOHEE_PRODUCT.md`.
 - Do not run it from this work-breakdown document.
 
 ## 2. Recommended execution order
@@ -172,8 +172,9 @@ Goal: make the new direction visible on `main`.
 Steps:
 1. Verify PR #159 checks and review threads.
 2. Merge PR #159 if green.
-3. Use `docs/AUTOMATION_ACTIVE_QUEUE.md` as the active queue.
-4. Do not start product feature work before the platform boundary work begins.
+3. Use `docs/QUEUE_ROUTER.md` to find the active queue.
+4. Use `docs/queues/AUTOMATION_PLATFORM.md` as the active automation execution queue while the router says `AUTOMATION_PLATFORM`.
+5. Do not start product feature work before the platform boundary work begins.
 
 ### Phase 1: Define boundaries and contracts
 
@@ -297,7 +298,7 @@ Gate must verify:
 Run only after the gate passes or owner/ChatGPT explicitly defers the automation lane.
 
 Product queue:
-- `docs/KOHEE_PRODUCT_QUEUE.md`
+- `docs/queues/KOHEE_PRODUCT.md`
 
 ## 3. Practical grouping for Local Codex
 
@@ -320,6 +321,7 @@ Work nature decides grouping. Execution order decides priority.
 
 - Category tells what kind of work it is.
 - Phase tells when it should run.
-- `docs/AUTOMATION_ACTIVE_QUEUE.md` is the active execution queue.
-- `docs/KOHEE_PRODUCT_QUEUE.md` is paused product work.
+- `docs/QUEUE_ROUTER.md` tells which queue is active.
+- `docs/queues/AUTOMATION_PLATFORM.md` is the active automation execution queue while the router says `AUTOMATION_PLATFORM`.
+- `docs/queues/KOHEE_PRODUCT.md` is paused product work.
 - This document explains grouping and order; it is not the active queue.
