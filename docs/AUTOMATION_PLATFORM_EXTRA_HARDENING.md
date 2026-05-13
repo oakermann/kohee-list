@@ -175,14 +175,43 @@ Acceptance:
 - Define breaking-change and migration policy for managed projects.
 - Keep it policy/design-only before central reusable workflows are enforced.
 
+## Latest review hardening items
+
+### 18. Human-in-the-loop approval integrity design
+
+The platform should make approval requests resistant to misleading summaries or forged approval context.
+
+Acceptance:
+- Define a canonical approval summary format generated from structured task fields, not raw PR/comment text.
+- Show risk, scope, disallowed actions, evidence links, expiry, and exact approved operation.
+- Require approval records to link back to immutable GitHub evidence.
+- Treat approval UI/copy as untrusted unless it can be regenerated from the task schema and ledger.
+
+### 19. Automation platform threat model and abuse-case review
+
+The automation platform should have its own threat model before stronger execution is enabled.
+
+Acceptance:
+- Identify assets, trust boundaries, actors, abuse cases, and recovery controls.
+- Include LLM prompt injection, stale queue, malicious PR text, webhook replay, compromised local worker, confused approval, excessive permissions, and unsafe repo split as abuse cases.
+- Keep it design-only before implementation changes.
+
+### 20. Platform secure-by-design checklist
+
+The platform should define a small checklist for every future automation feature so security is considered before implementation.
+
+Acceptance:
+- Each feature should state default-safe behavior, logging/evidence, rollback, least-privilege expectation, failure mode, and user-visible impact.
+- Use this checklist before enabling write actions, merge automation, new project onboarding automation, or control-board actions.
+
 ## Placement in the automation lane
 
 These items should be handled before the platform maturity gate and before project feature work resumes. They can be grouped into a small number of docs PRs if doing each one separately makes the queue too noisy.
 
 Suggested grouping:
 
-1. Input trust, webhook idempotency, task lease, API backoff, and task-intake eval fixtures.
-2. Reusable workflow baseline, reusable workflow compatibility, approval gates, short-lived access readiness, scanning baseline, code scanning baseline, and SBOM.
+1. Input trust, webhook idempotency, task lease, API backoff, task-intake eval fixtures, approval integrity, and threat model.
+2. Reusable workflow baseline, reusable workflow compatibility, approval gates, short-lived access readiness, scanning baseline, code scanning baseline, SBOM, and secure-by-design checklist.
 3. Golden path, catalog health, event journal, queue versioning, ruleset baseline, and legacy redirect deprecation.
 
 ## Hold conditions
