@@ -4,9 +4,9 @@ Date: 2026-05-13
 Status: planning / queue organization
 Risk: LOW docs/governance
 
-This document separates the automation-platform work added to the queue by work nature and by execution order.
+This document separates the automation-platform work by work nature and by execution order.
 
-The goal is to stop treating the queue as one long undifferentiated list. `KOHEE_ACTIVE_QUEUE.md` can stay focused on current execution order, while this document explains what kind of work each item is and why the order exists.
+The goal is to stop treating the queue as one long undifferentiated list. `docs/AUTOMATION_ACTIVE_QUEUE.md` is the active automation execution queue. `docs/KOHEE_PRODUCT_QUEUE.md` is the paused KOHEE product queue. This document explains what kind of automation work each item is and why the order exists.
 
 No runtime behavior, repo settings, workflow settings, deployment, credential, D1/schema, auth/session, CSV, or public `/data` behavior is changed by this document.
 
@@ -149,7 +149,7 @@ Output:
 
 ### H. Product work after automation lane
 
-Purpose: resume product implementation only after the automation platform foundation is ready.
+Purpose: keep product work visible but paused until the automation platform is ready.
 
 Items:
 - KOHEE admin review console Phase 2/3
@@ -158,6 +158,10 @@ Items:
 
 Output:
 - Product work resumes under the automation platform instead of bypassing it
+
+Queue location:
+- Product work lives in `docs/KOHEE_PRODUCT_QUEUE.md`.
+- Do not run it from this work-breakdown document.
 
 ## 2. Recommended execution order
 
@@ -168,7 +172,8 @@ Goal: make the new direction visible on `main`.
 Steps:
 1. Verify PR #159 checks and review threads.
 2. Merge PR #159 if green.
-3. Do not start product feature work before the platform boundary work begins.
+3. Use `docs/AUTOMATION_ACTIVE_QUEUE.md` as the active queue.
+4. Do not start product feature work before the platform boundary work begins.
 
 ### Phase 1: Define boundaries and contracts
 
@@ -289,10 +294,10 @@ Gate must verify:
 
 ### Phase 8: Resume project work under the platform
 
-Run in this order:
-1. KOHEE admin review console Phase 2/3
-2. KOHEE submissions review CSV Phase 2 audit/design
-3. Future project prep for news app, blog/status site, and internal handover app
+Run only after the gate passes or owner/ChatGPT explicitly defers the automation lane.
+
+Product queue:
+- `docs/KOHEE_PRODUCT_QUEUE.md`
 
 ## 3. Practical grouping for Local Codex
 
@@ -315,4 +320,6 @@ Work nature decides grouping. Execution order decides priority.
 
 - Category tells what kind of work it is.
 - Phase tells when it should run.
-- ACTIVE_QUEUE should stay short and point to this breakdown once this is merged.
+- `docs/AUTOMATION_ACTIVE_QUEUE.md` is the active execution queue.
+- `docs/KOHEE_PRODUCT_QUEUE.md` is paused product work.
+- This document explains grouping and order; it is not the active queue.
