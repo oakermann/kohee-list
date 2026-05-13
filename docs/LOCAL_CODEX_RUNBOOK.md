@@ -1,6 +1,6 @@
 # Local Codex Runbook
 
-Status: active Phase 5A local execution readiness contract
+Status: active Phase 5A/5B local execution readiness contract
 
 Purpose: define how Local Codex selects, executes, reports, and stops work while the active lane is `AUTOMATION_PLATFORM`.
 
@@ -49,6 +49,83 @@ Local Codex must follow this contract for every eligible task:
 | Task is docs/schema/design-only and matches active queue | Eligible LOW/MEDIUM depending on file scope. |
 | Task is unclear or spans multiple risk areas | Split, ask owner/ChatGPT, or HOLD. |
 
+## Phase 5B dry-run picker plan
+
+A dry-run picker is a selection simulation. It chooses and reports the next eligible task without editing files, creating branches, opening PRs, merging, deploying, or closing issues.
+
+Inputs:
+
+1. `docs/QUEUE_ROUTER.md`
+2. `docs/queues/AUTOMATION_PLATFORM.md`
+3. issue `#23` latest automation comments
+4. open PR list
+5. unresolved review threads
+6. latest check status for active PRs
+7. changed-file risk rules from `AGENTS.md` and this runbook
+
+Dry-run picker steps:
+
+1. Confirm active lane and active queue.
+2. List recorded blockers from issue `#23`, open PRs, failed checks, and unresolved review threads.
+3. List candidate tasks from the active queue only.
+4. Reject product work unless the automation lane was explicitly deferred.
+5. Assign each candidate a risk level: LOW, MEDIUM, HIGH, or HOLD.
+6. Record expected files and forbidden areas for each candidate.
+7. Reject candidates that overlap files, shared tests, workflow risk, or high-risk areas.
+8. Pick the safest next serial task.
+9. If no safe task exists, report HOLD with blocker evidence.
+10. Output a dry-run report and stop.
+
+Dry-run picker output table:
+
+| Field | Meaning |
+| --- | --- |
+| Candidate | Short task name from active queue. |
+| Source | Queue section or issue/PR source. |
+| Risk | LOW, MEDIUM, HIGH, or HOLD. |
+| Expected files | Files likely to change if executed. |
+| Forbidden areas | Areas that must not change. |
+| Blockers | Open PRs, failed checks, owner approval, or unclear scope. |
+| Decision | PICK, SKIP, FIX_REQUIRED, or HOLD. |
+| Evidence | PR/check/issue/queue evidence supporting the decision. |
+
+Dry-run decision meanings:
+
+- `PICK`: safe next serial task.
+- `SKIP`: valid task but not next because another blocker or higher-priority queue item comes first.
+- `FIX_REQUIRED`: existing PR/check/review must be fixed before new work.
+- `HOLD`: owner/ChatGPT approval or clearer scope is required.
+
+Dry-run report template:
+
+```text
+Status:
+Blocker:
+Next action:
+Evidence:
+- active lane:
+- active queue:
+- candidate count:
+- picked candidate:
+- risk:
+- expected files:
+- forbidden areas:
+- checks reviewed:
+- review threads:
+- issue state:
+- blocker status:
+```
+
+Dry-run hard stops:
+
+- Do not edit files.
+- Do not create branches.
+- Do not open PRs.
+- Do not merge.
+- Do not deploy.
+- Do not close issues.
+- Do not enable unattended loop or auto-merge.
+
 ## Stop conditions
 
 Stop and report instead of continuing when any of these occur:
@@ -93,7 +170,7 @@ For implementation-heavy work, add `Tests` and `Remaining risks`, but keep the r
 
 ## Operating default
 
-Local Codex should run serially by default during Phase 5A.
+Local Codex should run serially by default during Phase 5A/5B.
 
 Parallel LOW work is allowed only when all of the following are true:
 
