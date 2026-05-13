@@ -11,10 +11,13 @@ Purpose: active execution queue for the automation-platform lane.
 - Detailed grouping/order: `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.
 - Extra hardening backlog: `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
 - Do not reorder this queue from supporting docs unless the owner/ChatGPT updates this file.
+- The ten-point automation roadmap is queued below as follow-up work. It must not disturb the current Phase 5/6 order unless the owner/ChatGPT explicitly promotes it.
 
 ## Active lane
 
 Automation Phase 6 path: current automation state → Phase 5 bridge → Phase 6 separation/control-plane foundation → Phase 6 hardening → maturity gate.
+
+After the Phase 6 maturity gate, the lane can continue into the ten-point roadmap: evidence validation, recovery planning, decision logging, CI/CD posture, and repo-independent reuse.
 
 ## Current codebase baseline
 
@@ -139,6 +142,68 @@ Reference:
 Hard stop:
 - Do not resume KOHEE product work unless the maturity gate passes or the owner/ChatGPT explicitly defers the automation lane.
 
+### 6. Ten-point roadmap — evidence validator
+
+Goal:
+- Make readiness and merge decisions depend on GitHub evidence instead of Codex self-report.
+
+Expected output:
+- Evidence validator plan for PR URL, head SHA, base branch, changed files, checks, review threads, issue links, risk labels, queue/lane match, and forbidden-file absence.
+- Standard decision outputs: `MERGE`, `FIX`, `HOLD`, `NEXT`.
+
+Hard stop:
+- Do not merge from self-report.
+- Do not enable auto-merge as part of this step.
+
+### 7. Ten-point roadmap — recovery and decision log hardening
+
+Goal:
+- Make failed automation recoverable and auditable.
+
+Expected output:
+- PR rollback-note requirement.
+- Last-known-good SHA tracking design.
+- Failed PR history and blocked-lane history design.
+- Automation decision log for ChatGPT/owner decisions.
+
+Hard stop:
+- No D1 or production recovery automation without separate owner approval.
+- No production behavior changes without explicit approval.
+
+### 8. Ten-point roadmap — CI/CD posture
+
+Goal:
+- Raise the automation platform toward ten-point operational maturity.
+
+Expected output:
+- Workflow permission review.
+- GitHub Actions action-pinning review plan.
+- High-risk workflow pattern audit plan.
+- SLSA-lite/provenance/artifact-attestation feasibility note.
+- OpenSSF Scorecard or equivalent posture review plan.
+
+Hard stop:
+- Do not change deployment credentials or production settings without explicit owner approval.
+- Do not make noisy audit findings blocking until they are proven high-signal.
+
+### 9. Ten-point roadmap — repo-independent platform generalization
+
+Goal:
+- Prepare the automation platform for reuse across KOHEE LIST, news app, blog/status site, and internal handover app.
+
+Expected output:
+- Separation of automation core rules from project-specific rules.
+- Generic worker contract.
+- Generic risk policy hooks.
+- Queue router template.
+- Evidence validator template.
+- Merge policy template.
+- Project registry/onboarding checklist for future repos.
+
+Hard stop:
+- Do not extract a new repository or move runtime code without explicit owner approval.
+- KOHEE product queue remains paused unless the Phase 6 maturity gate passes or owner/ChatGPT explicitly defers this lane.
+
 ## After Phase 6
 
 After the Phase 6 maturity gate, product work can resume from:
@@ -149,6 +214,34 @@ Initial paused product items:
 - KOHEE admin review console Phase 2/3.
 - KOHEE submissions review CSV Phase 2 audit/design.
 - Future project prep for news app, blog/status site, and internal handover app.
+
+Product work can also stay paused if the owner/ChatGPT chooses to continue the ten-point automation roadmap first.
+
+## Merge decision rule
+
+Use GitHub evidence, not Codex self-report.
+
+MERGE:
+- Active queue/lane match.
+- Expected changed files only.
+- Forbidden areas absent.
+- Required checks pass.
+- Review threads resolved or explicitly waived.
+- Not HIGH/HOLD.
+- Evidence report includes PR URL, head SHA, changed files, checks, review threads, issue state, and blocker status.
+
+FIX:
+- Safe scope, but incomplete docs, evidence, validation, wording, or fixable check result.
+
+HOLD:
+- Product work mixed into the automation lane.
+- Deploy, D1, auth/session, CSV import/reset, or public `/data` behavior changed without explicit approval.
+- Unattended loop or auto-merge enabled or implied.
+- Extra hardening pulled into the active queue without owner/ChatGPT promotion.
+- GitHub evidence insufficient.
+
+NEXT:
+- Current PR is merged or closed with a clear follow-up and the active queue can advance safely.
 
 ## Reporting rule
 
