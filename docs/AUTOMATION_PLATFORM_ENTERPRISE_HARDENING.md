@@ -113,6 +113,9 @@ Output:
 
 ### 6B-5 observability-control-board
 
+Output document:
+- `docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md`
+
 Absorb:
 - DORA / delivery metrics.
 - Automation SLO dashboard signals.

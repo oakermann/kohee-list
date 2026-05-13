@@ -13,6 +13,7 @@ const files = {
   eventWorkerLease: "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md",
   supplyChainCi: "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md",
   recoveryRollback: "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md",
+  observabilityControlBoard: "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
   verifyRelease: "scripts/verify-release.ps1",
@@ -86,6 +87,7 @@ const trustPolicyApproval = read(files.trustPolicyApproval);
 const eventWorkerLease = read(files.eventWorkerLease);
 const supplyChainCi = read(files.supplyChainCi);
 const recoveryRollback = read(files.recoveryRollback);
+const observabilityControlBoard = read(files.observabilityControlBoard);
 const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
 const verifyRelease = read(files.verifyRelease);
@@ -232,6 +234,19 @@ const recoveryRollbackItems = [
   "Completion criteria",
 ];
 
+const observabilityControlBoardItems = [
+  "Phase 6B-5 Observability Control Board Contract",
+  "Delivery metrics",
+  "Automation SLO design",
+  "Health alert design",
+  "Error monitoring design",
+  "Browser smoke and E2E visibility",
+  "Incident visibility",
+  "Customer impact and maintenance signals",
+  "Control-board data-source mapping",
+  "Completion criteria",
+];
+
 // Entrypoint/source-of-truth group.
 mustHaveAll("AGENTS", agents, [
   "The active lane is `AUTOMATION_PLATFORM`",
@@ -370,6 +385,7 @@ mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md");
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md");
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md");
+mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md");
 mustAppearInOrder("enterprise hardening", enterpriseHardening, [
   "## Enterprise gap inventory",
   "## Lane absorption plan",
@@ -439,6 +455,20 @@ mustAppearInOrder("recovery rollback", recoveryRollback, [
   "## 8. Incident response and postmortem",
   "## 9. Release notes and changelog requirements",
   "## 10. Completion criteria",
+]);
+
+// Phase 6B-5 observability/control-board contract must remain complete.
+mustHaveAll("observability control board", observabilityControlBoard, observabilityControlBoardItems);
+mustAppearInOrder("observability control board", observabilityControlBoard, [
+  "## 1. Delivery metrics",
+  "## 2. Automation SLO design",
+  "## 3. Health alert design",
+  "## 4. Error monitoring design",
+  "## 5. Browser smoke and E2E visibility",
+  "## 6. Incident visibility",
+  "## 7. Customer impact and maintenance signals",
+  "## 8. Control-board data-source mapping",
+  "## 9. Completion criteria",
 ]);
 
 // Active queue must point to the current work-breakdown phase names.
