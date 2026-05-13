@@ -59,6 +59,9 @@ Output:
 
 ### 6B-2 event-worker-lease
 
+Output document:
+- `docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md`
+
 Absorb:
 - Automation SLO signals related to stuck work.
 - Task lease and heartbeat design.
