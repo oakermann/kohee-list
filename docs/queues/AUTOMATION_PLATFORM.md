@@ -10,10 +10,36 @@ Purpose: active execution queue for the automation-platform lane.
 - Detailed grouping/order: `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.
 - Extra hardening backlog: `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
 - Do not reorder this queue from supporting docs unless the owner/ChatGPT updates this file.
+- Finish the automation/KOH​EE separation foundation first, then fold in extra hardening items as scoped follow-up work.
 
 ## Active lane
 
 Automation platform foundation before product feature work.
+
+## Execution model
+
+### Stage A: automation separation foundation first
+
+Complete items 1–3 before expanding into the broader extra-hardening backlog.
+
+Goal:
+- Separate automation-platform rules from KOHEE product rules.
+- Define the common contracts and schemas.
+- Prepare the future `dev-automation-platform` split without moving runtime code yet.
+
+### Stage B: harden the separated platform
+
+After Stage A, process items 4–6 with the relevant items from `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
+
+Goal:
+- Make Local Codex execution, webhook intake, security posture, observability, and control-board foundations reliable.
+
+### Stage C: maturity gate
+
+Run item 7 after Stage A and Stage B are documented.
+
+Goal:
+- Decide whether project work can resume under the platform.
 
 ### 1. Boundary + schemas + task intake foundation
 
