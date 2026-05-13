@@ -11,12 +11,6 @@ Purpose: define the click-run project-factory workflow. The platform must let th
 User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold
 ```
 
-Compatibility wording for older queue checks:
-
-```text
-User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
-```
-
 This is a reusable project factory model, not a KOHEE-only helper.
 
 ## Roles

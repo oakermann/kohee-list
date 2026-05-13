@@ -363,7 +363,7 @@ mustAppearInOrder("router", docs.router, [
 mustHaveAll("operator rail", docs.operatorRail, [
   "Automation Operator Rail",
   "active operator rail",
-  "User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold",
+  "User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold",
   "TASK_PACKET",
   "task_id:",
   "Cloudflare Worker/GitHub App",
@@ -374,6 +374,11 @@ mustHaveAll("operator rail", docs.operatorRail, [
   "HIGH/HOLD never auto-merges",
   "User says 진행 -> ChatGPT creates task packet -> Cloudflare/GitHub App records it -> Local Codex works",
 ]);
+mustNotHave(
+  "operator rail",
+  docs.operatorRail,
+  "User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold",
+);
 mustAppearInOrder("operator rail", docs.operatorRail, [
   "## Fixed operating model",
   "## Roles",
@@ -391,13 +396,19 @@ mustAppearInOrder("operator rail", docs.operatorRail, [
 mustHaveAll("automation queue", docs.automationQueue, [
   "Purpose: active execution queue for the project-factory automation platform.",
   "Build a reusable automation platform, not a KOHEE-only helper.",
+  "User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold",
   "docs/AUTOMATION_OPERATOR_RAIL.md",
   "Enterprise hardening documents are reference/backlog, not the active execution queue.",
   "TASK_PACKET",
   "Cloudflare Worker/GitHub App",
   "Local Codex",
+  "PR evidence means PR metadata, checks, changed files, and Codex Review/review-thread state.",
   "LOW/MEDIUM can auto-merge only after evidence gates pass",
   "HIGH/HOLD waits for explicit user approval",
+  "Codex Review/review threads must be resolved or explicitly waived before merge.",
+  "Codex Review/review threads are checked before merge readiness.",
+  "LOW/MEDIUM auto-merge evidence gate definition, including Codex Review/review-thread resolution.",
+  "Codex Review threads resolved or explicitly waived.",
   "Project profiles",
   "Status / Blocker / Next action / Evidence",
 ]);
@@ -414,6 +425,11 @@ mustAppearInOrder("automation queue", docs.automationQueue, [
   "### 6. Cloudflare/GitHub App control plane",
   "## Current next actions",
 ]);
+mustNotHave(
+  "automation queue",
+  docs.automationQueue,
+  "User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold",
+);
 mustNotHave("automation queue", docs.automationQueue, "Stage A comes first");
 mustNotHave("automation queue", docs.automationQueue, "Stage B comes after Stage A");
 
