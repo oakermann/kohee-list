@@ -121,6 +121,20 @@ const phase6AItems = [
   "Golden path scaffolding design:",
 ];
 
+const phase6BItems = [
+  "Phase 6B lane split",
+  "Lane table:",
+  "`6B-1 trust-policy-approval`",
+  "`6B-2 event-worker-lease`",
+  "`6B-3 supply-chain-ci`",
+  "`6B-4 recovery-rollback`",
+  "`6B-5 observability-control-board`",
+  "`6B-6 budget-retry-maturity-prep`",
+  "Lane rules:",
+  "Recommended merge order:",
+  "Parallel eligibility:",
+];
+
 // Entrypoint/source-of-truth group.
 mustHaveAll("AGENTS", agents, [
   "The active lane is `AUTOMATION_PLATFORM`",
@@ -240,6 +254,17 @@ mustAppearInOrder("work breakdown Phase 6A contract", workBreakdown, [
   "Shared template seed plan:",
   "Project onboarding checklist:",
   "Golden path scaffolding design:",
+]);
+
+// Phase 6B lane split must be recorded in the work breakdown.
+mustHaveAll("work breakdown Phase 6B", workBreakdown, phase6BItems);
+mustAppearInOrder("work breakdown Phase 6B lane split", workBreakdown, [
+  "### Phase 6B: harden the separated platform",
+  "#### Phase 6B lane split",
+  "Lane table:",
+  "Lane rules:",
+  "Recommended merge order:",
+  "Parallel eligibility:",
 ]);
 
 // Active queue must point to the current work-breakdown phase names.

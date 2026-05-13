@@ -453,6 +453,45 @@ Hard stops:
 Why here:
 - These items should influence later implementation, but they should not delay the immediate Phase 5 bridge or the Phase 6A separation foundation.
 
+#### Phase 6B lane split
+
+Purpose:
+- Keep Phase 6B parallelizable without overlapping files, checks, or risk areas.
+- Prevent one oversized hardening PR.
+- Let Local Codex run independent LOW/MEDIUM lanes only when the dry-run picker confirms no overlap.
+
+Lane table:
+
+| Lane | Scope | Primary output | Parallel notes |
+| --- | --- | --- | --- |
+| `6B-1 trust-policy-approval` | LLM/input trust boundary, policy-as-code validator, approval ledger, owner override, protected environment approval, ADR policy | Policy and approval hardening contract | Can run alone first; it defines policy language used by later lanes. |
+| `6B-2 event-worker-lease` | Webhook idempotency, redelivery, task lease, heartbeat, reusable workflow baseline | Event intake and worker reliability contract | May run after or beside 6B-1 if it does not touch the same file sections. |
+| `6B-3 supply-chain-ci` | Workflow permission review, action pinning, workflow-pattern audit, OIDC readiness, dependency/install safeguards, incident freeze mode | Supply-chain and CI/CD posture contract | Keep separate from package/lockfile changes; docs/audit only unless approved. |
+| `6B-4 recovery-rollback` | Rollback note, last-known-good SHA, failed PR history, blocked-lane history, decision log, incident playbook | Recovery and rollback auditability contract | Can run in parallel with observability if file scopes do not overlap. |
+| `6B-5 observability-control-board` | Reconciliation, telemetry, event journal, metrics, snapshot/replay, control-board mapping/MVP, project health audit | Observability and control-board contract | Design only; no runtime dashboard implementation without approval. |
+| `6B-6 budget-retry-maturity-prep` | Automation budget, retry guard, maturity-gate readiness checklist, remaining HOLD list | Budget/retry and Phase 6C prep contract | Run last because it consumes outputs from earlier lanes. |
+
+Lane rules:
+- Each lane must produce a scoped docs/schema/design PR unless explicitly approved otherwise.
+- Each lane must list expected files and forbidden areas before editing.
+- Lanes must not change the same files in parallel unless owner/ChatGPT explicitly serializes merge order.
+- `scripts/check-queue-docs.mjs` changes should be serialized because many lanes may need it.
+- Runtime code, workflow settings, repo settings, deployment settings, credentials, D1/schema, auth/session, CSV import/reset, public `/data`, dependency/package/lockfile/install-script behavior, auto-merge, and unattended loops remain HOLD unless explicitly approved.
+- If a lane needs a stronger action, it must produce an approval pack rather than enabling that action.
+
+Recommended merge order:
+1. `6B-1 trust-policy-approval`
+2. `6B-2 event-worker-lease`
+3. `6B-3 supply-chain-ci`
+4. `6B-4 recovery-rollback`
+5. `6B-5 observability-control-board`
+6. `6B-6 budget-retry-maturity-prep`
+
+Parallel eligibility:
+- `6B-4 recovery-rollback` and `6B-5 observability-control-board` can be parallel candidates after `6B-1` lands if their file scopes do not overlap.
+- `6B-3 supply-chain-ci` can run in parallel only as docs/audit work and only if it does not touch package/lockfile/workflow files.
+- `6B-6` is not parallel by default; it depends on previous lane outputs.
+
 ### Phase 6C: maturity gate
 
 Goal:
