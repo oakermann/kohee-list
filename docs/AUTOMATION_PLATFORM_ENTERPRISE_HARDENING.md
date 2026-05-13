@@ -131,6 +131,9 @@ Output:
 
 ### 6B-6 budget-retry-maturity-prep
 
+Output document:
+- `docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md`
+
 Absorb:
 - Cost / quota guardrail.
 - Retry budget.
