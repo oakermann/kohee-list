@@ -27,6 +27,7 @@ Baseline to preserve:
 - Phase 5B dry-run picker plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5C GitHub evidence validator plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5D low/medium PR exercise loop plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
+- Phase 5E approval and notification readiness is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - KOHEE product work remains paused while this automation lane is active.
 - Existing HIGH/HOLD safety rules remain in force.
 
@@ -103,9 +104,6 @@ Current artifact:
 - Phase 5C evidence inputs, validation steps, decision rules, report template, and validator hard stops are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5D low/medium PR exercise purpose, allowed/forbidden exercise PRs, loop steps, result ledger, and completion criteria are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 
-Next sub-step:
-- Phase 5 bridge approval and notification readiness.
-
 Reference:
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 5 bridge.
 
@@ -126,6 +124,12 @@ Expected output:
 - Evidence-first owner approval/report format.
 - Explicit rule that auto-merge or unattended execution remains HOLD until the low/medium PR exercise loop is proven and owner-approved.
 - All stronger behavior remains HOLD until explicit owner approval.
+
+Current artifact:
+- Phase 5E approval notification bridge, owner approval pack template, native auto-merge approval pack, local controlled worker loop approval pack, and notification hard stops are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
+
+Next sub-step:
+- Automation Phase 6A separation foundation.
 
 Reference:
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 5 bridge.
