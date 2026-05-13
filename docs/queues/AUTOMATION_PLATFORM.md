@@ -1,6 +1,6 @@
 # Automation Platform Queue
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 Purpose: active execution queue for the project-factory automation platform.
 
 ## Core objective
@@ -72,7 +72,7 @@ Meaning:
 
 ### 4. Click-run task rail
 
-Status: active work.
+Status: baseline complete and preserved.
 
 Goal:
 - User tells ChatGPT `진행`.
@@ -85,24 +85,26 @@ Goal:
 - HIGH/HOLD waits for explicit user approval.
 
 Required outputs:
-1. `TASK_PACKET` standard.
-2. GitHub task queue location, initially issue `#23` or a dedicated task issue.
-3. Cloudflare/GitHub App write path for task packets and evidence comments.
-4. Local Codex polling/watch rule for new task packets.
-5. LOW/MEDIUM auto-merge evidence gate definition, including Codex Review/review-thread resolution.
+1. `TASK_PACKET` standard: complete in PR #188.
+2. GitHub task queue bridge, initially issue `#23`: dry-run complete in PR #189.
+3. Local Codex watcher rule: dry-run complete in PR #190.
+4. LOW/MEDIUM auto-merge evidence gate definition, including Codex Review/review-thread resolution: dry-run complete in PR #191.
+5. Cloudflare/GitHub App write path for real task packets and evidence comments: HOLD until explicitly approved.
+
+LOW/MEDIUM auto-merge evidence gate definition, including Codex Review/review-thread resolution.
 
 ### 5. Project profiles
 
-Status: not started.
+Status: active next work.
 
 Goal:
 - Make the platform manage multiple projects.
 
 Required project profiles:
-- KOHEE LIST.
-- News app.
-- Handover/internal work app.
-- Blog/status site.
+- KOHEE LIST: v0 profile complete in PR #192.
+- News app: placeholder only until intake data is supplied.
+- Handover/internal work app: placeholder only until intake data is supplied.
+- Blog/status site: placeholder only until intake data is supplied.
 
 Each profile needs:
 - repo and local path.
@@ -115,7 +117,7 @@ Each profile needs:
 
 ### 6. Cloudflare/GitHub App control plane
 
-Status: not started beyond earlier foundation.
+Status: dry-run hardening next; real writes remain HOLD.
 
 Goal:
 - Harden the Cloudflare Worker/GitHub App as the online execution arm.
@@ -131,63 +133,59 @@ Responsibilities:
 
 ## Current next actions
 
-### 4A. Replace document-heavy execution with task packets
+### 5A. Add project profile validator v0
 
-Add a concise task-packet contract.
-
-Required fields:
-
-```text
-task_id:
-project:
-lane:
-risk:
-mode:
-goal:
-allowed_files:
-forbidden_areas:
-checks:
-stop_condition:
-report_format:
-merge_policy:
-```
-
-### 4B. Define GitHub task queue bridge
-
-Choose the first GitHub storage location for task packets.
-
-Default:
-- issue `#23` until a dedicated queue issue exists.
+Add a report/check script for managed project profiles.
 
 Rules:
-- one task packet per task.
-- Local Codex must not start a new task while an open task PR is unresolved.
-- task packet updates must preserve evidence.
+- `docs/project-profiles/kohee-list.json` must pass required field validation.
+- placeholder projects remain HOLD/not routable until they have real profile data.
+- no GitHub writes, deploys, secrets, product runtime changes, or auto-merge enablement.
 
-### 4C. Define Local Codex watcher
+### 5B. Add automation decision record dry-run
 
-Local Codex watcher target:
+Combine task packet, project profile, policy-risk output, and PR evidence fixtures into one decision record.
 
-```text
-read task packet -> claim one task -> work one branch -> run checks -> open/update PR -> report -> stop
-```
+Allowed outputs:
+- `NEXT`
+- `FIX_REQUIRED`
+- `HOLD`
+- `MERGE_READY_DRY_RUN`
 
-### 4D. Define LOW/MEDIUM auto-merge gate
+Real merge, GitHub writes, and native auto-merge enablement remain forbidden.
+Codex Review threads resolved or explicitly waived.
 
-LOW/MEDIUM auto-merge is allowed only when all are true:
+### 5C. Add project profile intake template
 
-- project profile allows it.
-- changed files are expected.
-- forbidden areas absent.
-- `PR Validate` success.
-- `Validate` success.
-- unresolved review threads absent.
-- Codex Review threads resolved or explicitly waived.
-- head SHA stable.
-- policy-risk is LOW or approved MEDIUM.
-- PR evidence is complete.
+Define the data needed before adding News app, Handover/internal work app, or Blog/status site as managed projects.
 
-HIGH/HOLD is never auto-merged.
+Required intake data:
+- repository and default branch.
+- local path policy.
+- active queue and lane.
+- risk rules and forbidden areas.
+- validation commands.
+- deploy policy.
+- product-specific invariants.
+
+### 6A. Control-plane hardening design dry-run
+
+Validate, from docs and fixtures only, the future Cloudflare/GitHub App control-plane flow:
+
+- task enqueue.
+- evidence observe.
+- merge decision.
+- HOLD/FIX_REQUIRED reporting.
+
+No issue comment write, PR merge, secrets, deploy, native auto-merge, or unattended loop.
+
+### HOLD. Real control-plane write path
+
+Do not implement without explicit user approval:
+- Cloudflare/GitHub App writes real `TASK_PACKET` comments to issue `#23`.
+- Cloudflare/GitHub App records live PR evidence comments.
+- Cloudflare/GitHub App merges LOW/MEDIUM PRs after gates pass.
+- native auto-merge enablement.
 
 ## Active HOLD list
 
