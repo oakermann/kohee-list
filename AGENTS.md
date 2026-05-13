@@ -6,20 +6,29 @@ Purpose: short entrypoint for ChatGPT, Codex, and local Codex.
 
 The active lane is `AUTOMATION_PLATFORM` until the platform maturity gate passes or the owner/ChatGPT explicitly defers it for an urgent product bug.
 
-Queue files:
+Canonical queue files:
 
-- `docs/KOHEE_ACTIVE_QUEUE.md`: queue router. Read this first.
-- `docs/AUTOMATION_ACTIVE_QUEUE.md`: active automation-platform execution queue. Local Codex should follow this while the automation lane is active.
-- `docs/KOHEE_PRODUCT_QUEUE.md`: paused KOHEE product queue. Do not start it while the automation lane is active unless explicitly deferred by the owner/ChatGPT.
+- `docs/QUEUE_ROUTER.md`: queue router. Read this first.
+- `docs/queues/AUTOMATION_PLATFORM.md`: active automation-platform execution queue. Local Codex should follow this while the automation lane is active.
+- `docs/queues/KOHEE_PRODUCT.md`: paused KOHEE product queue. Do not start it while the automation lane is active unless explicitly deferred by the owner/ChatGPT.
+
+Supporting docs:
+
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`: work categories, grouping, and phase order.
 - `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`: advanced automation hardening backlog.
+
+Legacy compatibility files:
+
+- `docs/KOHEE_ACTIVE_QUEUE.md` redirects to `docs/QUEUE_ROUTER.md`.
+- `docs/AUTOMATION_ACTIVE_QUEUE.md` redirects to `docs/queues/AUTOMATION_PLATFORM.md`.
+- `docs/KOHEE_PRODUCT_QUEUE.md` redirects to `docs/queues/KOHEE_PRODUCT.md`.
 
 ## Read path
 
 Always read:
 
-1. `docs/KOHEE_ACTIVE_QUEUE.md`
-2. If the router says `AUTOMATION_PLATFORM`, read `docs/AUTOMATION_ACTIVE_QUEUE.md`
+1. `docs/QUEUE_ROUTER.md`
+2. If the router says `AUTOMATION_PLATFORM`, read `docs/queues/AUTOMATION_PLATFORM.md`
 3. Current PR / issue / check logs relevant to the task
 
 For local PC work, also read:
@@ -49,7 +58,7 @@ Reference only:
 - No `aaa/aaaa`.
 - No deploy unless explicitly requested.
 - Do not apply D1 migrations.
-- While `AUTOMATION_PLATFORM` is active, do not start KOHEE product work from `docs/KOHEE_PRODUCT_QUEUE.md`.
+- While `AUTOMATION_PLATFORM` is active, do not start KOHEE product work from `docs/queues/KOHEE_PRODUCT.md`.
 - Product work resumes only after the platform maturity gate or an explicit owner/ChatGPT deferral.
 
 ## Tracks
@@ -63,9 +72,9 @@ If MOBILE hits local-tool requirements, move it to LOCAL instead of forcing prog
 
 Local Codex should start from GitHub state, not a long pasted prompt:
 
-1. Read `docs/KOHEE_ACTIVE_QUEUE.md`.
+1. Read `docs/QUEUE_ROUTER.md`.
 2. Follow the router to the active queue.
-3. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/AUTOMATION_ACTIVE_QUEUE.md`.
+3. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
 4. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
 5. Inspect issue `#23` and open PRs marked `HOLD_LOCAL_REQUIRED` when relevant.
 6. Work only on the recorded blocker or next active automation task.
