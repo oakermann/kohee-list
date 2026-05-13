@@ -2,6 +2,7 @@
 import fs from "node:fs";
 
 const files = {
+  agents: "AGENTS.md",
   router: "docs/QUEUE_ROUTER.md",
   automationQueue: "docs/queues/AUTOMATION_PLATFORM.md",
   productQueue: "docs/queues/KOHEE_PRODUCT.md",
@@ -46,6 +47,11 @@ function mustMatch(label, content, regex, message) {
   else fail(`${label} missing pattern: ${message}`);
 }
 
+function mustNotMatch(label, content, regex, message) {
+  if (regex.test(content)) fail(`${label} has stale pattern: ${message}`);
+  else ok(`${label}: no stale pattern ${message}`);
+}
+
 function mustAppearInOrder(label, content, items) {
   let searchFrom = 0;
   for (const item of items) {
@@ -63,6 +69,7 @@ function mustHaveAll(label, content, items) {
   for (const item of items) mustHave(label, content, item);
 }
 
+const agents = read(files.agents);
 const router = read(files.router);
 const automationQueue = read(files.automationQueue);
 const productQueue = read(files.productQueue);
@@ -71,7 +78,53 @@ const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
 const verifyRelease = read(files.verifyRelease);
 
-// Router/source-of-truth group.
+const sharedVocabulary = [
+  "Phase 5 bridge",
+  "Phase 6A",
+  "Phase 6B",
+  "Phase 6C",
+  "Evidence-based decision system",
+  "Supply-chain and CI/CD posture",
+  "Recovery and rollback auditability",
+  "Protected environment approval gate design",
+];
+
+const canonicalItems = [
+  "GitHub evidence validator",
+  "MERGE / FIX / HOLD / NEXT",
+  "Evidence-first approval/report format",
+  "Low/medium PR exercise loop",
+  "Dependency-change gate",
+  "Lifecycle/install-script policy",
+  "Lockfile/package-manager-change review",
+  "Supply-chain incident freeze mode",
+  "Rollback note",
+  "Last-known-good SHA tracking",
+  "Failed PR / blocked-lane history",
+  "Automation decision log",
+];
+
+// Entrypoint/source-of-truth group.
+mustHaveAll("AGENTS", agents, [
+  "The active lane is `AUTOMATION_PLATFORM`",
+  "docs/QUEUE_ROUTER.md",
+  "docs/queues/AUTOMATION_PLATFORM.md",
+  "docs/queues/KOHEE_PRODUCT.md",
+  "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
+  "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
+  "GitHub evidence wins",
+  "Codex self-reports",
+  "Automation lane and GitHub evidence reports use:",
+  "Status / Blocker / Next action / Evidence",
+]);
+mustAppearInOrder("AGENTS read path", agents, [
+  "## Current routing",
+  "## Read path",
+  "## Core rules",
+  "## Local Codex",
+  "## Report format",
+]);
+
 mustHaveAll("router", router, [
   "`AUTOMATION_PLATFORM`",
   "docs/queues/AUTOMATION_PLATFORM.md",
@@ -87,20 +140,12 @@ mustAppearInOrder("router", router, [
   "## Supporting automation docs",
 ]);
 
-// Active queue and work-breakdown must share the same phase vocabulary.
+// Active queue and work-breakdown must share canonical vocabulary and order.
 for (const [label, content] of [
   ["automation queue", automationQueue],
   ["work breakdown", workBreakdown],
 ]) {
-  mustHaveAll(label, content, [
-    "Phase 5 bridge",
-    "Phase 6A",
-    "Phase 6B",
-    "Phase 6C",
-    "Evidence-based decision system",
-    "Supply-chain and CI/CD posture",
-    "Recovery and rollback auditability",
-  ]);
+  mustHaveAll(label, content, sharedVocabulary);
   mustAppearInOrder(label, content, [
     "Phase 5 bridge",
     "Phase 6A",
@@ -109,15 +154,26 @@ for (const [label, content] of [
   ]);
 }
 
+for (const item of canonicalItems) {
+  mustHave("automation queue", automationQueue, item);
+  mustHave("work breakdown", workBreakdown, item);
+}
+
 // Active queue must point to the current work-breakdown phase names.
 mustHaveAll("automation queue", automationQueue, [
   "Purpose: active execution queue for the automation-platform lane.",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "docs/queues/KOHEE_PRODUCT.md",
-  "MERGE / FIX / HOLD / NEXT",
-  "KOHEE product work",
-  "dependency/package changes",
   "Do not resume KOHEE product work unless the maturity gate passes",
+  "Do not treat dependency/package changes as LOW by default",
+]);
+mustAppearInOrder("automation queue execution headings", automationQueue, [
+  "### 0. Merge / activate the queue split",
+  "### 1. Phase 5 bridge — local execution readiness",
+  "### 2. Phase 5 bridge — approval and notification readiness",
+  "### 3. Automation Phase 6A — separation foundation",
+  "### 4. Automation Phase 6B — harden the separated platform",
+  "### 5. Automation Phase 6C — maturity gate",
 ]);
 mustNotHave(
   "automation queue",
@@ -134,7 +190,6 @@ mustHaveAll("work breakdown", workBreakdown, [
   "docs/queues/KOHEE_PRODUCT.md",
   "Compatibility note:",
   "Older references to `Phase 4` now map to the current `Phase 5 bridge` section",
-  "Protected environment approval gate design",
   "Phase 5 bridge comes first",
   "This document explains grouping and order; it is not the active queue.",
 ]);
@@ -158,11 +213,18 @@ mustHaveAll("product queue", productQueue, [
 
 // Extra hardening remains supporting context, not the active execution queue.
 mustHave("extra hardening", extraHardening, "automation");
-if (/active execution queue/i.test(extraHardening)) {
-  fail("extra hardening is marked like an active queue");
-} else {
-  ok("extra hardening is not marked as active queue");
-}
+mustNotMatch(
+  "extra hardening",
+  extraHardening,
+  /Purpose:\s*active execution queue/i,
+  "active queue purpose",
+);
+mustNotMatch(
+  "extra hardening",
+  extraHardening,
+  /This is the active queue/i,
+  "active queue claim",
+);
 
 // The checker must be reachable from project scripts and release verification.
 mustMatch(
