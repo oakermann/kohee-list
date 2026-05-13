@@ -83,6 +83,216 @@ const docs = Object.fromEntries(
   Object.entries(files).map(([key, path]) => [key, read(path)]),
 );
 
+const enterpriseContractLinks = [
+  "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md",
+  "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md",
+  "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md",
+  "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md",
+  "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md",
+  "docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md",
+];
+
+const contractSpecs = [
+  {
+    label: "trust policy approval",
+    content: docs.trustPolicyApproval,
+    title: "Phase 6B-1 Trust Policy Approval Contract",
+    required: [
+      "Trust boundary",
+      "Prompt-injection and instruction override defense",
+      "Policy-as-code direction",
+      "Approval ledger design",
+      "Owner override protocol",
+      "Protected environment approval gate",
+      "RACI-style role split",
+      "Data classification direction",
+      "ADR policy",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Trust boundary",
+      "## 2. Prompt-injection and instruction override defense",
+      "## 3. Policy-as-code direction",
+      "## 4. Approval ledger design",
+      "## 5. Owner override protocol",
+      "## 6. Protected environment approval gate",
+      "## 7. RACI-style role split",
+      "## 8. Data classification direction",
+      "## 9. ADR policy",
+      "## 10. Completion criteria",
+    ],
+  },
+  {
+    label: "event worker lease",
+    content: docs.eventWorkerLease,
+    title: "Phase 6B-2 Event Worker Lease Contract",
+    required: [
+      "Event intake boundary",
+      "Webhook idempotency design",
+      "Task lease model",
+      "Heartbeat and stuck detection",
+      "Retry and rate-limit policy",
+      "Reusable workflow baseline",
+      "Future worker states",
+      "Fallback path",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Event intake boundary",
+      "## 2. Webhook idempotency design",
+      "## 3. Task lease model",
+      "## 4. Heartbeat and stuck detection",
+      "## 5. Retry and rate-limit policy",
+      "## 6. Reusable workflow baseline",
+      "## 7. Future worker states",
+      "## 8. Fallback path",
+      "## 9. Completion criteria",
+    ],
+  },
+  {
+    label: "supply chain ci",
+    content: docs.supplyChainCi,
+    title: "Phase 6B-3 Supply Chain CI Contract",
+    required: [
+      "Secrets and permission inventory",
+      "Workflow permission review",
+      "Branch protection and ruleset inventory",
+      "Third-party action risk scoring",
+      "Dependency risk scoring",
+      "Build provenance and artifact attestation readiness",
+      "Config and infra drift audit",
+      "Incident freeze mode",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Secrets and permission inventory",
+      "## 2. Workflow permission review",
+      "## 3. Branch protection and ruleset inventory",
+      "## 4. Third-party action risk scoring",
+      "## 5. Dependency risk scoring",
+      "## 6. Build provenance and artifact attestation readiness",
+      "## 7. Config and infra drift audit",
+      "## 8. Incident freeze mode",
+      "## 9. Completion criteria",
+    ],
+  },
+  {
+    label: "recovery rollback",
+    content: docs.recoveryRollback,
+    title: "Phase 6B-4 Recovery Rollback Contract",
+    required: [
+      "Release checklist",
+      "Rollback runbook",
+      "Last-known-good SHA policy",
+      "Cloudflare rollback and deployment evidence",
+      "D1 backup and restore drill policy",
+      "Evidence archive and decision log",
+      "Failed PR and blocked-lane history",
+      "Incident response and postmortem",
+      "Release notes and changelog requirements",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Release checklist",
+      "## 2. Rollback runbook",
+      "## 3. Last-known-good SHA policy",
+      "## 4. Cloudflare rollback and deployment evidence",
+      "## 5. D1 backup and restore drill policy",
+      "## 6. Evidence archive and decision log",
+      "## 7. Failed PR and blocked-lane history",
+      "## 8. Incident response and postmortem",
+      "## 9. Release notes and changelog requirements",
+      "## 10. Completion criteria",
+    ],
+  },
+  {
+    label: "observability control board",
+    content: docs.observabilityControlBoard,
+    title: "Phase 6B-5 Observability Control Board Contract",
+    required: [
+      "Delivery metrics",
+      "Automation SLO design",
+      "Health alert design",
+      "Error monitoring design",
+      "Browser smoke and E2E visibility",
+      "Incident visibility",
+      "Customer impact and maintenance signals",
+      "Control-board data-source mapping",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Delivery metrics",
+      "## 2. Automation SLO design",
+      "## 3. Health alert design",
+      "## 4. Error monitoring design",
+      "## 5. Browser smoke and E2E visibility",
+      "## 6. Incident visibility",
+      "## 7. Customer impact and maintenance signals",
+      "## 8. Control-board data-source mapping",
+      "## 9. Completion criteria",
+    ],
+  },
+  {
+    label: "budget retry maturity prep",
+    content: docs.budgetRetryMaturityPrep,
+    title: "Phase 6B-6 Budget Retry Maturity Prep Contract",
+    required: [
+      "Cost and quota guardrail",
+      "Retry budget",
+      "Concurrency cap",
+      "Daily PR and lane cap",
+      "Phase 6C maturity gate checklist",
+      "Reusable template extraction plan",
+      "Automation docs simplification plan",
+      "Remaining HOLD list",
+      "Phase 6B closure package",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Cost and quota guardrail",
+      "## 2. Retry budget",
+      "## 3. Concurrency cap",
+      "## 4. Daily PR and lane cap",
+      "## 5. Phase 6C maturity gate checklist",
+      "## 6. Reusable template extraction plan",
+      "## 7. Automation docs simplification plan",
+      "## 8. Remaining HOLD list",
+      "## 9. Phase 6B closure package",
+      "## 10. Completion criteria",
+    ],
+  },
+  {
+    label: "maturity gate",
+    content: docs.maturityGate,
+    title: "Phase 6C Maturity Gate",
+    required: [
+      "Gate decision",
+      "Evidence checklist",
+      "Completed foundation evidence",
+      "Remaining HOLD list",
+      "Product resume decision",
+      "Post-gate options",
+      "Go / No-Go criteria",
+      "Maturity result",
+      "Completion criteria",
+      "HOLD_PRODUCT_RESUME",
+      "PRODUCT_RESUME_NOT_AUTOMATIC",
+      "STRONGER_AUTOMATION_BEHAVIOR_REMAINS_HOLD",
+    ],
+    order: [
+      "## 1. Gate decision",
+      "## 2. Evidence checklist",
+      "## 3. Completed foundation evidence",
+      "## 4. Remaining HOLD list",
+      "## 5. Product resume decision",
+      "## 6. Post-gate options",
+      "## 7. Go / No-Go criteria",
+      "## 8. Maturity result",
+      "## 9. Completion criteria",
+    ],
+  },
+];
+
 mustHaveAll("AGENTS", docs.agents, [
   "The active lane is `AUTOMATION_PLATFORM`",
   "docs/QUEUE_ROUTER.md",
@@ -182,20 +392,14 @@ mustHaveAll("enterprise hardening", docs.enterpriseHardening, [
   "6B-5 observability-control-board",
   "6B-6 budget-retry-maturity-prep",
 ]);
+for (const linkedDoc of enterpriseContractLinks) {
+  mustHave("enterprise hardening", docs.enterpriseHardening, linkedDoc);
+}
 
-const contractDocs = [
-  ["trust policy approval", docs.trustPolicyApproval, "Phase 6B-1 Trust Policy Approval Contract"],
-  ["event worker lease", docs.eventWorkerLease, "Phase 6B-2 Event Worker Lease Contract"],
-  ["supply chain ci", docs.supplyChainCi, "Phase 6B-3 Supply Chain CI Contract"],
-  ["recovery rollback", docs.recoveryRollback, "Phase 6B-4 Recovery Rollback Contract"],
-  ["observability control board", docs.observabilityControlBoard, "Phase 6B-5 Observability Control Board Contract"],
-  ["budget retry maturity prep", docs.budgetRetryMaturityPrep, "Phase 6B-6 Budget Retry Maturity Prep Contract"],
-  ["maturity gate", docs.maturityGate, "Phase 6C Maturity Gate"],
-];
-
-for (const [label, content, title] of contractDocs) {
-  mustHave(label, content, title);
-  mustHave(label, content, "Completion criteria");
+for (const spec of contractSpecs) {
+  mustHave(spec.label, spec.content, spec.title);
+  mustHaveAll(spec.label, spec.content, spec.required);
+  mustAppearInOrder(spec.label, spec.content, spec.order);
 }
 
 mustHaveAll("product queue", docs.productQueue, [
