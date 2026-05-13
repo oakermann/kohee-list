@@ -11,13 +11,10 @@ Purpose: active execution queue for the automation-platform lane.
 - Detailed grouping/order: `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.
 - Extra hardening backlog: `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
 - Do not reorder this queue from supporting docs unless the owner/ChatGPT updates this file.
-- The ten-point automation roadmap is queued below as follow-up work. It must not disturb the current Phase 5/6 order unless the owner/ChatGPT explicitly promotes it.
 
 ## Active lane
 
 Automation Phase 6 path: current automation state → Phase 5 bridge → Phase 6 separation/control-plane foundation → Phase 6 hardening → maturity gate.
-
-After the Phase 6 maturity gate, the lane can continue into the ten-point roadmap: evidence validation, recovery planning, decision logging, CI/CD posture, and repo-independent reuse.
 
 ## Current codebase baseline
 
@@ -28,6 +25,27 @@ Baseline to preserve:
 - Prior status/comment bridge and dry-run classifier work is already part of the automation foundation.
 - KOHEE product work remains paused while this automation lane is active.
 - Existing HIGH/HOLD safety rules remain in force.
+
+## Ten-point roadmap mapping
+
+The ten-point automation design is not a new execution queue. It is mapped into the existing Phase 5 / Phase 6 order:
+
+- Phase 5 bridge:
+  - Phase 5A local Codex worker contract and runbook hardening.
+  - Phase 5B dry-run picker plan.
+  - Phase 5C GitHub evidence validator plan for PR URL, head SHA, checks, changed files, review threads, issue state, and queue/lane match.
+  - MERGE / FIX / HOLD / NEXT decision criteria based on GitHub evidence, not Codex self-report.
+- Phase 6A separation foundation:
+  - Automation-platform rules separated from KOHEE-product rules.
+  - Project registry, task schema, state transition policy, and reusable onboarding/template direction.
+- Phase 6B hardening:
+  - CI/CD posture review, workflow permission review, action-pinning review plan, and high-risk workflow-pattern audit plan.
+  - Recovery and auditability planning: rollback note, last-known-good SHA, failed PR history, blocked-lane history, and automation decision log.
+  - Supply-chain posture planning: provenance/attestation/SLSA-lite feasibility and OpenSSF Scorecard or equivalent baseline review.
+- Phase 6C maturity gate:
+  - Verify the platform can safely manage project work before KOHEE_PRODUCT resumes.
+- After Phase 6:
+  - If the owner/ChatGPT keeps the automation lane active, continue repo-independent generalization for news app, blog/status site, and internal handover app reuse.
 
 ## Execution order
 
@@ -47,8 +65,11 @@ Goal:
 
 Expected output:
 - Phase 5A local Codex worker runbook hardening.
+- Local worker contract for task pick → risk check → minimal patch → validation → PR → evidence report.
 - Task-pick rules and stop conditions clarified.
 - Phase 5B local task picker dry-run plan.
+- Phase 5C GitHub evidence validator plan.
+- MERGE / FIX / HOLD / NEXT criteria drafted from GitHub evidence.
 - No unattended loop yet.
 
 Reference:
@@ -68,6 +89,7 @@ Expected output:
 - Approval notification bridge design.
 - Phase 4C native auto-merge owner approval pack.
 - Phase 5C local controlled worker loop owner approval pack.
+- Evidence-first owner approval format for PR URL, head SHA, checks, changed files, review threads, issue state, and blocker status.
 - All stronger behavior remains HOLD until explicit owner approval.
 
 Reference:
@@ -92,6 +114,7 @@ Expected output:
 - Governance and safety design.
 - Future `dev-automation-platform` repo split plan.
 - Shared templates, onboarding checklist, and golden path design.
+- Clear split between reusable automation core rules and KOHEE-specific rules.
 
 Reference:
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phases 1–3.
@@ -113,6 +136,10 @@ Expected output:
 - Task lease and heartbeat design.
 - Reusable workflow baseline.
 - Security and supply-chain posture.
+- Workflow permission review and action-pinning review plan.
+- High-risk workflow-pattern audit plan.
+- Recovery and auditability plan: rollback note, last-known-good SHA, failed PR history, blocked-lane history, and automation decision log.
+- Provenance/attestation/SLSA-lite feasibility note and OpenSSF Scorecard or equivalent baseline review plan.
 - Observability and control board foundation.
 - Extra hardening items grouped into scoped follow-up PRs.
 
@@ -123,6 +150,8 @@ Reference:
 Hard stop:
 - Planning/design/audit first.
 - No stronger write/merge/control-board actions without explicit owner approval.
+- Do not change deployment credentials or production settings without explicit owner approval.
+- Do not make noisy audit findings blocking until they are proven high-signal.
 
 ### 5. Automation Phase 6C — maturity gate
 
@@ -131,9 +160,11 @@ Goal:
 
 Expected output:
 - Confirm Phase 5 bridge work is accounted for.
+- Confirm Phase 5A/5B/5C local execution readiness and evidence-validation planning exist.
 - Confirm Phase 6A separation foundation exists.
 - Confirm Phase 6B hardening docs exist or remaining items are explicitly scheduled.
 - Confirm remaining HOLD items.
+- Confirm MERGE / FIX / HOLD / NEXT criteria are usable from GitHub evidence.
 - Decide whether KOHEE product work can resume under the platform.
 
 Reference:
@@ -141,68 +172,6 @@ Reference:
 
 Hard stop:
 - Do not resume KOHEE product work unless the maturity gate passes or the owner/ChatGPT explicitly defers the automation lane.
-
-### 6. Ten-point roadmap — evidence validator
-
-Goal:
-- Make readiness and merge decisions depend on GitHub evidence instead of Codex self-report.
-
-Expected output:
-- Evidence validator plan for PR URL, head SHA, base branch, changed files, checks, review threads, issue links, risk labels, queue/lane match, and forbidden-file absence.
-- Standard decision outputs: `MERGE`, `FIX`, `HOLD`, `NEXT`.
-
-Hard stop:
-- Do not merge from self-report.
-- Do not enable auto-merge as part of this step.
-
-### 7. Ten-point roadmap — recovery and decision log hardening
-
-Goal:
-- Make failed automation recoverable and auditable.
-
-Expected output:
-- PR rollback-note requirement.
-- Last-known-good SHA tracking design.
-- Failed PR history and blocked-lane history design.
-- Automation decision log for ChatGPT/owner decisions.
-
-Hard stop:
-- No D1 or production recovery automation without separate owner approval.
-- No production behavior changes without explicit approval.
-
-### 8. Ten-point roadmap — CI/CD posture
-
-Goal:
-- Raise the automation platform toward ten-point operational maturity.
-
-Expected output:
-- Workflow permission review.
-- GitHub Actions action-pinning review plan.
-- High-risk workflow pattern audit plan.
-- SLSA-lite/provenance/artifact-attestation feasibility note.
-- OpenSSF Scorecard or equivalent posture review plan.
-
-Hard stop:
-- Do not change deployment credentials or production settings without explicit owner approval.
-- Do not make noisy audit findings blocking until they are proven high-signal.
-
-### 9. Ten-point roadmap — repo-independent platform generalization
-
-Goal:
-- Prepare the automation platform for reuse across KOHEE LIST, news app, blog/status site, and internal handover app.
-
-Expected output:
-- Separation of automation core rules from project-specific rules.
-- Generic worker contract.
-- Generic risk policy hooks.
-- Queue router template.
-- Evidence validator template.
-- Merge policy template.
-- Project registry/onboarding checklist for future repos.
-
-Hard stop:
-- Do not extract a new repository or move runtime code without explicit owner approval.
-- KOHEE product queue remains paused unless the Phase 6 maturity gate passes or owner/ChatGPT explicitly defers this lane.
 
 ## After Phase 6
 
@@ -215,7 +184,7 @@ Initial paused product items:
 - KOHEE submissions review CSV Phase 2 audit/design.
 - Future project prep for news app, blog/status site, and internal handover app.
 
-Product work can also stay paused if the owner/ChatGPT chooses to continue the ten-point automation roadmap first.
+If the owner/ChatGPT keeps `AUTOMATION_PLATFORM` active after the maturity gate, continue repo-independent platform generalization before resuming product work.
 
 ## Merge decision rule
 
