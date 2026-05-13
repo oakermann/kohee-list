@@ -1,0 +1,27 @@
+{
+  "number": 191,
+  "headSha": "abc123",
+  "expectedHeadSha": "abc123",
+  "risk": "LOW",
+  "changedFiles": [
+    "docs/queues/AUTOMATION_PLATFORM.md",
+    "scripts/unexpected.mjs"
+  ],
+  "allowedFiles": [
+    "docs/queues/AUTOMATION_PLATFORM.md"
+  ],
+  "checks": [
+    {
+      "name": "PR Validate",
+      "conclusion": "success"
+    },
+    {
+      "name": "Validate",
+      "conclusion": "success"
+    }
+  ],
+  "unresolvedReviewThreads": 0,
+  "requestedChanges": 0,
+  "forbiddenAreasTouched": [],
+  "policyRiskOverall": "LOW candidate"
+}

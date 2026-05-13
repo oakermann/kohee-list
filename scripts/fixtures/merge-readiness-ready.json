@@ -1,0 +1,28 @@
+{
+  "number": 190,
+  "headSha": "abc123",
+  "expectedHeadSha": "abc123",
+  "risk": "MEDIUM",
+  "changedFiles": [
+    "scripts/local-codex-watcher-dry-run.mjs",
+    "scripts/test-local-codex-watcher-dry-run.mjs"
+  ],
+  "allowedFiles": [
+    "scripts/local-codex-watcher-dry-run.mjs",
+    "scripts/test-local-codex-watcher-dry-run.mjs"
+  ],
+  "checks": [
+    {
+      "name": "PR Validate",
+      "conclusion": "success"
+    },
+    {
+      "name": "Validate",
+      "conclusion": "success"
+    }
+  ],
+  "unresolvedReviewThreads": 0,
+  "requestedChanges": 0,
+  "forbiddenAreasTouched": [],
+  "policyRiskOverall": "unmatched/unknown"
+}
