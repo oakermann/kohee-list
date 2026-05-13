@@ -10,6 +10,7 @@ const files = {
   workBreakdown: "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   enterpriseHardening: "docs/AUTOMATION_PLATFORM_ENTERPRISE_HARDENING.md",
   trustPolicyApproval: "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md",
+  eventWorkerLease: "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
   verifyRelease: "scripts/verify-release.ps1",
@@ -80,6 +81,7 @@ const localRunbook = read(files.localRunbook);
 const workBreakdown = read(files.workBreakdown);
 const enterpriseHardening = read(files.enterpriseHardening);
 const trustPolicyApproval = read(files.trustPolicyApproval);
+const eventWorkerLease = read(files.eventWorkerLease);
 const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
 const verifyRelease = read(files.verifyRelease);
@@ -183,6 +185,19 @@ const trustPolicyApprovalItems = [
   "RACI-style role split",
   "Data classification direction",
   "ADR policy",
+  "Completion criteria",
+];
+
+const eventWorkerLeaseItems = [
+  "Phase 6B-2 Event Worker Lease Contract",
+  "Event intake boundary",
+  "Webhook idempotency design",
+  "Task lease model",
+  "Heartbeat and stuck detection",
+  "Retry and rate-limit policy",
+  "Reusable workflow baseline",
+  "Future worker states",
+  "Fallback path",
   "Completion criteria",
 ];
 
@@ -321,6 +336,7 @@ mustAppearInOrder("work breakdown Phase 6B lane split", workBreakdown, [
 // Enterprise hardening map must preserve the searched operating-gap inventory.
 mustHaveAll("enterprise hardening", enterpriseHardening, enterpriseGapItems);
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md");
+mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md");
 mustAppearInOrder("enterprise hardening", enterpriseHardening, [
   "## Enterprise gap inventory",
   "## Lane absorption plan",
@@ -347,6 +363,20 @@ mustAppearInOrder("trust policy approval", trustPolicyApproval, [
   "## 8. Data classification direction",
   "## 9. ADR policy",
   "## 10. Completion criteria",
+]);
+
+// Phase 6B-2 event/worker/lease contract must remain complete.
+mustHaveAll("event worker lease", eventWorkerLease, eventWorkerLeaseItems);
+mustAppearInOrder("event worker lease", eventWorkerLease, [
+  "## 1. Event intake boundary",
+  "## 2. Webhook idempotency design",
+  "## 3. Task lease model",
+  "## 4. Heartbeat and stuck detection",
+  "## 5. Retry and rate-limit policy",
+  "## 6. Reusable workflow baseline",
+  "## 7. Future worker states",
+  "## 8. Fallback path",
+  "## 9. Completion criteria",
 ]);
 
 // Active queue must point to the current work-breakdown phase names.
