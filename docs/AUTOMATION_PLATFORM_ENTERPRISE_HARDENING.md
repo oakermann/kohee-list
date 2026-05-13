@@ -43,6 +43,9 @@ No runtime behavior, repository settings, workflow settings, deployment settings
 
 ### 6B-1 trust-policy-approval
 
+Output document:
+- `docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md`
+
 Absorb:
 - Policy-as-code enforcement direction.
 - Approval ledger.
