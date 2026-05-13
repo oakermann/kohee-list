@@ -313,6 +313,7 @@ mustAppearInOrder("AGENTS read path", docs.agents, [
 
 mustHaveAll("router", docs.router, [
   "`AUTOMATION_PLATFORM`",
+  "docs/AUTOMATION_OPERATOR_RAIL.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/queues/KOHEE_PRODUCT.md",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
@@ -323,6 +324,7 @@ mustHaveAll("router", docs.router, [
 mustHaveAll("operator rail", docs.operatorRail, [
   "Automation Operator Rail",
   "active operator rail",
+  "User -> ChatGPT -> Local Codex -> GitHub PR -> ChatGPT verification -> User merge approval",
   "진행",
   "Codex must read the repo rail",
   "Open PR exists",
@@ -330,16 +332,17 @@ mustHaveAll("operator rail", docs.operatorRail, [
   "Unresolved review thread exists",
   "LOW/MEDIUM",
   "HIGH/HOLD",
-  "Codex does not merge",
-  "User says 진행 -> Codex works -> ChatGPT checks -> User approves merge",
+  "Local Codex does not merge",
+  "User tells ChatGPT 진행 -> ChatGPT routes -> Local Codex works -> ChatGPT checks -> User approves merge",
 ]);
 mustAppearInOrder("operator rail", docs.operatorRail, [
+  "## Original operating model",
   "## Roles",
   "## Command contract",
-  "## Codex read order",
+  "## Local Codex read order",
   "## Task selection rule",
   "## Restricted work",
-  "## Required Codex output",
+  "## Required Local Codex output",
   "## Merge rule",
   "## One-run boundary",
   "## Main workflow",
