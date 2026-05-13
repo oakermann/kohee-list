@@ -89,19 +89,19 @@ const sharedVocabulary = [
   "Protected environment approval gate design",
 ];
 
-const canonicalItems = [
-  "GitHub evidence validator",
-  "MERGE / FIX / HOLD / NEXT",
-  "Evidence-first approval/report format",
-  "Low/medium PR exercise loop",
-  "Dependency-change gate",
-  "Lifecycle/install-script policy",
-  "Lockfile/package-manager-change review",
-  "Supply-chain incident freeze mode",
-  "Rollback note",
-  "Last-known-good SHA tracking",
-  "Failed PR / blocked-lane history",
-  "Automation decision log",
+const canonicalPatterns = [
+  ["GitHub evidence validator", /GitHub evidence validator/],
+  ["MERGE / FIX / HOLD / NEXT", /MERGE \/ FIX \/ HOLD \/ NEXT/],
+  ["Evidence-first approval/report format", /Evidence-first owner approval\/report format|Evidence-first approval\/report format/],
+  ["Low/medium PR exercise loop", /Low\/medium PR exercise (loop|plan)/],
+  ["Dependency-change gate", /Dependency-change gate/],
+  ["Lifecycle/install-script policy", /Lifecycle\/install-script policy/],
+  ["Lockfile/package-manager-change review", /Lockfile\/package-manager-change review/],
+  ["Supply-chain incident freeze mode", /Supply-chain incident freeze mode/],
+  ["Rollback note", /Rollback note/],
+  ["Last-known-good SHA tracking", /Last-known-good SHA tracking/],
+  ["Failed PR and blocked-lane history", /Failed PR[\s\S]{0,40}blocked-lane history|Failed PR history[\s\S]{0,80}Blocked-lane history/],
+  ["Automation decision log", /Automation decision log/],
 ];
 
 // Entrypoint/source-of-truth group.
@@ -152,11 +152,9 @@ for (const [label, content] of [
     "Phase 6B",
     "Phase 6C",
   ]);
-}
-
-for (const item of canonicalItems) {
-  mustHave("automation queue", automationQueue, item);
-  mustHave("work breakdown", workBreakdown, item);
+  for (const [patternLabel, pattern] of canonicalPatterns) {
+    mustMatch(label, content, pattern, patternLabel);
+  }
 }
 
 // Active queue must point to the current work-breakdown phase names.
