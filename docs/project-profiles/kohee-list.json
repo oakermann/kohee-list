@@ -1,0 +1,84 @@
+{
+  "version": 0,
+  "project": "KOHEE LIST",
+  "status": "first_managed_project",
+  "repository": {
+    "full_name": "oakermann/kohee-list",
+    "default_branch": "main",
+    "local_path_policy": "Use the current checked-out local workspace for oakermann/kohee-list."
+  },
+  "routing": {
+    "active_lane": "AUTOMATION_PLATFORM",
+    "active_queue": "docs/queues/AUTOMATION_PLATFORM.md",
+    "paused_product_queue": "docs/queues/KOHEE_PRODUCT.md",
+    "task_queue": "GitHub issue #23 until a dedicated queue issue or API exists"
+  },
+  "automation_scope": {
+    "auto_merge_allowed": [
+      "LOW docs-only, audit-only, checker docs sync after evidence gates pass",
+      "selected MEDIUM scripts/** parser/test/dry-run work after evidence gates pass"
+    ],
+    "auto_merge_forbidden": [
+      "HIGH/HOLD work",
+      "native auto-merge enablement",
+      "direct merge bot behavior",
+      "unattended worker loop",
+      "branch delete automation",
+      "issue close automation"
+    ]
+  },
+  "forbidden_areas": [
+    "D1/schema/migrations",
+    "auth/session/security behavior",
+    "CSV import/reset behavior",
+    "public /data behavior",
+    "deploy/secrets/Cloudflare production config",
+    ".github/workflows/**",
+    "package-lock.json",
+    "dependency/install-script behavior",
+    "product UI/runtime feature work"
+  ],
+  "required_checks": [
+    "npm run check:deploy-sync",
+    "npm run check:queue-docs",
+    "npm run check:policy-risk",
+    "npm run test:unit",
+    "npm run audit:kohee",
+    "npm run verify:release",
+    "git diff --check"
+  ],
+  "merge_evidence_gates": [
+    "changed files match the task packet",
+    "forbidden areas are absent",
+    "PR Validate succeeds",
+    "Validate succeeds",
+    "review threads are absent or resolved",
+    "head SHA is stable",
+    "policy-risk is LOW or approved MEDIUM",
+    "PR evidence is complete"
+  ],
+  "deploy_policy": {
+    "allowed_by_default": false,
+    "rule": "Deploy, secrets, and Cloudflare production settings remain HOLD unless explicitly approved."
+  },
+  "product_invariants": [
+    "public /data must expose approved, non-deleted cafes only",
+    "auth/session/security behavior is HIGH/HOLD by default",
+    "CSV import/reset behavior is HIGH/HOLD by default",
+    "D1/schema/migrations are HIGH/HOLD by default"
+  ],
+  "placeholder_projects": [
+    {
+      "project": "News app",
+      "status": "placeholder_only"
+    },
+    {
+      "project": "Handover/internal work app",
+      "status": "placeholder_only"
+    },
+    {
+      "project": "Blog/status site",
+      "status": "placeholder_only"
+    }
+  ]
+}
