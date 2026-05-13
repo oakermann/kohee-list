@@ -1,0 +1,38 @@
+{
+  "taskPacketText": "TASK_PACKET:\ntask_id: automation-decision-record-dry-run\nproject: KOHEE LIST\nlane: AUTOMATION_PLATFORM\nrisk: MEDIUM\nmode: dry-run\ngoal: Build a decision record dry-run.\nallowed_files: scripts/automation-decision-record-dry-run.mjs, scripts/test-automation-decision-record-dry-run.mjs\nforbidden_areas: D1/schema/migrations, auth/session/security behavior, CSV import/reset behavior, public /data behavior, deploy/secrets\nchecks: npm run test:unit, git diff --check\nstop_condition: stop after PR evidence report\nreport_format: Status / Blocker / Next action / Evidence\nmerge_policy: low-medium-evidence-gate\nexpires_at: 2999-01-01T00:00:00Z\n",
+  "projectProfile": {
+    "project": "KOHEE LIST",
+    "status": "first_managed_project"
+  },
+  "policyRisk": {
+    "overall": "LOW candidate"
+  },
+  "prEvidence": {
+    "number": 200,
+    "risk": "MEDIUM",
+    "headSha": "abc123",
+    "expectedHeadSha": "abc123",
+    "changedFiles": [
+      "scripts/automation-decision-record-dry-run.mjs",
+      "scripts/test-automation-decision-record-dry-run.mjs"
+    ],
+    "allowedFiles": [
+      "scripts/automation-decision-record-dry-run.mjs",
+      "scripts/test-automation-decision-record-dry-run.mjs"
+    ],
+    "checks": [
+      {
+        "name": "PR Validate",
+        "conclusion": "success"
+      },
+      {
+        "name": "Validate",
+        "conclusion": "success"
+      }
+    ],
+    "unresolvedReviewThreads": 0,
+    "requestedChanges": 0,
+    "forbiddenAreasTouched": [],
+    "policyRiskOverall": "LOW candidate"
+  }
+}
