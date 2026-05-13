@@ -6,6 +6,7 @@ const files = {
   router: "docs/QUEUE_ROUTER.md",
   automationQueue: "docs/queues/AUTOMATION_PLATFORM.md",
   productQueue: "docs/queues/KOHEE_PRODUCT.md",
+  localRunbook: "docs/LOCAL_CODEX_RUNBOOK.md",
   workBreakdown: "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
@@ -73,6 +74,7 @@ const agents = read(files.agents);
 const router = read(files.router);
 const automationQueue = read(files.automationQueue);
 const productQueue = read(files.productQueue);
+const localRunbook = read(files.localRunbook);
 const workBreakdown = read(files.workBreakdown);
 const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
@@ -156,6 +158,29 @@ for (const [label, content] of [
     mustMatch(label, content, pattern, patternLabel);
   }
 }
+
+// Local runbook must follow router and active queue, not legacy queue files.
+mustHaveAll("local runbook", localRunbook, [
+  "Status: active Phase 5A local execution readiness contract",
+  "docs/QUEUE_ROUTER.md",
+  "docs/queues/AUTOMATION_PLATFORM.md",
+  "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
+  "Phase 5A worker contract",
+  "Task-pick decision table",
+  "Stop conditions",
+  "Evidence report template",
+  "Status / Blocker / Next action / Evidence",
+]);
+mustAppearInOrder("local runbook", localRunbook, [
+  "## Read order",
+  "## Phase 5A worker contract",
+  "## Task-pick decision table",
+  "## Stop conditions",
+  "## Evidence report template",
+  "## Operating default",
+]);
+mustNotHave("local runbook", localRunbook, "Use `docs/KOHEE_ACTIVE_QUEUE.md` as the source of truth.");
+mustNotHave("local runbook", localRunbook, "Pick up to 2 independent LOW tasks from `docs/KOHEE_ACTIVE_QUEUE.md`");
 
 // Active queue must point to the current work-breakdown phase names.
 mustHaveAll("automation queue", automationQueue, [
