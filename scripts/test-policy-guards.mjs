@@ -72,5 +72,6 @@ await import("./test-task-packet.mjs");
 await import("./test-issue-task-bridge.mjs");
 await import("./test-local-codex-watcher-dry-run.mjs");
 await import("./test-merge-readiness-dry-run.mjs");
+await import("./test-project-profile-validator.mjs");
 
 console.log("[policy-guards] ok");
