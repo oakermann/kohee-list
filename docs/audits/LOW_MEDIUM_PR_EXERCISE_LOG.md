@@ -53,8 +53,27 @@ follow-up: run exercise 2.
 
 ### Exercise 2 — record exercise result flow
 
-Status: IN_PROGRESS
+Status: COMPLETED
 Candidate: Record Exercise 1 outcome and add Exercise 2 to the ledger.
+Source: Low/medium PR exercise loop continuation.
+Risk: LOW
+Expected files:
+- `docs/audits/LOW_MEDIUM_PR_EXERCISE_LOG.md`
+Actual changed files:
+- `docs/audits/LOW_MEDIUM_PR_EXERCISE_LOG.md`
+Forbidden areas touched: no
+PR URL: https://github.com/oakermann/kohee-list/pull/181
+head SHA at final decision: `aafc1507125db825a4d42390c126891e398eecdb`
+checks: PR Validate success; Validate / verify success
+review threads: none
+decision: MERGE
+result: merged as `2330450b4af0f3d496bd5088a3048499a8b9d38e`
+follow-up: run exercise 3.
+
+### Exercise 3 — record second exercise result
+
+Status: IN_PROGRESS
+Candidate: Record Exercise 2 outcome and add Exercise 3 to the ledger.
 Source: Low/medium PR exercise loop continuation.
 Risk: LOW
 Expected files:
@@ -68,4 +87,4 @@ checks: pending
 review threads: pending
 decision: pending
 result: pending
-follow-up: run exercise 3 after this PR is closed.
+follow-up: decide whether to continue exercise loop or move to policy-as-code implementation planning.
