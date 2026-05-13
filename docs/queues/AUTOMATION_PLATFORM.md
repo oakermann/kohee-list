@@ -26,6 +26,7 @@ Baseline to preserve:
 - Phase 5A local worker contract/runbook is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5B dry-run picker plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5C GitHub evidence validator plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
+- Phase 5D low/medium PR exercise loop plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - KOHEE product work remains paused while this automation lane is active.
 - Existing HIGH/HOLD safety rules remain in force.
 
@@ -100,9 +101,10 @@ Current artifact:
 - Phase 5A local worker contract, task-pick decision table, stop conditions, and evidence report template are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5B dry-run picker inputs, steps, output table, decisions, report template, and hard stops are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5C evidence inputs, validation steps, decision rules, report template, and validator hard stops are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
+- Phase 5D low/medium PR exercise purpose, allowed/forbidden exercise PRs, loop steps, result ledger, and completion criteria are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 
 Next sub-step:
-- Phase 5 bridge low/medium PR exercise loop plan.
+- Phase 5 bridge approval and notification readiness.
 
 Reference:
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 5 bridge.
