@@ -2,13 +2,21 @@
 
 Purpose: short entrypoint for ChatGPT, Cloudflare/GitHub App automation, and Local Codex.
 
+## Supreme rule
+
+- `docs/AUTOMATION_CONSTITUTION.md` is the top-level automation constitution.
+- Read it before changing automation routing, queue, role split, merge policy, or project-factory architecture.
+- If any automation document conflicts with the constitution, the constitution wins.
+- Do not weaken or amend the constitution unless the user explicitly asks to change the automation constitution or top-level operating model.
+
 ## Current routing
 
 The active lane is `AUTOMATION_PLATFORM` until the project-factory automation rail can safely manage product work or the owner/ChatGPT explicitly defers it for an urgent product bug.
 
 Canonical active files:
 
-- `docs/QUEUE_ROUTER.md`: active lane/router. Read this first.
+- `docs/AUTOMATION_CONSTITUTION.md`: supreme automation contract.
+- `docs/QUEUE_ROUTER.md`: active lane/router.
 - `docs/AUTOMATION_OPERATOR_RAIL.md`: active project-factory operating rail.
 - `docs/queues/AUTOMATION_PLATFORM.md`: active automation-platform execution queue.
 - `docs/queues/KOHEE_PRODUCT.md`: paused KOHEE product queue. Do not start it while the automation lane is active unless explicitly deferred by the owner/ChatGPT.
@@ -24,17 +32,18 @@ Reference/backlog docs:
 ## Fixed operating model
 
 ```text
-User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
+User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold
 ```
 
 ## Read path
 
 Always read:
 
-1. `docs/QUEUE_ROUTER.md`
-2. `docs/AUTOMATION_OPERATOR_RAIL.md`
-3. If the router says `AUTOMATION_PLATFORM`, read `docs/queues/AUTOMATION_PLATFORM.md`
-4. Current PR / issue / check logs relevant to the task
+1. `docs/AUTOMATION_CONSTITUTION.md`
+2. `docs/QUEUE_ROUTER.md`
+3. `docs/AUTOMATION_OPERATOR_RAIL.md`
+4. If the router says `AUTOMATION_PLATFORM`, read `docs/queues/AUTOMATION_PLATFORM.md`
+5. Current PR / issue / check logs relevant to the task
 
 For local PC work, also read:
 
@@ -70,15 +79,16 @@ When policy or risk is unclear, read:
 
 Local Codex should start from GitHub task/evidence state, not a long user-pasted prompt:
 
-1. Read `docs/QUEUE_ROUTER.md`.
-2. Read `docs/AUTOMATION_OPERATOR_RAIL.md`.
-3. Follow the router to the active queue.
-4. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
-5. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
-6. Read the active task packet from issue `#23` or the active task queue.
-7. Inspect open PRs, failed checks, and unresolved review threads.
-8. Work only on the current blocker or next routed task.
-9. Open or update one scoped PR, then stop and report evidence.
+1. Read `docs/AUTOMATION_CONSTITUTION.md`.
+2. Read `docs/QUEUE_ROUTER.md`.
+3. Read `docs/AUTOMATION_OPERATOR_RAIL.md`.
+4. Follow the router to the active queue.
+5. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
+6. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
+7. Read the active task packet from issue `#23` or the active task queue.
+8. Inspect open PRs, failed checks, and unresolved review threads.
+9. Work only on the current blocker or next routed task.
+10. Open or update one scoped PR, then stop and report evidence.
 
 ## Parallel work
 

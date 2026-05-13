@@ -3,6 +3,12 @@
 Last updated: 2026-05-13
 Purpose: tell ChatGPT, Cloudflare/GitHub App automation, and Local Codex which lane and operating rail are active.
 
+## Supreme rule
+
+- `docs/AUTOMATION_CONSTITUTION.md` is the top-level automation constitution.
+- If this router conflicts with the constitution, the constitution wins.
+- Do not alter the top-level operating model unless the user explicitly asks to change the automation constitution.
+
 ## Active lane
 
 `AUTOMATION_PLATFORM`
@@ -16,7 +22,7 @@ This is the active project-factory rail for `진행` mode.
 Fixed operating model:
 
 ```text
-User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
+User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold
 ```
 
 ## Active execution queue
@@ -47,7 +53,7 @@ Cloudflare Worker/GitHub App is the online execution arm. It records task packet
 
 ## Rule for Local Codex
 
-Local Codex reads the GitHub task packet and performs the actual local repo work. Local Codex must follow `docs/AUTOMATION_OPERATOR_RAIL.md` and `docs/queues/AUTOMATION_PLATFORM.md` while the active lane is `AUTOMATION_PLATFORM`.
+Local Codex reads the GitHub task packet and performs the actual local repo work. Local Codex must follow `docs/AUTOMATION_CONSTITUTION.md`, `docs/AUTOMATION_OPERATOR_RAIL.md`, and `docs/queues/AUTOMATION_PLATFORM.md` while the active lane is `AUTOMATION_PLATFORM`.
 
 Do not start `docs/queues/KOHEE_PRODUCT.md` unless:
 

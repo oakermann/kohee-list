@@ -8,6 +8,12 @@ Purpose: define the click-run project-factory workflow. The platform must let th
 ## Fixed operating model
 
 ```text
+User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold
+```
+
+Compatibility wording for older queue checks:
+
+```text
 User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
 ```
 
@@ -22,6 +28,7 @@ This is a reusable project factory model, not a KOHEE-only helper.
 | Cloudflare Worker/GitHub App | Online execution arm. Records task packets and evidence in GitHub, updates issue/PR comments/status, and later performs allowed LOW/MEDIUM merge actions after gates pass. |
 | GitHub | Task queue and evidence store: task packets, issue state, PRs, head SHA, changed files, checks, review threads, comments, and merge history. |
 | Local Codex | Actual code worker. Reads task packets, edits locally, runs checks, commits, pushes, opens/updates PRs, and reports evidence. |
+| Codex Review | PR reviewer/error detector. Creates review threads that must be resolved or explicitly waived before merge. |
 | GitHub Actions | Validation gate for PR checks and release checks. |
 
 ## Command contract
@@ -98,6 +105,7 @@ LOW/MEDIUM may be merged by the automation layer only when all gates pass:
 - `PR Validate` succeeds.
 - `Validate` succeeds.
 - unresolved review threads are absent.
+- Codex Review threads are resolved or explicitly waived.
 - head SHA is stable.
 - policy-risk is LOW or approved MEDIUM.
 - PR evidence is complete.
