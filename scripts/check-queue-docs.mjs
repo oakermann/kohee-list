@@ -8,6 +8,7 @@ const files = {
   productQueue: "docs/queues/KOHEE_PRODUCT.md",
   localRunbook: "docs/LOCAL_CODEX_RUNBOOK.md",
   workBreakdown: "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
+  enterpriseHardening: "docs/AUTOMATION_PLATFORM_ENTERPRISE_HARDENING.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
   verifyRelease: "scripts/verify-release.ps1",
@@ -76,6 +77,7 @@ const automationQueue = read(files.automationQueue);
 const productQueue = read(files.productQueue);
 const localRunbook = read(files.localRunbook);
 const workBreakdown = read(files.workBreakdown);
+const enterpriseHardening = read(files.enterpriseHardening);
 const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
 const verifyRelease = read(files.verifyRelease);
@@ -133,6 +135,39 @@ const phase6BItems = [
   "Lane rules:",
   "Recommended merge order:",
   "Parallel eligibility:",
+];
+
+const enterpriseGapItems = [
+  "Automation Platform Enterprise Hardening Map",
+  "Enterprise gap inventory",
+  "DORA / delivery metrics",
+  "Automation SLO / stuck detection",
+  "Policy-as-code enforcement",
+  "Release artifact provenance",
+  "Cloudflare rollback / deployment runbook",
+  "Browser smoke / E2E",
+  "Secrets / OIDC / least privilege",
+  "Dependency / third-party risk scoring",
+  "Threat modeling / prompt injection defense",
+  "Immutable audit / evidence archive",
+  "Incident response / postmortem",
+  "Config / infra drift detection",
+  "Cost / quota guardrail",
+  "Docs simplification",
+  "Reusable template extraction",
+  "Branch protection / ruleset inventory",
+  "Data classification / privacy inventory",
+  "D1 backup / restore drill",
+  "Release notes / changelog automation",
+  "Customer impact / maintenance process",
+  "Lane absorption plan",
+  "6B-1 trust-policy-approval",
+  "6B-2 event-worker-lease",
+  "6B-3 supply-chain-ci",
+  "6B-4 recovery-rollback",
+  "6B-5 observability-control-board",
+  "6B-6 budget-retry-maturity-prep",
+  "Minimum Phase 6B completion expectation",
 ];
 
 // Entrypoint/source-of-truth group.
@@ -265,6 +300,21 @@ mustAppearInOrder("work breakdown Phase 6B lane split", workBreakdown, [
   "Lane rules:",
   "Recommended merge order:",
   "Parallel eligibility:",
+]);
+
+// Enterprise hardening map must preserve the searched operating-gap inventory.
+mustHaveAll("enterprise hardening", enterpriseHardening, enterpriseGapItems);
+mustAppearInOrder("enterprise hardening", enterpriseHardening, [
+  "## Enterprise gap inventory",
+  "## Lane absorption plan",
+  "### 6B-1 trust-policy-approval",
+  "### 6B-2 event-worker-lease",
+  "### 6B-3 supply-chain-ci",
+  "### 6B-4 recovery-rollback",
+  "### 6B-5 observability-control-board",
+  "### 6B-6 budget-retry-maturity-prep",
+  "## Enterprise hardening execution rules",
+  "## Minimum Phase 6B completion expectation",
 ]);
 
 // Active queue must point to the current work-breakdown phase names.
