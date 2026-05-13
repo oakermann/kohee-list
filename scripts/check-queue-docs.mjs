@@ -14,6 +14,7 @@ const files = {
   supplyChainCi: "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md",
   recoveryRollback: "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md",
   observabilityControlBoard: "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md",
+  budgetRetryMaturityPrep: "docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
   verifyRelease: "scripts/verify-release.ps1",
@@ -88,6 +89,7 @@ const eventWorkerLease = read(files.eventWorkerLease);
 const supplyChainCi = read(files.supplyChainCi);
 const recoveryRollback = read(files.recoveryRollback);
 const observabilityControlBoard = read(files.observabilityControlBoard);
+const budgetRetryMaturityPrep = read(files.budgetRetryMaturityPrep);
 const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
 const verifyRelease = read(files.verifyRelease);
@@ -247,6 +249,20 @@ const observabilityControlBoardItems = [
   "Completion criteria",
 ];
 
+const budgetRetryMaturityPrepItems = [
+  "Phase 6B-6 Budget Retry Maturity Prep Contract",
+  "Cost and quota guardrail",
+  "Retry budget",
+  "Concurrency cap",
+  "Daily PR and lane cap",
+  "Phase 6C maturity gate checklist",
+  "Reusable template extraction plan",
+  "Automation docs simplification plan",
+  "Remaining HOLD list",
+  "Phase 6B closure package",
+  "Completion criteria",
+];
+
 // Entrypoint/source-of-truth group.
 mustHaveAll("AGENTS", agents, [
   "The active lane is `AUTOMATION_PLATFORM`",
@@ -386,6 +402,7 @@ mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md");
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md");
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md");
+mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md");
 mustAppearInOrder("enterprise hardening", enterpriseHardening, [
   "## Enterprise gap inventory",
   "## Lane absorption plan",
@@ -469,6 +486,21 @@ mustAppearInOrder("observability control board", observabilityControlBoard, [
   "## 7. Customer impact and maintenance signals",
   "## 8. Control-board data-source mapping",
   "## 9. Completion criteria",
+]);
+
+// Phase 6B-6 budget/retry/maturity-prep contract must remain complete.
+mustHaveAll("budget retry maturity prep", budgetRetryMaturityPrep, budgetRetryMaturityPrepItems);
+mustAppearInOrder("budget retry maturity prep", budgetRetryMaturityPrep, [
+  "## 1. Cost and quota guardrail",
+  "## 2. Retry budget",
+  "## 3. Concurrency cap",
+  "## 4. Daily PR and lane cap",
+  "## 5. Phase 6C maturity gate checklist",
+  "## 6. Reusable template extraction plan",
+  "## 7. Automation docs simplification plan",
+  "## 8. Remaining HOLD list",
+  "## 9. Phase 6B closure package",
+  "## 10. Completion criteria",
 ]);
 
 // Active queue must point to the current work-breakdown phase names.
