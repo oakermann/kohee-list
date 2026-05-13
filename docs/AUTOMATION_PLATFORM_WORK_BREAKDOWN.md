@@ -10,6 +10,20 @@ The goal is to stop treating the queue as one long undifferentiated list. `docs/
 
 No runtime behavior, repo settings, workflow settings, deployment, credential, D1/schema, auth/session, CSV, or public `/data` behavior is changed by this document.
 
+## 0. Ordering principle
+
+Stage A comes first: automation/KOH​EE separation foundation.
+
+Do this before broad hardening:
+- Boundary and ownership
+- Contracts, schemas, and task normalization
+- Repo split preparation
+- Template and onboarding foundations
+
+Stage B comes after Stage A: apply the extra hardening backlog to the separated platform design.
+
+This prevents extra hardening work from being mixed into KOHEE product rules or from delaying the basic automation/platform split.
+
 ## 1. Work categories
 
 ### A. Platform boundary and ownership
@@ -176,7 +190,11 @@ Steps:
 4. Use `docs/queues/AUTOMATION_PLATFORM.md` as the active automation execution queue while the router says `AUTOMATION_PLATFORM`.
 5. Do not start product feature work before the platform boundary work begins.
 
-### Phase 1: Define boundaries and contracts
+### Stage A: separation foundation
+
+Purpose: create the boundary and shared substrate before processing the wider hardening backlog.
+
+#### Phase 1: Define boundaries and contracts
 
 Goal: stop mixing KOHEE product rules with automation-platform rules.
 
@@ -191,9 +209,9 @@ Run in this order:
 Why first:
 - Every later task depends on knowing what a task, project, state, and managed repo are.
 
-### Phase 2: Add governance and safety design
+#### Phase 2: Add governance and safety design
 
-Goal: define how the platform decides, records, and blocks work.
+Goal: define how the platform decides, records, and blocks work at the design level.
 
 Run in this order:
 1. LLM / automation input trust boundary design
@@ -206,7 +224,7 @@ Run in this order:
 Why second:
 - Local Codex and Worker should not execute stronger automation until trust boundaries and approval rules are explicit.
 
-### Phase 3: Define repo split and multi-project foundation
+#### Phase 3: Define repo split and multi-project foundation
 
 Goal: prepare `dev-automation-platform` without breaking KOHEE.
 
@@ -220,7 +238,11 @@ Run in this order:
 Why third:
 - The platform can be separated only after the common pieces are identified.
 
-### Phase 4: Harden execution paths
+### Stage B: harden the separated platform design
+
+Purpose: apply the extra hardening backlog to the platform design after Stage A exists.
+
+#### Phase 4: Harden execution paths
 
 Goal: make Local Codex and webhook-driven automation reliable.
 
@@ -237,7 +259,7 @@ Run in this order:
 Why fourth:
 - Execution should become more automatic only after leases, idempotency, and shared validation are designed.
 
-### Phase 5: Add security and supply-chain posture
+#### Phase 5: Add security and supply-chain posture
 
 Goal: make the platform safe enough to manage multiple repos over time.
 
@@ -256,7 +278,7 @@ Run in this order:
 Why fifth:
 - These should influence later implementation, but they do not need to block the initial schemas and boundaries.
 
-### Phase 6: Make status observable and debuggable
+#### Phase 6: Make status observable and debuggable
 
 Goal: build the foundation for the future control board.
 
@@ -275,7 +297,9 @@ Run in this order:
 Why sixth:
 - A board is useful only after the platform has a state model, registry, and event model.
 
-### Phase 7: Maturity gate
+### Stage C: maturity gate and product resumption
+
+#### Phase 7: Maturity gate
 
 Goal: decide if product work can resume under the platform.
 
@@ -283,7 +307,8 @@ Run:
 - Platform maturity gate review
 
 Gate must verify:
-- Boundary exists
+- Stage A separation foundation exists
+- Stage B hardening documentation exists or remaining hardening is explicitly scheduled
 - Status/task schemas exist
 - State machine exists
 - Project registry/catalog exists
@@ -293,7 +318,7 @@ Gate must verify:
 - Control board data mapping exists
 - Remaining HOLD items are explicit
 
-### Phase 8: Resume project work under the platform
+#### Phase 8: Resume project work under the platform
 
 Run only after the gate passes or owner/ChatGPT explicitly defers the automation lane.
 
@@ -321,6 +346,7 @@ Work nature decides grouping. Execution order decides priority.
 
 - Category tells what kind of work it is.
 - Phase tells when it should run.
+- Stage A must establish separation before Stage B broad hardening is folded in.
 - `docs/QUEUE_ROUTER.md` tells which queue is active.
 - `docs/queues/AUTOMATION_PLATFORM.md` is the active automation execution queue while the router says `AUTOMATION_PLATFORM`.
 - `docs/queues/KOHEE_PRODUCT.md` is paused product work.
