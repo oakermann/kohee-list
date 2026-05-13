@@ -15,6 +15,7 @@ const files = {
   recoveryRollback: "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md",
   observabilityControlBoard: "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md",
   budgetRetryMaturityPrep: "docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md",
+  maturityGate: "docs/AUTOMATION_PLATFORM_6C_MATURITY_GATE.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
   verifyRelease: "scripts/verify-release.ps1",
@@ -77,22 +78,9 @@ function mustHaveAll(label, content, items) {
   for (const item of items) mustHave(label, content, item);
 }
 
-const agents = read(files.agents);
-const router = read(files.router);
-const automationQueue = read(files.automationQueue);
-const productQueue = read(files.productQueue);
-const localRunbook = read(files.localRunbook);
-const workBreakdown = read(files.workBreakdown);
-const enterpriseHardening = read(files.enterpriseHardening);
-const trustPolicyApproval = read(files.trustPolicyApproval);
-const eventWorkerLease = read(files.eventWorkerLease);
-const supplyChainCi = read(files.supplyChainCi);
-const recoveryRollback = read(files.recoveryRollback);
-const observabilityControlBoard = read(files.observabilityControlBoard);
-const budgetRetryMaturityPrep = read(files.budgetRetryMaturityPrep);
-const extraHardening = read(files.extraHardening);
-const packageJson = read(files.packageJson);
-const verifyRelease = read(files.verifyRelease);
+const docs = Object.fromEntries(
+  Object.entries(files).map(([key, path]) => [key, read(path)]),
+);
 
 const sharedVocabulary = [
   "Phase 5 bridge",
@@ -182,89 +170,208 @@ const enterpriseGapItems = [
   "Minimum Phase 6B completion expectation",
 ];
 
-const trustPolicyApprovalItems = [
-  "Phase 6B-1 Trust Policy Approval Contract",
-  "Trust boundary",
-  "Prompt-injection and instruction override defense",
-  "Policy-as-code direction",
-  "Approval ledger design",
-  "Owner override protocol",
-  "Protected environment approval gate",
-  "RACI-style role split",
-  "Data classification direction",
-  "ADR policy",
-  "Completion criteria",
+const contractSpecs = [
+  {
+    label: "trust policy approval",
+    content: docs.trustPolicyApproval,
+    required: [
+      "Phase 6B-1 Trust Policy Approval Contract",
+      "Trust boundary",
+      "Prompt-injection and instruction override defense",
+      "Policy-as-code direction",
+      "Approval ledger design",
+      "Owner override protocol",
+      "Protected environment approval gate",
+      "RACI-style role split",
+      "Data classification direction",
+      "ADR policy",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Trust boundary",
+      "## 2. Prompt-injection and instruction override defense",
+      "## 3. Policy-as-code direction",
+      "## 4. Approval ledger design",
+      "## 5. Owner override protocol",
+      "## 6. Protected environment approval gate",
+      "## 7. RACI-style role split",
+      "## 8. Data classification direction",
+      "## 9. ADR policy",
+      "## 10. Completion criteria",
+    ],
+  },
+  {
+    label: "event worker lease",
+    content: docs.eventWorkerLease,
+    required: [
+      "Phase 6B-2 Event Worker Lease Contract",
+      "Event intake boundary",
+      "Webhook idempotency design",
+      "Task lease model",
+      "Heartbeat and stuck detection",
+      "Retry and rate-limit policy",
+      "Reusable workflow baseline",
+      "Future worker states",
+      "Fallback path",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Event intake boundary",
+      "## 2. Webhook idempotency design",
+      "## 3. Task lease model",
+      "## 4. Heartbeat and stuck detection",
+      "## 5. Retry and rate-limit policy",
+      "## 6. Reusable workflow baseline",
+      "## 7. Future worker states",
+      "## 8. Fallback path",
+      "## 9. Completion criteria",
+    ],
+  },
+  {
+    label: "supply chain ci",
+    content: docs.supplyChainCi,
+    required: [
+      "Phase 6B-3 Supply Chain CI Contract",
+      "Secrets and permission inventory",
+      "Workflow permission review",
+      "Branch protection and ruleset inventory",
+      "Third-party action risk scoring",
+      "Dependency risk scoring",
+      "Build provenance and artifact attestation readiness",
+      "Config and infra drift audit",
+      "Incident freeze mode",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Secrets and permission inventory",
+      "## 2. Workflow permission review",
+      "## 3. Branch protection and ruleset inventory",
+      "## 4. Third-party action risk scoring",
+      "## 5. Dependency risk scoring",
+      "## 6. Build provenance and artifact attestation readiness",
+      "## 7. Config and infra drift audit",
+      "## 8. Incident freeze mode",
+      "## 9. Completion criteria",
+    ],
+  },
+  {
+    label: "recovery rollback",
+    content: docs.recoveryRollback,
+    required: [
+      "Phase 6B-4 Recovery Rollback Contract",
+      "Release checklist",
+      "Rollback runbook",
+      "Last-known-good SHA policy",
+      "Cloudflare rollback and deployment evidence",
+      "D1 backup and restore drill policy",
+      "Evidence archive and decision log",
+      "Failed PR and blocked-lane history",
+      "Incident response and postmortem",
+      "Release notes and changelog requirements",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Release checklist",
+      "## 2. Rollback runbook",
+      "## 3. Last-known-good SHA policy",
+      "## 4. Cloudflare rollback and deployment evidence",
+      "## 5. D1 backup and restore drill policy",
+      "## 6. Evidence archive and decision log",
+      "## 7. Failed PR and blocked-lane history",
+      "## 8. Incident response and postmortem",
+      "## 9. Release notes and changelog requirements",
+      "## 10. Completion criteria",
+    ],
+  },
+  {
+    label: "observability control board",
+    content: docs.observabilityControlBoard,
+    required: [
+      "Phase 6B-5 Observability Control Board Contract",
+      "Delivery metrics",
+      "Automation SLO design",
+      "Health alert design",
+      "Error monitoring design",
+      "Browser smoke and E2E visibility",
+      "Incident visibility",
+      "Customer impact and maintenance signals",
+      "Control-board data-source mapping",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Delivery metrics",
+      "## 2. Automation SLO design",
+      "## 3. Health alert design",
+      "## 4. Error monitoring design",
+      "## 5. Browser smoke and E2E visibility",
+      "## 6. Incident visibility",
+      "## 7. Customer impact and maintenance signals",
+      "## 8. Control-board data-source mapping",
+      "## 9. Completion criteria",
+    ],
+  },
+  {
+    label: "budget retry maturity prep",
+    content: docs.budgetRetryMaturityPrep,
+    required: [
+      "Phase 6B-6 Budget Retry Maturity Prep Contract",
+      "Cost and quota guardrail",
+      "Retry budget",
+      "Concurrency cap",
+      "Daily PR and lane cap",
+      "Phase 6C maturity gate checklist",
+      "Reusable template extraction plan",
+      "Automation docs simplification plan",
+      "Remaining HOLD list",
+      "Phase 6B closure package",
+      "Completion criteria",
+    ],
+    order: [
+      "## 1. Cost and quota guardrail",
+      "## 2. Retry budget",
+      "## 3. Concurrency cap",
+      "## 4. Daily PR and lane cap",
+      "## 5. Phase 6C maturity gate checklist",
+      "## 6. Reusable template extraction plan",
+      "## 7. Automation docs simplification plan",
+      "## 8. Remaining HOLD list",
+      "## 9. Phase 6B closure package",
+      "## 10. Completion criteria",
+    ],
+  },
+  {
+    label: "maturity gate",
+    content: docs.maturityGate,
+    required: [
+      "Phase 6C Maturity Gate",
+      "Gate decision",
+      "Evidence checklist",
+      "Completed foundation evidence",
+      "Remaining HOLD list",
+      "Product resume decision",
+      "Post-gate options",
+      "Go / No-Go criteria",
+      "Maturity result",
+      "Completion criteria",
+      "HOLD_PRODUCT_RESUME",
+      "PRODUCT_RESUME_NOT_AUTOMATIC",
+      "STRONGER_AUTOMATION_BEHAVIOR_REMAINS_HOLD",
+    ],
+    order: [
+      "## 1. Gate decision",
+      "## 2. Evidence checklist",
+      "## 3. Completed foundation evidence",
+      "## 4. Remaining HOLD list",
+      "## 5. Product resume decision",
+      "## 6. Post-gate options",
+      "## 7. Go / No-Go criteria",
+      "## 8. Maturity result",
+      "## 9. Completion criteria",
+    ],
+  },
 ];
 
-const eventWorkerLeaseItems = [
-  "Phase 6B-2 Event Worker Lease Contract",
-  "Event intake boundary",
-  "Webhook idempotency design",
-  "Task lease model",
-  "Heartbeat and stuck detection",
-  "Retry and rate-limit policy",
-  "Reusable workflow baseline",
-  "Future worker states",
-  "Fallback path",
-  "Completion criteria",
-];
-
-const supplyChainCiItems = [
-  "Phase 6B-3 Supply Chain CI Contract",
-  "Secrets and permission inventory",
-  "Workflow permission review",
-  "Branch protection and ruleset inventory",
-  "Third-party action risk scoring",
-  "Dependency risk scoring",
-  "Build provenance and artifact attestation readiness",
-  "Config and infra drift audit",
-  "Incident freeze mode",
-  "Completion criteria",
-];
-
-const recoveryRollbackItems = [
-  "Phase 6B-4 Recovery Rollback Contract",
-  "Release checklist",
-  "Rollback runbook",
-  "Last-known-good SHA policy",
-  "Cloudflare rollback and deployment evidence",
-  "D1 backup and restore drill policy",
-  "Evidence archive and decision log",
-  "Failed PR and blocked-lane history",
-  "Incident response and postmortem",
-  "Release notes and changelog requirements",
-  "Completion criteria",
-];
-
-const observabilityControlBoardItems = [
-  "Phase 6B-5 Observability Control Board Contract",
-  "Delivery metrics",
-  "Automation SLO design",
-  "Health alert design",
-  "Error monitoring design",
-  "Browser smoke and E2E visibility",
-  "Incident visibility",
-  "Customer impact and maintenance signals",
-  "Control-board data-source mapping",
-  "Completion criteria",
-];
-
-const budgetRetryMaturityPrepItems = [
-  "Phase 6B-6 Budget Retry Maturity Prep Contract",
-  "Cost and quota guardrail",
-  "Retry budget",
-  "Concurrency cap",
-  "Daily PR and lane cap",
-  "Phase 6C maturity gate checklist",
-  "Reusable template extraction plan",
-  "Automation docs simplification plan",
-  "Remaining HOLD list",
-  "Phase 6B closure package",
-  "Completion criteria",
-];
-
-// Entrypoint/source-of-truth group.
-mustHaveAll("AGENTS", agents, [
+mustHaveAll("AGENTS", docs.agents, [
   "The active lane is `AUTOMATION_PLATFORM`",
   "docs/QUEUE_ROUTER.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
@@ -276,7 +383,7 @@ mustHaveAll("AGENTS", agents, [
   "Automation lane and GitHub evidence reports use:",
   "Status / Blocker / Next action / Evidence",
 ]);
-mustAppearInOrder("AGENTS read path", agents, [
+mustAppearInOrder("AGENTS read path", docs.agents, [
   "## Current routing",
   "## Read path",
   "## Core rules",
@@ -284,7 +391,7 @@ mustAppearInOrder("AGENTS read path", agents, [
   "## Report format",
 ]);
 
-mustHaveAll("router", router, [
+mustHaveAll("router", docs.router, [
   "`AUTOMATION_PLATFORM`",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/queues/KOHEE_PRODUCT.md",
@@ -292,17 +399,16 @@ mustHaveAll("router", router, [
   "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   "Status / Blocker / Next action / Evidence",
 ]);
-mustAppearInOrder("router", router, [
+mustAppearInOrder("router", docs.router, [
   "## Active lane",
   "## Active execution queue",
   "## Paused product queue",
   "## Supporting automation docs",
 ]);
 
-// Active queue and work-breakdown must share canonical vocabulary and order.
 for (const [label, content] of [
-  ["automation queue", automationQueue],
-  ["work breakdown", workBreakdown],
+  ["automation queue", docs.automationQueue],
+  ["work breakdown", docs.workBreakdown],
 ]) {
   mustHaveAll(label, content, sharedVocabulary);
   mustAppearInOrder(label, content, [
@@ -316,8 +422,7 @@ for (const [label, content] of [
   }
 }
 
-// Local runbook must follow router and active queue, not legacy queue files.
-mustHaveAll("local runbook", localRunbook, [
+mustHaveAll("local runbook", docs.localRunbook, [
   "Status: active Phase 5A/5B/5C/5D/5E local execution readiness contract",
   "docs/QUEUE_ROUTER.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
@@ -325,33 +430,12 @@ mustHaveAll("local runbook", localRunbook, [
   "Phase 5A worker contract",
   "Task-pick decision table",
   "Phase 5B dry-run picker plan",
-  "Dry-run picker steps:",
-  "Dry-run picker output table:",
-  "Dry-run report template:",
-  "Dry-run hard stops:",
   "Phase 5C GitHub evidence validator plan",
-  "Required evidence inputs:",
-  "Validation steps:",
-  "Decision rules:",
-  "Evidence validator report template:",
-  "Validator hard stops:",
   "Phase 5D low/medium PR exercise loop plan",
-  "Allowed exercise PRs:",
-  "Forbidden exercise PRs:",
-  "Exercise loop steps for each PR:",
-  "Exercise result ledger template:",
-  "Completion criteria:",
   "Phase 5E approval and notification readiness",
-  "Approval notification bridge:",
-  "Owner approval pack template:",
-  "Native auto-merge approval pack:",
-  "Local controlled worker loop approval pack:",
-  "Notification readiness hard stops:",
-  "Stop conditions",
-  "Evidence report template",
   "Status / Blocker / Next action / Evidence",
 ]);
-mustAppearInOrder("local runbook", localRunbook, [
+mustAppearInOrder("local runbook", docs.localRunbook, [
   "## Read order",
   "## Phase 5A worker contract",
   "## Task-pick decision table",
@@ -363,12 +447,11 @@ mustAppearInOrder("local runbook", localRunbook, [
   "## Evidence report template",
   "## Operating default",
 ]);
-mustNotHave("local runbook", localRunbook, "Use `docs/KOHEE_ACTIVE_QUEUE.md` as the source of truth.");
-mustNotHave("local runbook", localRunbook, "Pick up to 2 independent LOW tasks from `docs/KOHEE_ACTIVE_QUEUE.md`");
+mustNotHave("local runbook", docs.localRunbook, "Use `docs/KOHEE_ACTIVE_QUEUE.md` as the source of truth.");
+mustNotHave("local runbook", docs.localRunbook, "Pick up to 2 independent LOW tasks from `docs/KOHEE_ACTIVE_QUEUE.md`");
 
-// Phase 6A separation foundation must be recorded in the work breakdown.
-mustHaveAll("work breakdown Phase 6A", workBreakdown, phase6AItems);
-mustAppearInOrder("work breakdown Phase 6A contract", workBreakdown, [
+mustHaveAll("work breakdown Phase 6A", docs.workBreakdown, phase6AItems);
+mustAppearInOrder("work breakdown Phase 6A contract", docs.workBreakdown, [
   "### Phase 6A: separation foundation",
   "#### Phase 6A separation foundation contract",
   "Boundary table:",
@@ -384,9 +467,8 @@ mustAppearInOrder("work breakdown Phase 6A contract", workBreakdown, [
   "Golden path scaffolding design:",
 ]);
 
-// Phase 6B lane split must be recorded in the work breakdown.
-mustHaveAll("work breakdown Phase 6B", workBreakdown, phase6BItems);
-mustAppearInOrder("work breakdown Phase 6B lane split", workBreakdown, [
+mustHaveAll("work breakdown Phase 6B", docs.workBreakdown, phase6BItems);
+mustAppearInOrder("work breakdown Phase 6B lane split", docs.workBreakdown, [
   "### Phase 6B: harden the separated platform",
   "#### Phase 6B lane split",
   "Lane table:",
@@ -395,15 +477,18 @@ mustAppearInOrder("work breakdown Phase 6B lane split", workBreakdown, [
   "Parallel eligibility:",
 ]);
 
-// Enterprise hardening map must preserve the searched operating-gap inventory.
-mustHaveAll("enterprise hardening", enterpriseHardening, enterpriseGapItems);
-mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md");
-mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md");
-mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md");
-mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md");
-mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md");
-mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md");
-mustAppearInOrder("enterprise hardening", enterpriseHardening, [
+mustHaveAll("enterprise hardening", docs.enterpriseHardening, enterpriseGapItems);
+for (const linkedDoc of [
+  "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md",
+  "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md",
+  "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md",
+  "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md",
+  "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md",
+  "docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md",
+]) {
+  mustHave("enterprise hardening", docs.enterpriseHardening, linkedDoc);
+}
+mustAppearInOrder("enterprise hardening", docs.enterpriseHardening, [
   "## Enterprise gap inventory",
   "## Lane absorption plan",
   "### 6B-1 trust-policy-approval",
@@ -416,95 +501,12 @@ mustAppearInOrder("enterprise hardening", enterpriseHardening, [
   "## Minimum Phase 6B completion expectation",
 ]);
 
-// Phase 6B-1 trust/policy/approval contract must remain complete.
-mustHaveAll("trust policy approval", trustPolicyApproval, trustPolicyApprovalItems);
-mustAppearInOrder("trust policy approval", trustPolicyApproval, [
-  "## 1. Trust boundary",
-  "## 2. Prompt-injection and instruction override defense",
-  "## 3. Policy-as-code direction",
-  "## 4. Approval ledger design",
-  "## 5. Owner override protocol",
-  "## 6. Protected environment approval gate",
-  "## 7. RACI-style role split",
-  "## 8. Data classification direction",
-  "## 9. ADR policy",
-  "## 10. Completion criteria",
-]);
+for (const spec of contractSpecs) {
+  mustHaveAll(spec.label, spec.content, spec.required);
+  mustAppearInOrder(spec.label, spec.content, spec.order);
+}
 
-// Phase 6B-2 event/worker/lease contract must remain complete.
-mustHaveAll("event worker lease", eventWorkerLease, eventWorkerLeaseItems);
-mustAppearInOrder("event worker lease", eventWorkerLease, [
-  "## 1. Event intake boundary",
-  "## 2. Webhook idempotency design",
-  "## 3. Task lease model",
-  "## 4. Heartbeat and stuck detection",
-  "## 5. Retry and rate-limit policy",
-  "## 6. Reusable workflow baseline",
-  "## 7. Future worker states",
-  "## 8. Fallback path",
-  "## 9. Completion criteria",
-]);
-
-// Phase 6B-3 supply-chain/CI contract must remain complete.
-mustHaveAll("supply chain ci", supplyChainCi, supplyChainCiItems);
-mustAppearInOrder("supply chain ci", supplyChainCi, [
-  "## 1. Secrets and permission inventory",
-  "## 2. Workflow permission review",
-  "## 3. Branch protection and ruleset inventory",
-  "## 4. Third-party action risk scoring",
-  "## 5. Dependency risk scoring",
-  "## 6. Build provenance and artifact attestation readiness",
-  "## 7. Config and infra drift audit",
-  "## 8. Incident freeze mode",
-  "## 9. Completion criteria",
-]);
-
-// Phase 6B-4 recovery/rollback contract must remain complete.
-mustHaveAll("recovery rollback", recoveryRollback, recoveryRollbackItems);
-mustAppearInOrder("recovery rollback", recoveryRollback, [
-  "## 1. Release checklist",
-  "## 2. Rollback runbook",
-  "## 3. Last-known-good SHA policy",
-  "## 4. Cloudflare rollback and deployment evidence",
-  "## 5. D1 backup and restore drill policy",
-  "## 6. Evidence archive and decision log",
-  "## 7. Failed PR and blocked-lane history",
-  "## 8. Incident response and postmortem",
-  "## 9. Release notes and changelog requirements",
-  "## 10. Completion criteria",
-]);
-
-// Phase 6B-5 observability/control-board contract must remain complete.
-mustHaveAll("observability control board", observabilityControlBoard, observabilityControlBoardItems);
-mustAppearInOrder("observability control board", observabilityControlBoard, [
-  "## 1. Delivery metrics",
-  "## 2. Automation SLO design",
-  "## 3. Health alert design",
-  "## 4. Error monitoring design",
-  "## 5. Browser smoke and E2E visibility",
-  "## 6. Incident visibility",
-  "## 7. Customer impact and maintenance signals",
-  "## 8. Control-board data-source mapping",
-  "## 9. Completion criteria",
-]);
-
-// Phase 6B-6 budget/retry/maturity-prep contract must remain complete.
-mustHaveAll("budget retry maturity prep", budgetRetryMaturityPrep, budgetRetryMaturityPrepItems);
-mustAppearInOrder("budget retry maturity prep", budgetRetryMaturityPrep, [
-  "## 1. Cost and quota guardrail",
-  "## 2. Retry budget",
-  "## 3. Concurrency cap",
-  "## 4. Daily PR and lane cap",
-  "## 5. Phase 6C maturity gate checklist",
-  "## 6. Reusable template extraction plan",
-  "## 7. Automation docs simplification plan",
-  "## 8. Remaining HOLD list",
-  "## 9. Phase 6B closure package",
-  "## 10. Completion criteria",
-]);
-
-// Active queue must point to the current work-breakdown phase names.
-mustHaveAll("automation queue", automationQueue, [
+mustHaveAll("automation queue", docs.automationQueue, [
   "Purpose: active execution queue for the automation-platform lane.",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "docs/queues/KOHEE_PRODUCT.md",
@@ -513,7 +515,7 @@ mustHaveAll("automation queue", automationQueue, [
   "Do not resume KOHEE product work unless the maturity gate passes",
   "Do not treat dependency/package changes as LOW by default",
 ]);
-mustAppearInOrder("automation queue execution headings", automationQueue, [
+mustAppearInOrder("automation queue execution headings", docs.automationQueue, [
   "### 0. Merge / activate the queue split",
   "### 1. Phase 5 bridge — local execution readiness",
   "### 2. Phase 5 bridge — approval and notification readiness",
@@ -521,15 +523,10 @@ mustAppearInOrder("automation queue execution headings", automationQueue, [
   "### 4. Automation Phase 6B — harden the separated platform",
   "### 5. Automation Phase 6C — maturity gate",
 ]);
-mustNotHave(
-  "automation queue",
-  automationQueue,
-  "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4",
-);
-mustNotHave("automation queue", automationQueue, "Reference:\n- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4");
+mustNotHave("automation queue", docs.automationQueue, "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4");
+mustNotHave("automation queue", docs.automationQueue, "Reference:\n- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4");
 
-// Work-breakdown must explain that the queue remains the active execution source.
-mustHaveAll("work breakdown", workBreakdown, [
+mustHaveAll("work breakdown", docs.workBreakdown, [
   "Source of truth:",
   "docs/QUEUE_ROUTER.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
@@ -539,17 +536,16 @@ mustHaveAll("work breakdown", workBreakdown, [
   "Phase 5 bridge comes first",
   "This document explains grouping and order; it is not the active queue.",
 ]);
-mustAppearInOrder("work breakdown execution order", workBreakdown, [
+mustAppearInOrder("work breakdown execution order", docs.workBreakdown, [
   "### Phase 5 bridge: local execution and approval readiness",
   "### Phase 6A: separation foundation",
   "### Phase 6B: harden the separated platform",
   "### Phase 6C: maturity gate",
 ]);
-mustNotHave("work breakdown", workBreakdown, "Stage A comes first");
-mustNotHave("work breakdown", workBreakdown, "Stage B comes after Stage A");
+mustNotHave("work breakdown", docs.workBreakdown, "Stage A comes first");
+mustNotHave("work breakdown", docs.workBreakdown, "Stage B comes after Stage A");
 
-// Product queue must remain paused while the automation lane is active.
-mustHaveAll("product queue", productQueue, [
+mustHaveAll("product queue", docs.productQueue, [
   "Paused while the automation-platform lane is active.",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "platform maturity gate",
@@ -557,31 +553,19 @@ mustHaveAll("product queue", productQueue, [
   "Product implementation starts only after project contract and risk policy exist.",
 ]);
 
-// Extra hardening remains supporting context, not the active execution queue.
-mustHave("extra hardening", extraHardening, "automation");
-mustNotMatch(
-  "extra hardening",
-  extraHardening,
-  /Purpose:\s*active execution queue/i,
-  "active queue purpose",
-);
-mustNotMatch(
-  "extra hardening",
-  extraHardening,
-  /This is the active queue/i,
-  "active queue claim",
-);
+mustHave("extra hardening", docs.extraHardening, "automation");
+mustNotMatch("extra hardening", docs.extraHardening, /Purpose:\s*active execution queue/i, "active queue purpose");
+mustNotMatch("extra hardening", docs.extraHardening, /This is the active queue/i, "active queue claim");
 
-// The checker must be reachable from project scripts and release verification.
 mustMatch(
   "package.json",
-  packageJson,
+  docs.packageJson,
   /"check:queue-docs"\s*:\s*"node scripts\/check-queue-docs\.mjs"/,
   "check:queue-docs script",
 );
-mustHave("verify-release", verifyRelease, "queue docs consistency");
-mustHave("verify-release", verifyRelease, "npm run check:queue-docs");
-mustAppearInOrder("verify-release", verifyRelease, [
+mustHave("verify-release", docs.verifyRelease, "queue docs consistency");
+mustHave("verify-release", docs.verifyRelease, "npm run check:queue-docs");
+mustAppearInOrder("verify-release", docs.verifyRelease, [
   "deploy source sync",
   "queue docs consistency",
   "unit tests",
