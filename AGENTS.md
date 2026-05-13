@@ -2,12 +2,25 @@
 
 Purpose: short entrypoint for ChatGPT, Codex, and local Codex.
 
+## Current routing
+
+The active lane is `AUTOMATION_PLATFORM` until the platform maturity gate passes or the owner/ChatGPT explicitly defers it for an urgent product bug.
+
+Queue files:
+
+- `docs/KOHEE_ACTIVE_QUEUE.md`: queue router. Read this first.
+- `docs/AUTOMATION_ACTIVE_QUEUE.md`: active automation-platform execution queue. Local Codex should follow this while the automation lane is active.
+- `docs/KOHEE_PRODUCT_QUEUE.md`: paused KOHEE product queue. Do not start it while the automation lane is active unless explicitly deferred by the owner/ChatGPT.
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`: work categories, grouping, and phase order.
+- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`: advanced automation hardening backlog.
+
 ## Read path
 
 Always read:
 
 1. `docs/KOHEE_ACTIVE_QUEUE.md`
-2. Current PR / issue / check logs relevant to the task
+2. If the router says `AUTOMATION_PLATFORM`, read `docs/AUTOMATION_ACTIVE_QUEUE.md`
+3. Current PR / issue / check logs relevant to the task
 
 For local PC work, also read:
 
@@ -20,6 +33,8 @@ When policy or risk is unclear, read:
 
 Reference only:
 
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`
+- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`
 - `docs/CODEX_AUTOMATION_STATUS.md`
 - `docs/CODEX_WORKFLOW.md`
 - archived audit/planning docs
@@ -34,6 +49,8 @@ Reference only:
 - No `aaa/aaaa`.
 - No deploy unless explicitly requested.
 - Do not apply D1 migrations.
+- While `AUTOMATION_PLATFORM` is active, do not start KOHEE product work from `docs/KOHEE_PRODUCT_QUEUE.md`.
+- Product work resumes only after the platform maturity gate or an explicit owner/ChatGPT deferral.
 
 ## Tracks
 
@@ -46,11 +63,13 @@ If MOBILE hits local-tool requirements, move it to LOCAL instead of forcing prog
 
 Local Codex should start from GitHub state, not a long pasted prompt:
 
-1. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
-2. Read `docs/KOHEE_ACTIVE_QUEUE.md`.
-3. Inspect issue `#23` and open PRs marked `HOLD_LOCAL_REQUIRED`.
-4. Work only on the recorded blocker.
-5. Record a short result in `docs/audits/LOCAL_CODEX_AUDIT_LOG.md` and on the target PR or issue.
+1. Read `docs/KOHEE_ACTIVE_QUEUE.md`.
+2. Follow the router to the active queue.
+3. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/AUTOMATION_ACTIVE_QUEUE.md`.
+4. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
+5. Inspect issue `#23` and open PRs marked `HOLD_LOCAL_REQUIRED` when relevant.
+6. Work only on the recorded blocker or next active automation task.
+7. Record a short result in `docs/audits/LOCAL_CODEX_AUDIT_LOG.md` and on the target PR or issue.
 
 ## Parallel work
 
