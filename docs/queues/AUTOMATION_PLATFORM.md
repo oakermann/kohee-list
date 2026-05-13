@@ -93,7 +93,7 @@ Expected output:
 - No unattended loop yet.
 
 Reference:
-- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4.
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 5 bridge.
 
 Hard stop:
 - No background loop.
@@ -114,7 +114,7 @@ Expected output:
 - All stronger behavior remains HOLD until explicit owner approval.
 
 Reference:
-- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4.
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 5 bridge.
 - Relevant items in `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
 
 Hard stop:
