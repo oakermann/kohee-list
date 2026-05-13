@@ -16,6 +16,8 @@ assert.equal(normalizePath(".\\docs\\foo.md"), "docs/foo.md");
 assert.equal(bucketFor("docs/foo.md"), "LOW candidate");
 assert.equal(bucketFor("docs/queues/AUTOMATION_PLATFORM.md"), "LOW candidate");
 assert.equal(bucketFor("migrations/0001.sql"), "HIGH/HOLD candidate");
+assert.equal(bucketFor("schema/0001.sql"), "HIGH/HOLD candidate");
+assert.equal(bucketFor("d1/0001.sql"), "HIGH/HOLD candidate");
 assert.equal(bucketFor("schema.sql"), "HIGH/HOLD candidate");
 assert.equal(bucketFor("server/auth.js"), "HIGH/HOLD candidate");
 assert.equal(bucketFor("server/session.js"), "HIGH/HOLD candidate");

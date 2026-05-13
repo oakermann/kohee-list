@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,7 +15,11 @@ const HIGH_HOLD_RULES = [
     area: "D1/schema/migrations",
     matches: (file) =>
       file === "schema.sql" ||
+      file.startsWith("schema/") ||
+      file.startsWith("d1/") ||
       file.startsWith("migrations/") ||
+      file.includes("/schema/") ||
+      file.includes("/d1/") ||
       file.includes("/migrations/"),
   },
   {
@@ -95,7 +100,23 @@ function git(args) {
   });
 }
 
-export function getGitChangedFiles() {
+function tryGit(args) {
+  try {
+    return git(args);
+  } catch {
+    return "";
+  }
+}
+
+function currentBranchName() {
+  return tryGit(["rev-parse", "--abbrev-ref", "HEAD"]).trim();
+}
+
+function mainLikeBranch(branch) {
+  return branch === "main" || branch === "master";
+}
+
+function workingTreeChangedFiles() {
   const tracked = changedFilesFromOutput(
     git(["diff", "--name-only", "HEAD", "--"]),
   );
@@ -103,6 +124,93 @@ export function getGitChangedFiles() {
     git(["ls-files", "--others", "--exclude-standard"]),
   );
   return uniqueFiles([...tracked, ...untracked]);
+}
+
+function envComparisonChangedFiles() {
+  const base =
+    process.env.POLICY_RISK_BASE_SHA ||
+    process.env.BASE_SHA ||
+    process.env.GITHUB_BASE_SHA ||
+    "";
+  const head =
+    process.env.POLICY_RISK_HEAD_SHA ||
+    process.env.HEAD_SHA ||
+    process.env.GITHUB_SHA ||
+    "HEAD";
+
+  if (!base) return [];
+  return changedFilesFromOutput(
+    tryGit(["diff", "--name-only", base, head, "--"]),
+  );
+}
+
+function githubEventComparisonChangedFiles() {
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath) return [];
+
+  try {
+    const event = JSON.parse(readFileSync(eventPath, "utf8"));
+    const base = event?.pull_request?.base?.sha || "";
+    const head = event?.pull_request?.head?.sha || "";
+    if (!base || !head) return [];
+    return changedFilesFromOutput(
+      tryGit(["diff", "--name-only", base, head, "--"]),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function branchComparisonChangedFiles() {
+  const branch = currentBranchName();
+  if (!branch || mainLikeBranch(branch)) return [];
+
+  const baseRef =
+    tryGit(["rev-parse", "--verify", "origin/main"]).trim() ||
+    tryGit(["rev-parse", "--verify", "origin/master"]).trim();
+  if (!baseRef) return [];
+
+  const mergeBase = tryGit(["merge-base", baseRef, "HEAD"]).trim();
+  if (!mergeBase) return [];
+
+  return changedFilesFromOutput(
+    tryGit(["diff", "--name-only", mergeBase, "HEAD", "--"]),
+  );
+}
+
+function lastCommitChangedFiles() {
+  const branch = currentBranchName();
+  if (mainLikeBranch(branch)) return [];
+
+  return changedFilesFromOutput(
+    tryGit([
+      "diff-tree",
+      "--no-commit-id",
+      "--name-only",
+      "-r",
+      "-m",
+      "HEAD",
+    ]),
+  );
+}
+
+export function getGitChangedFiles() {
+  const strategies = [
+    workingTreeChangedFiles,
+    envComparisonChangedFiles,
+    githubEventComparisonChangedFiles,
+    branchComparisonChangedFiles,
+    lastCommitChangedFiles,
+  ];
+
+  for (const strategy of strategies) {
+    const files = strategy();
+    if (files.length > 0) {
+      return files;
+    }
+  }
+
+  return [];
 }
 
 export function classifyFile(file) {
