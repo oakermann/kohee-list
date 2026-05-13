@@ -28,6 +28,7 @@ Baseline to preserve:
 - Phase 5C GitHub evidence validator plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5D low/medium PR exercise loop plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - Phase 5E approval and notification readiness is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
+- Phase 6A separation foundation contract is recorded in `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.
 - KOHEE product work remains paused while this automation lane is active.
 - Existing HIGH/HOLD safety rules remain in force.
 
@@ -128,9 +129,6 @@ Expected output:
 Current artifact:
 - Phase 5E approval notification bridge, owner approval pack template, native auto-merge approval pack, local controlled worker loop approval pack, and notification hard stops are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 
-Next sub-step:
-- Automation Phase 6A separation foundation.
-
 Reference:
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 5 bridge.
 - Relevant items in `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
@@ -154,6 +152,12 @@ Expected output:
 - Future `dev-automation-platform` repo split plan.
 - Shared templates, onboarding checklist, and golden path design.
 - Clear split between reusable automation core rules and KOHEE-specific rules.
+
+Current artifact:
+- Phase 6A boundary table, automation status schema, task intake schema, state transition policy, project registry/catalog drafts, backlog separation, repo split prep, shared templates, onboarding checklist, and golden path scaffolding are recorded in `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.
+
+Next sub-step:
+- Automation Phase 6B harden the separated platform.
 
 Hard stop:
 - Do not create the new repo yet unless explicitly approved.
