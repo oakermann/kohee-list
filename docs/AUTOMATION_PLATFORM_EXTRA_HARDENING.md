@@ -117,15 +117,73 @@ Acceptance:
 - Connect the journal to snapshot/replay and control-board history.
 - Do not implement storage yet.
 
+## Further review hardening items
+
+### 12. Ruleset and branch-protection baseline audit
+
+The platform should define and audit the expected branch protection / ruleset baseline for the automation repo and managed project repos.
+
+Acceptance:
+- Define expected required checks, review requirements, conversation resolution, force-push/deletion stance, bypass stance, and deployment requirements where applicable.
+- Detect ruleset drift across managed repos.
+- Keep it audit/design-only before repository setting changes.
+
+### 13. Code scanning baseline audit
+
+The platform should decide whether CodeQL/code scanning baseline coverage is needed for the automation repo and managed project repos.
+
+Acceptance:
+- Document whether default setup is appropriate per repo.
+- Document which languages/artifacts are expected to be covered first.
+- Keep it audit-only before enabling new required checks.
+
+### 14. GitHub API rate-limit and backoff policy
+
+The control board, Worker, and dispatcher should avoid wasteful polling and handle API limits predictably.
+
+Acceptance:
+- Prefer webhook/event-driven updates over polling where practical.
+- Define request serialization, conditional requests, retry-after handling, reset-time handling, and exponential backoff rules.
+- Define a fail-safe HOLD path if status cannot be refreshed reliably.
+
+### 15. Queue schema/versioning and legacy redirect deprecation policy
+
+Queue, router, and task schemas should be versioned so Codex and future tooling know which format they are reading.
+
+Acceptance:
+- Define router version, queue schema version, task schema version, and status schema version fields.
+- Define when legacy redirect files can be removed.
+- Keep legacy redirects until Codex prompts and docs use only canonical paths.
+
+### 16. ChatGPT task-intake eval and adversarial fixture design
+
+ChatGPT-first task intake needs test fixtures so natural-language commands consistently become safe structured tasks.
+
+Acceptance:
+- Include normal owner command examples and expected structured task outputs.
+- Include adversarial/untrusted examples from PR bodies, comments, logs, and branch names.
+- Expected unsafe outputs should become HOLD, clarification, or non-executable tasks.
+- Do not implement an automated evaluator yet unless separately scoped.
+
+### 17. Reusable workflow release and compatibility policy
+
+Reusable workflows need versioning and compatibility rules before managed projects depend on them.
+
+Acceptance:
+- Define whether callers pin reusable workflows by tag, branch, or SHA.
+- Define compatibility expectations for required check names.
+- Define breaking-change and migration policy for managed projects.
+- Keep it policy/design-only before central reusable workflows are enforced.
+
 ## Placement in the automation lane
 
 These items should be handled before the platform maturity gate and before project feature work resumes. They can be grouped into a small number of docs PRs if doing each one separately makes the queue too noisy.
 
 Suggested grouping:
 
-1. Input trust, webhook idempotency, task lease.
-2. Reusable workflow, approval gates, short-lived credential readiness, scanning baseline, SBOM.
-3. Golden path, catalog health, event journal.
+1. Input trust, webhook idempotency, task lease, API backoff, and task-intake eval fixtures.
+2. Reusable workflow baseline, reusable workflow compatibility, approval gates, short-lived access readiness, scanning baseline, code scanning baseline, and SBOM.
+3. Golden path, catalog health, event journal, queue versioning, ruleset baseline, and legacy redirect deprecation.
 
 ## Hold conditions
 
