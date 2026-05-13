@@ -43,10 +43,12 @@ The ten-point automation design is not a new execution queue. It is mapped into 
   - CI/CD posture review, workflow permission review, action-pinning review plan, and high-risk workflow-pattern audit plan.
   - Recovery and auditability planning: rollback note, last-known-good SHA, failed PR history, blocked-lane history, and automation decision log.
   - Supply-chain posture planning: provenance/attestation/SLSA-lite feasibility and OpenSSF Scorecard or equivalent baseline review.
+  - Dependency/install safeguards: npm lifecycle-script policy, dependency-change gate, lockfile/package-manager-change review, token-rotation checklist, and supply-chain incident freeze mode.
   - Operational verification plan for repeated safe Local Codex runs before any unattended behavior is considered.
 - Phase 6C maturity gate:
   - Verify the platform can safely manage project work before KOHEE_PRODUCT resumes.
   - Verify the recovery/auditability pieces are present, not merely mentioned.
+  - Verify dependency/install safeguards are scheduled or present before any stronger automation.
 - After Phase 6:
   - If the owner/ChatGPT keeps the automation lane active, continue repo-independent generalization for news app, blog/status site, and internal handover app reuse.
 
@@ -143,6 +145,12 @@ Expected output:
 - Security and supply-chain posture.
 - Workflow permission review and action-pinning review plan.
 - High-risk workflow-pattern audit plan.
+- Dependency automation policy aligned with `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.
+- npm/dependency install-script policy: define when lifecycle scripts are allowed, blocked, or require manual approval.
+- Dependency-change gate: new packages, version bumps, lockfile changes, and package-manager changes require explicit risk review before merge.
+- Supply-chain incident freeze mode: define when dependency updates or automation runs pause during ecosystem-level incidents.
+- Secret/token exposure response checklist: define rotation checks for GitHub, npm, Cloudflare, OpenAI, and local developer tokens.
+- SBOM readiness remains tracked through the existing SBOM roadmap, without duplicating it here.
 - Recovery and auditability plan: rollback note, last-known-good SHA, failed PR history, blocked-lane history, and automation decision log.
 - Required evidence that rollback notes, last-known-good SHA tracking, failed PR history, blocked-lane history, and decision-log fields are captured somewhere concrete before maturity gate pass.
 - Provenance/attestation/SLSA-lite feasibility note and OpenSSF Scorecard or equivalent baseline review plan.
@@ -159,6 +167,7 @@ Hard stop:
 - No stronger write/merge/control-board actions without explicit owner approval.
 - Do not change deployment credentials or production settings without explicit owner approval.
 - Do not make noisy audit findings blocking until they are proven high-signal.
+- Do not treat dependency/package changes as LOW by default; classify new dependencies, lockfile churn, package-manager changes, and install-script changes as at least MEDIUM unless explicitly justified.
 
 ### 5. Automation Phase 6C — maturity gate
 
@@ -171,6 +180,7 @@ Expected output:
 - Confirm the low/medium PR exercise loop has been run or is explicitly scheduled with a blocker.
 - Confirm Phase 6A separation foundation exists.
 - Confirm Phase 6B hardening docs exist or remaining items are explicitly scheduled.
+- Confirm dependency/install safeguards are present or explicitly scheduled: lifecycle-script policy, dependency-change gate, supply-chain incident freeze mode, and token-rotation checklist.
 - Confirm rollback notes, last-known-good SHA tracking, failed PR history, blocked-lane history, and automation decision logging are defined concretely enough to be used.
 - Confirm remaining HOLD items.
 - Confirm MERGE / FIX / HOLD / NEXT criteria are usable from GitHub evidence.
@@ -181,7 +191,7 @@ Reference:
 
 Hard stop:
 - Do not resume KOHEE product work unless the maturity gate passes or the owner/ChatGPT explicitly defers the automation lane.
-- Do not pass the maturity gate on design-only claims if the evidence loop, recovery/auditability fields, and HOLD list are not concrete.
+- Do not pass the maturity gate on design-only claims if the evidence loop, recovery/auditability fields, dependency/install safeguards, and HOLD list are not concrete.
 
 ## After Phase 6
 
@@ -219,6 +229,8 @@ HOLD:
 - Extra hardening pulled into the active queue without owner/ChatGPT promotion.
 - GitHub evidence insufficient.
 - Maturity gate claims without concrete evidence-loop and recovery/auditability coverage.
+- Dependency/package changes are treated as LOW without explicit justification.
+- Ecosystem-level dependency incident occurs and incident freeze mode has not been evaluated.
 
 NEXT:
 - Current PR is merged or closed with a clear follow-up and the active queue can advance safely.
