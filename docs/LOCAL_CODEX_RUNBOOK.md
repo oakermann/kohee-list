@@ -1,6 +1,6 @@
 # Local Codex Runbook
 
-Status: active Phase 5A/5B/5C/5D local execution readiness contract
+Status: active Phase 5A/5B/5C/5D/5E local execution readiness contract
 
 Purpose: define how Local Codex selects, executes, reports, verifies, and stops work while the active lane is `AUTOMATION_PLATFORM`.
 
@@ -267,6 +267,60 @@ Completion criteria:
 - No exercise touches forbidden areas without approval.
 - No auto-merge or unattended loop is enabled.
 
+## Phase 5E approval and notification readiness
+
+Approval and notification readiness defines when stronger behavior may be proposed, how approval is requested, and what must remain HOLD.
+
+Approval notification bridge:
+
+| Situation | Notification target | Required content |
+| --- | --- | --- |
+| HOLD needs owner decision | issue `#23` or target PR comment | Status, blocker, next action, evidence, approval question |
+| FIX_REQUIRED blocks merge | target PR comment | failed check/review/thread evidence and smallest fix path |
+| Stronger behavior is proposed | owner/ChatGPT in active automation lane | exact behavior, risk, rollback, required approvals, disable path |
+| Maturity gate decision needed | issue `#23` plus active queue update | completed evidence, remaining HOLD list, go/no-go recommendation |
+
+Owner approval pack template:
+
+```text
+Status:
+Blocker:
+Next action:
+Evidence:
+- request type:
+- proposed behavior:
+- current default:
+- risk level:
+- files/settings affected:
+- checks required:
+- rollback/disable path:
+- explicit approval needed:
+```
+
+Native auto-merge approval pack:
+
+- Remains HOLD by default.
+- Requires at least three completed low/medium exercise PRs.
+- Requires required checks and review-thread policy to be proven.
+- Requires rollback/disable path.
+- Requires explicit owner/ChatGPT approval before enabling.
+
+Local controlled worker loop approval pack:
+
+- Remains HOLD by default.
+- Must be dry-run first.
+- Must process one task at a time unless explicitly approved.
+- Must stop on any HOLD, FIX_REQUIRED, failed check, unresolved review thread, or head-SHA change.
+- Must not merge, deploy, close issues, delete branches, or enable auto-merge unless separately approved.
+
+Notification readiness hard stops:
+
+- Do not request approval without evidence.
+- Do not imply approval from silence.
+- Do not bundle unrelated approval requests.
+- Do not turn approval packs into implementation.
+- Do not enable stronger behavior in the same PR that only documents the approval pack.
+
 ## Stop conditions
 
 Stop and report instead of continuing when any of these occur:
@@ -311,7 +365,7 @@ For implementation-heavy work, add `Tests` and `Remaining risks`, but keep the r
 
 ## Operating default
 
-Local Codex should run serially by default during Phase 5A/5B/5C/5D.
+Local Codex should run serially by default during Phase 5A/5B/5C/5D/5E.
 
 Parallel LOW work is allowed only when all of the following are true:
 
