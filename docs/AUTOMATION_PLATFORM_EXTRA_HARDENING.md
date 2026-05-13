@@ -204,14 +204,55 @@ Acceptance:
 - Each feature should state default-safe behavior, logging/evidence, rollback, least-privilege expectation, failure mode, and user-visible impact.
 - Use this checklist before enabling write actions, merge automation, new project onboarding automation, or control-board actions.
 
+## Final review hardening items
+
+### 21. Agent memory and context-store integrity policy
+
+The platform should define how long-lived automation context stays trustworthy.
+
+Acceptance:
+- Identify persistent context stores such as task queue state, normalized ChatGPT task records, approval ledger, control-board cache, Local Codex stop reports, event journal, and snapshot/replay artifacts.
+- Define how context records are validated before reuse.
+- Define snapshot, rollback, and correction flow for corrupted or stale context.
+- Treat regenerated summaries as lower trust than source evidence.
+
+### 22. Tool capability and MCP authorization boundary design
+
+The platform should define tool/capability boundaries before adding more connectors, MCP servers, or privileged tools.
+
+Acceptance:
+- Define a tool registry by capability class such as read-only, write, shell, patch, deploy, and settings.
+- Define which capabilities require owner approval.
+- Define token audience / target-resource expectations for external tool servers.
+- Avoid broad wildcard-style tool access in the platform design.
+
+### 23. Pending approval state versioning and revalidation policy
+
+Approvals that pause work should not remain valid forever or across changed evidence.
+
+Acceptance:
+- Define schema/version fields for pending approval state.
+- Define expiry rules.
+- Require revalidation if PR head SHA, task schema, target files, risk level, or policy changes while approval is pending.
+- Link pending state to the approval ledger and immutable evidence.
+
+### 24. SSDF / SLSA control mapping matrix
+
+The platform should map hardening work to a small security-control matrix so the backlog remains explainable and auditable.
+
+Acceptance:
+- Map queue schema, policy-as-code, provenance, SBOM, dependency policy, approval ledger, runner posture, secret scanning, incident/recovery, and evidence records to relevant control families.
+- Keep it lightweight; do not turn this into a compliance project.
+- Use the mapping to justify future hardening priority.
+
 ## Placement in the automation lane
 
 These items should be handled before the platform maturity gate and before project feature work resumes. They can be grouped into a small number of docs PRs if doing each one separately makes the queue too noisy.
 
 Suggested grouping:
 
-1. Input trust, webhook idempotency, task lease, API backoff, task-intake eval fixtures, approval integrity, and threat model.
-2. Reusable workflow baseline, reusable workflow compatibility, approval gates, short-lived access readiness, scanning baseline, code scanning baseline, SBOM, and secure-by-design checklist.
+1. Input trust, webhook idempotency, task lease, API backoff, task-intake eval fixtures, approval integrity, memory integrity, pending approval revalidation, and threat model.
+2. Reusable workflow baseline, reusable workflow compatibility, approval gates, short-lived access readiness, scanning baseline, code scanning baseline, SBOM, tool capability boundary, secure-by-design checklist, and SSDF/SLSA mapping.
 3. Golden path, catalog health, event journal, queue versioning, ruleset baseline, and legacy redirect deprecation.
 
 ## Hold conditions
