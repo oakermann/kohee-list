@@ -1,6 +1,6 @@
 # Local Codex Runbook
 
-Status: active Phase 5A/5B/5C local execution readiness contract
+Status: active Phase 5A/5B/5C/5D local execution readiness contract
 
 Purpose: define how Local Codex selects, executes, reports, verifies, and stops work while the active lane is `AUTOMATION_PLATFORM`.
 
@@ -200,6 +200,73 @@ Validator hard stops:
 - Do not merge if head SHA moved after evidence collection.
 - Do not merge if changed files include unapproved D1/schema/migration, auth/session, CSV import/reset, public `/data`, production deployment, credential, or dependency/install-script changes.
 
+## Phase 5D low/medium PR exercise loop plan
+
+The low/medium PR exercise loop proves the Phase 5A/5B/5C rules using real PRs before stronger automation is considered.
+
+Purpose:
+
+- Run at least three real LOW/MEDIUM PRs through the evidence-based MERGE / FIX / HOLD / NEXT flow.
+- Prove the dry-run picker can identify safe candidates.
+- Prove the evidence validator can block incomplete or risky PRs.
+- Prove ChatGPT/owner decisions use GitHub evidence instead of Codex self-report.
+- Keep unattended loop, auto-merge, direct merge bot behavior, and product work disabled.
+
+Allowed exercise PRs:
+
+| Exercise type | Allowed scope | Risk |
+| --- | --- | --- |
+| Docs sync | Queue/runbook/reporting wording only | LOW |
+| Validator/check update | `scripts/check-queue-docs.mjs` or docs-only checks | LOW/MEDIUM |
+| Audit-only note | Read-only audit doc or issue comment only | LOW |
+| Evidence template update | Report template or checklist wording | LOW |
+
+Forbidden exercise PRs:
+
+- Product features or UI changes.
+- D1/schema/migration changes.
+- Auth/session/security behavior changes.
+- CSV import/reset changes.
+- public `/data` behavior changes.
+- Production deploy, credential, or environment changes.
+- Dependency/package/lockfile/install-script behavior changes unless explicitly scoped as MEDIUM and owner/ChatGPT-approved.
+- Unattended loop, native auto-merge, direct merge bot behavior, issue close automation, or branch deletion.
+
+Exercise loop steps for each PR:
+
+1. Run the dry-run picker and record the selected candidate.
+2. Confirm expected files and forbidden areas.
+3. Open or inspect the exercise PR.
+4. Collect GitHub evidence: PR URL, PR number, head SHA, changed files, checks, review threads, comments, issue state, active lane, active queue.
+5. Apply the evidence validator decision rules.
+6. Return exactly one decision: MERGE, FIX, HOLD, or NEXT.
+7. If FIX, apply the smallest safe fix and repeat evidence validation.
+8. If HOLD, stop and record the blocker.
+9. If MERGE, merge only after required checks pass and review threads are resolved or explicitly waived.
+10. Record result and move to the next exercise only after the current one is closed.
+
+Exercise result ledger template:
+
+| Field | Required value |
+| --- | --- |
+| Exercise number | 1, 2, or 3+ |
+| PR URL | GitHub PR URL |
+| head SHA | Head SHA at decision time |
+| changed files | Changed file list |
+| checks | Pass/fail/pending result |
+| review threads | Resolved/unresolved/outdated summary |
+| decision | MERGE, FIX, HOLD, or NEXT |
+| result | merged, fixed, held, or skipped |
+| follow-up | next action or none |
+
+Completion criteria:
+
+- At least three LOW/MEDIUM exercise PRs have completed.
+- At least one exercise includes a real evidence validation before merge.
+- Any FIX/HOLD path records the blocker and next action.
+- No exercise touches forbidden areas without approval.
+- No auto-merge or unattended loop is enabled.
+
 ## Stop conditions
 
 Stop and report instead of continuing when any of these occur:
@@ -244,7 +311,7 @@ For implementation-heavy work, add `Tests` and `Remaining risks`, but keep the r
 
 ## Operating default
 
-Local Codex should run serially by default during Phase 5A/5B/5C.
+Local Codex should run serially by default during Phase 5A/5B/5C/5D.
 
 Parallel LOW work is allowed only when all of the following are true:
 
