@@ -75,6 +75,9 @@ Output:
 
 ### 6B-3 supply-chain-ci
 
+Output document:
+- `docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md`
+
 Absorb:
 - Secrets inventory and permission minimization.
 - OIDC feasibility.
