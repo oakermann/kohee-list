@@ -3,6 +3,7 @@ import fs from "node:fs";
 
 const files = {
   agents: "AGENTS.md",
+  constitution: "docs/AUTOMATION_CONSTITUTION.md",
   router: "docs/QUEUE_ROUTER.md",
   operatorRail: "docs/AUTOMATION_OPERATOR_RAIL.md",
   automationQueue: "docs/queues/AUTOMATION_PLATFORM.md",
@@ -293,7 +294,35 @@ const contractSpecs = [
   },
 ];
 
+mustHaveAll("constitution", docs.constitution, [
+  "Automation Constitution",
+  "supreme automation contract",
+  "This document outranks all other automation docs.",
+  "User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold",
+  "The user must not become the manual prompt carrier for every Local Codex task.",
+  "LOW/MEDIUM work can auto-merge only after every evidence gate passes",
+  "HIGH/HOLD never auto-merges",
+  "TASK_PACKET",
+  "This platform is not a KOHEE-only helper",
+  "Amendment rule",
+]);
+mustAppearInOrder("constitution", docs.constitution, [
+  "## 1. Supreme operating model",
+  "## 2. User contract",
+  "## 3. Role contract",
+  "## 4. Non-negotiable separation",
+  "## 5. Automation stages",
+  "## 6. Merge policy",
+  "## 7. Task packet contract",
+  "## 8. Active work rule",
+  "## 9. Restricted work rule",
+  "## 10. Project-factory rule",
+  "## 11. Drift rule",
+  "## 12. Amendment rule",
+]);
+
 mustHaveAll("AGENTS", docs.agents, [
+  "docs/AUTOMATION_CONSTITUTION.md",
   "The active lane is `AUTOMATION_PLATFORM`",
   "docs/QUEUE_ROUTER.md",
   "docs/AUTOMATION_OPERATOR_RAIL.md",
@@ -304,7 +333,9 @@ mustHaveAll("AGENTS", docs.agents, [
   "Status / Blocker / Next action / Evidence",
 ]);
 mustAppearInOrder("AGENTS read path", docs.agents, [
+  "## Supreme rule",
   "## Current routing",
+  "## Fixed operating model",
   "## Read path",
   "## Core rules",
   "## Local Codex",
@@ -312,6 +343,7 @@ mustAppearInOrder("AGENTS read path", docs.agents, [
 ]);
 
 mustHaveAll("router", docs.router, [
+  "docs/AUTOMATION_CONSTITUTION.md",
   "`AUTOMATION_PLATFORM`",
   "docs/AUTOMATION_OPERATOR_RAIL.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
@@ -319,6 +351,13 @@ mustHaveAll("router", docs.router, [
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   "Status / Blocker / Next action / Evidence",
+]);
+mustAppearInOrder("router", docs.router, [
+  "## Supreme rule",
+  "## Active lane",
+  "## Active operating rail",
+  "## Active execution queue",
+  "## Paused product queue",
 ]);
 
 mustHaveAll("operator rail", docs.operatorRail, [
