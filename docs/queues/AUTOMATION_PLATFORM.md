@@ -10,14 +10,16 @@ Build a reusable automation platform, not a KOHEE-only helper.
 Target workflow:
 
 ```text
-User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
+User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold
 ```
 
 User-facing goal:
 
 ```text
-진행 -> automation routes the next task -> Local Codex works -> PR/evidence appears -> LOW/MEDIUM auto-merge if gates pass; HIGH/HOLD waits for user approval
+진행 -> automation routes the next task -> Local Codex works -> PR/checks/review evidence appears -> LOW/MEDIUM auto-merge if gates pass; HIGH/HOLD waits for user approval
 ```
+
+PR evidence means PR metadata, checks, changed files, and Codex Review/review-thread state.
 
 ## Active execution rule
 
@@ -48,6 +50,7 @@ Status: complete and preserved.
 Meaning:
 - PRs are judged from GitHub evidence, not Codex self-report.
 - Checks and review threads are part of the merge decision.
+- Codex Review/review threads must be resolved or explicitly waived before merge.
 
 ### 2. Local Codex worker discipline
 
@@ -77,6 +80,7 @@ Goal:
 - Cloudflare Worker/GitHub App records the task packet in GitHub.
 - Local Codex reads the GitHub task packet and performs one scoped task.
 - GitHub Actions validates the PR.
+- Codex Review/review threads are checked before merge readiness.
 - LOW/MEDIUM can auto-merge only after evidence gates pass.
 - HIGH/HOLD waits for explicit user approval.
 
@@ -85,7 +89,7 @@ Required outputs:
 2. GitHub task queue location, initially issue `#23` or a dedicated task issue.
 3. Cloudflare/GitHub App write path for task packets and evidence comments.
 4. Local Codex polling/watch rule for new task packets.
-5. LOW/MEDIUM auto-merge evidence gate definition.
+5. LOW/MEDIUM auto-merge evidence gate definition, including Codex Review/review-thread resolution.
 
 ### 5. Project profiles
 
@@ -178,6 +182,7 @@ LOW/MEDIUM auto-merge is allowed only when all are true:
 - `PR Validate` success.
 - `Validate` success.
 - unresolved review threads absent.
+- Codex Review threads resolved or explicitly waived.
 - head SHA stable.
 - policy-risk is LOW or approved MEDIUM.
 - PR evidence is complete.
