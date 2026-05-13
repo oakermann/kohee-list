@@ -11,6 +11,7 @@ const files = {
   enterpriseHardening: "docs/AUTOMATION_PLATFORM_ENTERPRISE_HARDENING.md",
   trustPolicyApproval: "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md",
   eventWorkerLease: "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md",
+  supplyChainCi: "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
   verifyRelease: "scripts/verify-release.ps1",
@@ -82,6 +83,7 @@ const workBreakdown = read(files.workBreakdown);
 const enterpriseHardening = read(files.enterpriseHardening);
 const trustPolicyApproval = read(files.trustPolicyApproval);
 const eventWorkerLease = read(files.eventWorkerLease);
+const supplyChainCi = read(files.supplyChainCi);
 const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
 const verifyRelease = read(files.verifyRelease);
@@ -198,6 +200,19 @@ const eventWorkerLeaseItems = [
   "Reusable workflow baseline",
   "Future worker states",
   "Fallback path",
+  "Completion criteria",
+];
+
+const supplyChainCiItems = [
+  "Phase 6B-3 Supply Chain CI Contract",
+  "Secrets and permission inventory",
+  "Workflow permission review",
+  "Branch protection and ruleset inventory",
+  "Third-party action risk scoring",
+  "Dependency risk scoring",
+  "Build provenance and artifact attestation readiness",
+  "Config and infra drift audit",
+  "Incident freeze mode",
   "Completion criteria",
 ];
 
@@ -337,6 +352,7 @@ mustAppearInOrder("work breakdown Phase 6B lane split", workBreakdown, [
 mustHaveAll("enterprise hardening", enterpriseHardening, enterpriseGapItems);
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md");
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md");
+mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md");
 mustAppearInOrder("enterprise hardening", enterpriseHardening, [
   "## Enterprise gap inventory",
   "## Lane absorption plan",
@@ -376,6 +392,20 @@ mustAppearInOrder("event worker lease", eventWorkerLease, [
   "## 6. Reusable workflow baseline",
   "## 7. Future worker states",
   "## 8. Fallback path",
+  "## 9. Completion criteria",
+]);
+
+// Phase 6B-3 supply-chain/CI contract must remain complete.
+mustHaveAll("supply chain ci", supplyChainCi, supplyChainCiItems);
+mustAppearInOrder("supply chain ci", supplyChainCi, [
+  "## 1. Secrets and permission inventory",
+  "## 2. Workflow permission review",
+  "## 3. Branch protection and ruleset inventory",
+  "## 4. Third-party action risk scoring",
+  "## 5. Dependency risk scoring",
+  "## 6. Build provenance and artifact attestation readiness",
+  "## 7. Config and infra drift audit",
+  "## 8. Incident freeze mode",
   "## 9. Completion criteria",
 ]);
 
