@@ -1,0 +1,10 @@
+[
+  {
+    "id": 2301,
+    "body": "TASK_PACKET:\ntask_id: first-active\nproject: KOHEE LIST\nlane: AUTOMATION_PLATFORM\nrisk: LOW\nmode: docs-only\ngoal: First active packet.\nallowed_files: docs/queues/AUTOMATION_PLATFORM.md\nforbidden_areas: D1/schema/migration, auth/session/security, CSV import/reset, public data behavior, deploy/secrets\nchecks: npm run check:queue-docs\nstop_condition: bridge reports HOLD_MULTIPLE_TASK_PACKETS\nreport_format: Status / Blocker / Next action / Evidence\nmerge_policy: strict-evidence-gate\nexpires_at: 2999-01-01T00:00:00Z"
+  },
+  {
+    "id": 2302,
+    "body": "TASK_PACKET:\ntask_id: second-active\nproject: KOHEE LIST\nlane: AUTOMATION_PLATFORM\nrisk: LOW\nmode: docs-only\ngoal: Second active packet.\nallowed_files: docs/LOCAL_CODEX_RUNBOOK.md\nforbidden_areas: D1/schema/migration, auth/session/security, CSV import/reset, public data behavior, deploy/secrets\nchecks: npm run check:queue-docs\nstop_condition: bridge reports HOLD_MULTIPLE_TASK_PACKETS\nreport_format: Status / Blocker / Next action / Evidence\nmerge_policy: strict-evidence-gate\nexpires_at: 2999-01-01T00:00:00Z"
+  }
+]

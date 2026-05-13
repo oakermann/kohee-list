@@ -69,5 +69,6 @@ assert.ok(commandDispatch.includes("github.rest.issues.create"));
 assert.ok(commandDispatch.includes("Manual Codex trigger required"));
 
 await import("./test-task-packet.mjs");
+await import("./test-issue-task-bridge.mjs");
 
 console.log("[policy-guards] ok");
