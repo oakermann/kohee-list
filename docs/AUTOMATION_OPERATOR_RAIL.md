@@ -3,26 +3,26 @@
 Status: active operator rail
 Risk: LOW docs/governance
 
-Purpose: restore the original click-run workflow. The user gives work direction to ChatGPT; ChatGPT routes that work to Local Codex; Local Codex performs one scoped task, opens or updates one PR, and stops for ChatGPT verification.
+Purpose: define the click-run project-factory workflow. The platform must let the user direct work through ChatGPT, route it through the online execution layer, let Local Codex do the actual repo work, and use GitHub evidence for the final decision.
 
-## Original operating model
-
-This is the core model and must not be inverted:
+## Fixed operating model
 
 ```text
-User -> ChatGPT -> Local Codex -> GitHub PR -> ChatGPT verification -> User merge approval
+User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
 ```
 
-The user should not have to rewrite task prompts, pick queue details, or manually intermediate every Codex task.
+This is a reusable project factory model, not a KOHEE-only helper.
 
 ## Roles
 
 | Role | Responsibility |
 | --- | --- |
-| User | Gives direction to ChatGPT, usually `진행`, and explicitly approves merge when needed. |
-| ChatGPT | Chooses or normalizes the next task, routes the task to Local Codex when the local bridge is available, then checks Codex output and reports MERGE / FIX / HOLD / NEXT. ChatGPT does not edit while Codex is working. |
-| Local Codex | Reads repo instructions, handles the current blocker or next safe task, edits files, runs checks, opens or updates one PR, and reports evidence. |
-| GitHub | Source of truth for PR URL, head SHA, changed files, checks, review threads, issue state, and mergeability. |
+| User | Gives direction such as `진행`, `확인`, or project-specific direction. Approves HIGH/HOLD work. |
+| ChatGPT | Main orchestrator. Interprets the user request, chooses the next task, creates a task packet, reviews GitHub evidence, and reports MERGE / FIX / HOLD / NEXT. |
+| Cloudflare Worker/GitHub App | Online execution arm. Records task packets and evidence in GitHub, updates issue/PR comments/status, and later performs allowed LOW/MEDIUM merge actions after gates pass. |
+| GitHub | Task queue and evidence store: task packets, issue state, PRs, head SHA, changed files, checks, review threads, comments, and merge history. |
+| Local Codex | Actual code worker. Reads task packets, edits locally, runs checks, commits, pushes, opens/updates PRs, and reports evidence. |
+| GitHub Actions | Validation gate for PR checks and release checks. |
 
 ## Command contract
 
@@ -32,11 +32,48 @@ When the user tells ChatGPT:
 진행
 ```
 
-ChatGPT must route this into the Local Codex rail. Local Codex must then read the repo rail, pick the next safe automation task, execute one scoped unit, create or update one PR, report evidence, and stop.
+ChatGPT should not ask the user to hand-write a Codex prompt. ChatGPT should create or select a task packet and route it to the Cloudflare/GitHub App layer. Local Codex then reads the GitHub task packet and performs one scoped unit.
 
-Compatibility wording for checks: Codex must read the repo rail.
+## Task packet contract
 
-The target behavior is not user-to-Codex prompt copying. The target behavior is ChatGPT-to-Local-Codex handoff.
+A task packet is the standard work order.
+
+```text
+task_id:
+project:
+lane:
+risk:
+mode:
+goal:
+allowed_files:
+forbidden_areas:
+checks:
+stop_condition:
+report_format:
+merge_policy:
+```
+
+Default storage:
+- issue `#23` until a dedicated queue issue or queue API exists.
+
+## Task selection rule
+
+Before routing new work, the automation must check:
+
+1. open PRs.
+2. failed checks.
+3. unresolved review threads.
+4. issue `#23` blockers.
+5. active queue next action.
+
+| Condition | Action |
+| --- | --- |
+| Open PR exists | Work that PR first; do not start unrelated work. |
+| Required check failed | Fix the failing PR or report FIX_REQUIRED. |
+| Unresolved review thread exists | Address it or report HOLD/FIX_REQUIRED. |
+| issue `#23` has active blocker | Work blocker or report HOLD. |
+| No blockers and next task is LOW/MEDIUM | Route one scoped task to Local Codex. |
+| Next task is HIGH/HOLD | Do not route implementation; report HOLD for user approval. |
 
 ## Local Codex read order
 
@@ -45,32 +82,40 @@ The target behavior is not user-to-Codex prompt copying. The target behavior is 
 3. `docs/AUTOMATION_OPERATOR_RAIL.md`
 4. active queue from the router, currently `docs/queues/AUTOMATION_PLATFORM.md`
 5. `docs/LOCAL_CODEX_RUNBOOK.md`
-6. issue `#23` latest automation status comments
+6. GitHub task packet from issue `#23` or the active task queue
 7. open PRs, failed checks, unresolved review threads
 8. focused reference docs only when needed
 
-## Task selection rule
+## Merge policy
 
-Before choosing new work, Local Codex must check:
+Local Codex does not merge.
 
-1. Open PRs.
-2. Failed checks.
-3. Unresolved review threads.
-4. issue `#23` blockers.
-5. Active queue next action.
+LOW/MEDIUM may be merged by the automation layer only when all gates pass:
 
-| Condition | Action |
-| --- | --- |
-| Open PR exists | Work that PR first; do not start new work. |
-| Required check failed | Fix the failing PR or report FIX_REQUIRED. |
-| Unresolved review thread exists | Address it or report HOLD/FIX_REQUIRED. |
-| issue `#23` has active blocker | Work blocker or report HOLD. |
-| No blockers and next task is LOW/MEDIUM | Execute one scoped task. |
-| Next task is HIGH/HOLD | Do not implement; report HOLD. |
+- project profile allows LOW/MEDIUM auto-merge.
+- changed files match the task packet.
+- forbidden areas are absent.
+- `PR Validate` succeeds.
+- `Validate` succeeds.
+- unresolved review threads are absent.
+- head SHA is stable.
+- policy-risk is LOW or approved MEDIUM.
+- PR evidence is complete.
+
+HIGH/HOLD never auto-merges. HIGH/HOLD requires explicit user approval.
 
 ## Restricted work
 
-Local Codex must not touch restricted runtime, data, security, release, or product areas unless the owner/ChatGPT explicitly scopes that work. If unsure, report HOLD.
+Hold instead of implementing when work touches:
+
+- D1/schema/migration/data.
+- auth/session/security behavior.
+- CSV import/reset behavior.
+- public data behavior.
+- deploy or production settings.
+- secrets/credentials.
+- package/lockfile/install-script behavior without review.
+- broad product work while automation lane is active.
 
 ## Required Local Codex output
 
@@ -81,6 +126,8 @@ Status:
 Blocker:
 Next action:
 Evidence:
+- task_id:
+- project:
 - PR URL:
 - head SHA:
 - changed files:
@@ -88,22 +135,15 @@ Evidence:
 - review threads:
 - issue state:
 - restricted areas touched:
+- merge policy:
 ```
-
-## Merge rule
-
-Local Codex does not merge.
-
-ChatGPT checks the PR after Local Codex says it is done. ChatGPT must not edit files, PR body, or review threads while Local Codex is working.
-
-Merge is allowed only after the user explicitly says to merge and GitHub evidence is green.
 
 ## One-run boundary
 
-One `진행` equals one scoped unit:
+One routed task equals one scoped unit:
 
 ```text
-ChatGPT routes -> Local Codex picks one task -> edit -> validate -> PR -> report -> stop
+task packet -> Local Codex picks one task -> edit -> validate -> PR -> report -> stop
 ```
 
 Do not silently continue to another task after opening a PR.
@@ -111,7 +151,5 @@ Do not silently continue to another task after opening a PR.
 ## Main workflow
 
 ```text
-User tells ChatGPT 진행 -> ChatGPT routes -> Local Codex works -> ChatGPT checks -> User approves merge
+User says 진행 -> ChatGPT creates task packet -> Cloudflare/GitHub App records it -> Local Codex works -> PR/checks/evidence -> LOW/MEDIUM auto-merge if gates pass, otherwise HOLD/FIX -> ChatGPT reports result
 ```
-
-Compatibility wording for checks: User says 진행 -> Codex works -> ChatGPT checks -> User approves merge.
