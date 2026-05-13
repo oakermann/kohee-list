@@ -1,58 +1,218 @@
 # Automation Platform Queue
 
 Last updated: 2026-05-13
-Purpose: active execution queue for the automation-platform lane.
+Purpose: active execution queue for the project-factory automation platform.
 
-## Rule
+## Core objective
 
-- This is the active queue while `docs/QUEUE_ROUTER.md` says `AUTOMATION_PLATFORM`.
-- `docs/AUTOMATION_OPERATOR_RAIL.md` is the active click-run operating rail for `진행` mode.
-- `docs/queues/KOHEE_PRODUCT.md` is paused until the Phase 6 maturity gate passes or the owner/ChatGPT explicitly defers this lane.
-- Detailed grouping/order: `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.
-- Extra hardening backlog: `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
-- Do not reorder this queue from supporting docs unless the owner/ChatGPT updates this file.
+Build a reusable automation platform, not a KOHEE-only helper.
 
-## Active lane
+Target workflow:
 
-Automation operator rail path: user says `진행` → Codex reads the rail → Codex handles the current blocker or next safe task → Codex opens/updates one PR → ChatGPT verifies.
+```text
+User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
+```
 
-## Current codebase baseline
+User-facing goal:
 
-The current repo already has earlier automation groundwork. Do not restart from zero.
+```text
+진행 -> automation routes the next task -> Local Codex works -> PR/evidence appears -> LOW/MEDIUM auto-merge if gates pass; HIGH/HOLD waits for user approval
+```
 
-Baseline to preserve:
-- GitHub remains the source of truth for PRs, checks, review threads, issue state, and evidence.
-- `docs/AUTOMATION_OPERATOR_RAIL.md` is the simple active workflow for user `진행` commands.
-- Prior status/comment bridge and dry-run classifier work is already part of the automation foundation.
-- Phase 5A local worker contract/runbook is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
-- Phase 5B dry-run picker plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
-- Phase 5C GitHub evidence validator plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
-- Phase 5D low/medium PR exercise loop plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
-- Phase 5E approval and notification readiness is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
-- Phase 6A/6B/6C docs exist as reference and maturity evidence.
-- KOHEE product work remains paused while this automation lane is active.
-- Existing HIGH/HOLD safety rules remain in force.
+## Active execution rule
 
-## Current next action
+- `docs/AUTOMATION_OPERATOR_RAIL.md` is the active operating rail.
+- This queue defines the next build order.
+- `docs/queues/KOHEE_PRODUCT.md` remains paused until the automation rail can safely manage product work.
+- Enterprise hardening documents are reference/backlog, not the active execution queue.
+- Open PRs, failed checks, unresolved review threads, and issue `#23` blockers come before new work.
 
-Use the operator rail.
+## Preserve from automation phases 1-3
 
-Codex should:
-1. read `AGENTS.md`, `docs/QUEUE_ROUTER.md`, and `docs/AUTOMATION_OPERATOR_RAIL.md`.
-2. check open PRs, failed checks, unresolved review threads, and issue `#23` blockers.
-3. if a blocker exists, handle that first.
-4. if no blocker exists, choose one safe LOW/MEDIUM automation task.
-5. edit, validate, open/update one PR, report evidence, and stop.
+Keep these working parts:
 
-ChatGPT should:
-1. not edit while Codex is working.
-2. verify the PR after Codex reports done.
-3. report only errors or MERGE/FIX/HOLD/NEXT.
-4. merge only when the user explicitly says merge.
+- GitHub evidence as source of truth.
+- PR URL, head SHA, changed files, checks, review threads, issue state.
+- Local Codex as actual code worker.
+- GitHub Actions as validation gate.
+- `MERGE / FIX / HOLD / NEXT` decision language.
+- `scripts/policy-risk-report.mjs` report-only risk classification.
+- Forbidden-area protection for D1/schema, auth/session, CSV import/reset, public data, deploy/settings, credentials, package/lockfile/install-script risk.
+
+## Correct automation stages
+
+### 1. Evidence foundation
+
+Status: complete and preserved.
+
+Meaning:
+- PRs are judged from GitHub evidence, not Codex self-report.
+- Checks and review threads are part of the merge decision.
+
+### 2. Local Codex worker discipline
+
+Status: complete enough and preserved.
+
+Meaning:
+- Local Codex does scoped local edits/tests/PRs.
+- Local Codex reports `Status / Blocker / Next action / Evidence`.
+- Local Codex does not decide unsafe production work.
+
+### 3. Risk and decision gates
+
+Status: complete enough and preserved.
+
+Meaning:
+- LOW/MEDIUM/HIGH/HOLD classification exists.
+- Policy-risk reporting exists.
+- HIGH/HOLD requires user approval.
+
+### 4. Click-run task rail
+
+Status: active work.
+
+Goal:
+- User tells ChatGPT `진행`.
+- ChatGPT creates or selects a task packet.
+- Cloudflare Worker/GitHub App records the task packet in GitHub.
+- Local Codex reads the GitHub task packet and performs one scoped task.
+- GitHub Actions validates the PR.
+- LOW/MEDIUM can auto-merge only after evidence gates pass.
+- HIGH/HOLD waits for explicit user approval.
+
+Required outputs:
+1. `TASK_PACKET` standard.
+2. GitHub task queue location, initially issue `#23` or a dedicated task issue.
+3. Cloudflare/GitHub App write path for task packets and evidence comments.
+4. Local Codex polling/watch rule for new task packets.
+5. LOW/MEDIUM auto-merge evidence gate definition.
+
+### 5. Project profiles
+
+Status: not started.
+
+Goal:
+- Make the platform manage multiple projects.
+
+Required project profiles:
+- KOHEE LIST.
+- News app.
+- Handover/internal work app.
+- Blog/status site.
+
+Each profile needs:
+- repo and local path.
+- active queue.
+- risk rules.
+- forbidden areas.
+- test commands.
+- deploy rules.
+- product-specific invariants.
+
+### 6. Cloudflare/GitHub App control plane
+
+Status: not started beyond earlier foundation.
+
+Goal:
+- Harden the Cloudflare Worker/GitHub App as the online execution arm.
+
+Responsibilities:
+- receive ChatGPT task requests.
+- write task packets to GitHub.
+- maintain task/evidence state.
+- observe checks/review state.
+- trigger allowed LOW/MEDIUM auto-merge only after gates pass.
+- hold HIGH/HOLD for user approval.
+- support future dashboard/notifications/multi-project control.
+
+## Current next actions
+
+### 4A. Replace document-heavy execution with task packets
+
+Add a concise task-packet contract.
+
+Required fields:
+
+```text
+task_id:
+project:
+lane:
+risk:
+mode:
+goal:
+allowed_files:
+forbidden_areas:
+checks:
+stop_condition:
+report_format:
+merge_policy:
+```
+
+### 4B. Define GitHub task queue bridge
+
+Choose the first GitHub storage location for task packets.
+
+Default:
+- issue `#23` until a dedicated queue issue exists.
+
+Rules:
+- one task packet per task.
+- Local Codex must not start a new task while an open task PR is unresolved.
+- task packet updates must preserve evidence.
+
+### 4C. Define Local Codex watcher
+
+Local Codex watcher target:
+
+```text
+read task packet -> claim one task -> work one branch -> run checks -> open/update PR -> report -> stop
+```
+
+### 4D. Define LOW/MEDIUM auto-merge gate
+
+LOW/MEDIUM auto-merge is allowed only when all are true:
+
+- project profile allows it.
+- changed files are expected.
+- forbidden areas absent.
+- `PR Validate` success.
+- `Validate` success.
+- unresolved review threads absent.
+- head SHA stable.
+- policy-risk is LOW or approved MEDIUM.
+- PR evidence is complete.
+
+HIGH/HOLD is never auto-merged.
+
+## Active HOLD list
+
+Do not implement without explicit user approval:
+
+- HIGH/HOLD auto-merge.
+- D1/schema/migration/data mutation.
+- auth/session/security behavior changes.
+- CSV import/reset behavior changes.
+- public data behavior changes.
+- deploy/Cloudflare production settings.
+- secrets/credentials.
+- package/lockfile/install-script behavior without review.
+- broad product work while automation lane is active.
+
+## Reference/backlog docs
+
+These documents remain useful but are not the active execution queue:
+
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`
+- `docs/AUTOMATION_PLATFORM_ENTERPRISE_HARDENING.md`
+- `docs/AUTOMATION_PLATFORM_6B*.md`
+- `docs/AUTOMATION_PLATFORM_6C_MATURITY_GATE.md`
+- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`
+
+Use them for policy details only when the active task needs them.
 
 ## Reporting rule
 
-Use only:
+Use:
 
 ```text
 Status / Blocker / Next action / Evidence
