@@ -47,6 +47,6 @@ PR URL: https://github.com/oakermann/kohee-list/pull/180
 head SHA: pending final validation
 checks: pending final validation
 review threads: FIX_REQUIRED thread addressed by adding actual changed files
- decision: pending final validation
+decision: pending final validation
 result: pending
 follow-up: run exercise 2 after this PR is closed.
