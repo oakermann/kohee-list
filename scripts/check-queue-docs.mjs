@@ -12,6 +12,7 @@ const files = {
   trustPolicyApproval: "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md",
   eventWorkerLease: "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md",
   supplyChainCi: "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md",
+  recoveryRollback: "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
   verifyRelease: "scripts/verify-release.ps1",
@@ -84,6 +85,7 @@ const enterpriseHardening = read(files.enterpriseHardening);
 const trustPolicyApproval = read(files.trustPolicyApproval);
 const eventWorkerLease = read(files.eventWorkerLease);
 const supplyChainCi = read(files.supplyChainCi);
+const recoveryRollback = read(files.recoveryRollback);
 const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
 const verifyRelease = read(files.verifyRelease);
@@ -213,6 +215,20 @@ const supplyChainCiItems = [
   "Build provenance and artifact attestation readiness",
   "Config and infra drift audit",
   "Incident freeze mode",
+  "Completion criteria",
+];
+
+const recoveryRollbackItems = [
+  "Phase 6B-4 Recovery Rollback Contract",
+  "Release checklist",
+  "Rollback runbook",
+  "Last-known-good SHA policy",
+  "Cloudflare rollback and deployment evidence",
+  "D1 backup and restore drill policy",
+  "Evidence archive and decision log",
+  "Failed PR and blocked-lane history",
+  "Incident response and postmortem",
+  "Release notes and changelog requirements",
   "Completion criteria",
 ];
 
@@ -353,6 +369,7 @@ mustHaveAll("enterprise hardening", enterpriseHardening, enterpriseGapItems);
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md");
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md");
 mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md");
+mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md");
 mustAppearInOrder("enterprise hardening", enterpriseHardening, [
   "## Enterprise gap inventory",
   "## Lane absorption plan",
@@ -407,6 +424,21 @@ mustAppearInOrder("supply chain ci", supplyChainCi, [
   "## 7. Config and infra drift audit",
   "## 8. Incident freeze mode",
   "## 9. Completion criteria",
+]);
+
+// Phase 6B-4 recovery/rollback contract must remain complete.
+mustHaveAll("recovery rollback", recoveryRollback, recoveryRollbackItems);
+mustAppearInOrder("recovery rollback", recoveryRollback, [
+  "## 1. Release checklist",
+  "## 2. Rollback runbook",
+  "## 3. Last-known-good SHA policy",
+  "## 4. Cloudflare rollback and deployment evidence",
+  "## 5. D1 backup and restore drill policy",
+  "## 6. Evidence archive and decision log",
+  "## 7. Failed PR and blocked-lane history",
+  "## 8. Incident response and postmortem",
+  "## 9. Release notes and changelog requirements",
+  "## 10. Completion criteria",
 ]);
 
 // Active queue must point to the current work-breakdown phase names.

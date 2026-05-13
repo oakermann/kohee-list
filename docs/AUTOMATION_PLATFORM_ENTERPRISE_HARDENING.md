@@ -94,6 +94,9 @@ Output:
 
 ### 6B-4 recovery-rollback
 
+Output document:
+- `docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md`
+
 Absorb:
 - Rollback runbook.
 - Release checklist.
