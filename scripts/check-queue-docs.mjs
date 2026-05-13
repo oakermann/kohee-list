@@ -161,12 +161,17 @@ for (const [label, content] of [
 
 // Local runbook must follow router and active queue, not legacy queue files.
 mustHaveAll("local runbook", localRunbook, [
-  "Status: active Phase 5A local execution readiness contract",
+  "Status: active Phase 5A/5B local execution readiness contract",
   "docs/QUEUE_ROUTER.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "Phase 5A worker contract",
   "Task-pick decision table",
+  "Phase 5B dry-run picker plan",
+  "Dry-run picker steps:",
+  "Dry-run picker output table:",
+  "Dry-run report template:",
+  "Dry-run hard stops:",
   "Stop conditions",
   "Evidence report template",
   "Status / Blocker / Next action / Evidence",
@@ -175,6 +180,7 @@ mustAppearInOrder("local runbook", localRunbook, [
   "## Read order",
   "## Phase 5A worker contract",
   "## Task-pick decision table",
+  "## Phase 5B dry-run picker plan",
   "## Stop conditions",
   "## Evidence report template",
   "## Operating default",
@@ -187,6 +193,8 @@ mustHaveAll("automation queue", automationQueue, [
   "Purpose: active execution queue for the automation-platform lane.",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "docs/queues/KOHEE_PRODUCT.md",
+  "Phase 5B dry-run picker plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.",
+  "Phase 5C GitHub evidence validator plan.",
   "Do not resume KOHEE product work unless the maturity gate passes",
   "Do not treat dependency/package changes as LOW by default",
 ]);
