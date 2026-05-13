@@ -6,45 +6,79 @@ Purpose: active execution queue for the automation-platform lane.
 ## Rule
 
 - This is the active queue while `docs/QUEUE_ROUTER.md` says `AUTOMATION_PLATFORM`.
-- This queue is the explicit continuation of the current automation work through Automation Phase 6.
-- `docs/queues/KOHEE_PRODUCT.md` is paused until the maturity gate passes or the owner/ChatGPT explicitly defers this lane.
+- This queue starts from the current codebase state and carries automation through Phase 6.
+- `docs/queues/KOHEE_PRODUCT.md` is paused until the Phase 6 maturity gate passes or the owner/ChatGPT explicitly defers this lane.
 - Detailed grouping/order: `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.
 - Extra hardening backlog: `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
 - Do not reorder this queue from supporting docs unless the owner/ChatGPT updates this file.
-- Finish the Automation Phase 6 separation foundation first, then fold in extra hardening items as scoped follow-up work.
 
 ## Active lane
 
-Automation Phase 6: automation-platform separation and control-plane foundation before product feature work.
+Automation Phase 6 path: current automation state → Phase 5 bridge → Phase 6 separation/control-plane foundation → Phase 6 hardening → maturity gate.
 
-## Execution model
+## Current codebase baseline
 
-### Stage A: Automation Phase 6A — separation foundation first
+The current repo already has earlier automation groundwork. Do not restart from zero.
 
-Complete items 1–3 before expanding into the broader extra-hardening backlog.
+Baseline to preserve:
+- GitHub remains the source of truth for PRs, checks, review threads, issue state, and evidence.
+- Prior status/comment bridge and dry-run classifier work is already part of the automation foundation.
+- KOHEE product work remains paused while this automation lane is active.
+- Existing HIGH/HOLD safety rules remain in force.
 
-Goal:
-- Separate automation-platform rules from KOHEE product rules.
-- Define the common contracts and schemas.
-- Prepare the future `dev-automation-platform` split without moving runtime code yet.
+## Execution order
 
-### Stage B: Automation Phase 6B — harden the separated platform
-
-After Stage A, process items 4–6 with the relevant items from `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
-
-Goal:
-- Make Local Codex execution, webhook intake, security posture, observability, and control-board foundations reliable.
-
-### Stage C: Automation Phase 6C — maturity gate
-
-Run item 7 after Stage A and Stage B are documented.
+### 0. Merge / activate the queue split
 
 Goal:
-- Decide whether project work can resume under the platform.
+- Merge the PR that introduces the router and split queues.
+- After merge, Local Codex starts from `AGENTS.md` → `docs/QUEUE_ROUTER.md` → this file.
 
-### 1. Boundary + schemas + task intake foundation
+Hard stop:
+- Do not start KOHEE product work from this step.
 
-Use `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 1.
+### 1. Phase 5 bridge — local execution readiness
+
+Goal:
+- Bridge the current automation state into Phase 6 by making Local Codex task selection and stop rules reliable.
+
+Expected output:
+- Phase 5A local Codex worker runbook hardening.
+- Task-pick rules and stop conditions clarified.
+- Phase 5B local task picker dry-run plan.
+- No unattended loop yet.
+
+Reference:
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4.
+
+Hard stop:
+- No background loop.
+- No auto-merge enablement.
+- No product feature work.
+
+### 2. Phase 5 bridge — approval and notification readiness
+
+Goal:
+- Make HOLD/FIX_REQUIRED/approval-needed work visible before stronger automation.
+
+Expected output:
+- Approval notification bridge design.
+- Phase 4C native auto-merge owner approval pack.
+- Phase 5C local controlled worker loop owner approval pack.
+- All stronger behavior remains HOLD until explicit owner approval.
+
+Reference:
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4.
+- Relevant items in `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
+
+Hard stop:
+- Do not enable native auto-merge.
+- Do not enable unattended execution.
+
+### 3. Automation Phase 6A — separation foundation
+
+Goal:
+- Separate automation-platform rules from KOHEE product rules before applying broad extra hardening.
 
 Expected output:
 - Automation platform vs KOHEE project boundary.
@@ -52,79 +86,69 @@ Expected output:
 - ChatGPT-first task intake and task queue schema.
 - State transition policy.
 - Project registry and catalog metadata.
-
-### 2. Governance + safety design
-
-Use `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 2.
-
-Expected output:
-- Input trust boundary.
-- Policy-as-code design.
-- Approval ledger.
-- Owner override rules.
-- ADR policy.
-- Freeze mode design.
-
-### 3. Platform repo split + template foundation
-
-Use `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 3.
-
-Expected output:
-- Automation backlog split.
+- Governance and safety design.
 - Future `dev-automation-platform` repo split plan.
-- Shared template seed plan.
-- Project onboarding checklist.
-- Golden path design.
+- Shared templates, onboarding checklist, and golden path design.
 
-### 4. Local Codex + webhook execution hardening
+Reference:
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phases 1–3.
+- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md` for input-trust and golden-path items.
 
-Use `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4.
+Hard stop:
+- Do not create the new repo yet unless explicitly approved.
+- Do not move runtime automation code yet.
+- Do not start KOHEE product work.
+
+### 4. Automation Phase 6B — harden the separated platform
+
+Goal:
+- Apply additional hardening after Phase 6A has established the platform/product boundary.
 
 Expected output:
-- Local worker runbook hardening.
+- Local Codex execution hardening.
+- Webhook idempotency and redelivery design.
 - Task lease and heartbeat design.
-- Webhook duplicate/redelivery design.
 - Reusable workflow baseline.
-- Local task picker dry-run.
-- Notification bridge design.
-- Later approval packs.
+- Security and supply-chain posture.
+- Observability and control board foundation.
+- Extra hardening items grouped into scoped follow-up PRs.
 
-### 5. Security + supply-chain posture
+Reference:
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phases 4–6.
+- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`.
 
-Use `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 5.
+Hard stop:
+- Planning/design/audit first.
+- No stronger write/merge/control-board actions without explicit owner approval.
 
-Expected output:
-- Credential and permission inventory.
-- Per-project permission boundary.
-- CI runner posture audit.
-- Short-lived access readiness audit.
-- Secret scanning baseline.
-- Dependency update policy.
-- Provenance/SBOM/Scorecard readiness.
+### 5. Automation Phase 6C — maturity gate
 
-### 6. Observability + control board foundation
-
-Use `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 6.
+Goal:
+- Decide whether the automation platform is ready to manage project implementation work.
 
 Expected output:
-- Telemetry event schema.
-- Event journal design.
-- Drift audit.
-- Metrics design.
-- Snapshot/replay design.
-- Catalog health audit.
-- Control board data-source mapping.
-- Read-only board MVP design.
-- Budget/retry and recovery playbooks.
-
-### 7. Platform maturity gate review
-
-Use `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 7.
-
-Expected output:
-- Confirm whether the automation platform foundation is ready.
-- Confirm which HOLD items remain.
+- Confirm Phase 5 bridge work is accounted for.
+- Confirm Phase 6A separation foundation exists.
+- Confirm Phase 6B hardening docs exist or remaining items are explicitly scheduled.
+- Confirm remaining HOLD items.
 - Decide whether KOHEE product work can resume under the platform.
+
+Reference:
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 7.
+
+Hard stop:
+- Do not resume KOHEE product work unless the maturity gate passes or the owner/ChatGPT explicitly defers the automation lane.
+
+## After Phase 6
+
+After the Phase 6 maturity gate, product work can resume from:
+
+- `docs/queues/KOHEE_PRODUCT.md`
+
+Initial paused product items:
+- KOHEE admin review console Phase 2/3.
+- KOHEE submissions review CSV Phase 2 audit/design.
+- Future project prep for news app, blog/status site, and internal handover app.
 
 ## Reporting rule
 
