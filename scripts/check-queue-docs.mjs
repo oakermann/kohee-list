@@ -47,18 +47,14 @@ function mustMatch(label, content, regex, message) {
 }
 
 function mustAppearInOrder(label, content, items) {
-  let lastIndex = -1;
+  let searchFrom = 0;
   for (const item of items) {
-    const index = content.indexOf(item);
+    const index = content.indexOf(item, searchFrom);
     if (index === -1) {
-      fail(`${label} missing ordered item: ${item}`);
+      fail(`${label} missing ordered item after index ${searchFrom}: ${item}`);
       return;
     }
-    if (index <= lastIndex) {
-      fail(`${label} order mismatch at: ${item}`);
-      return;
-    }
-    lastIndex = index;
+    searchFrom = index + item.length;
   }
   ok(`${label}: ordered items match`);
 }
