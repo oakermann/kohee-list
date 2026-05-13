@@ -161,7 +161,7 @@ for (const [label, content] of [
 
 // Local runbook must follow router and active queue, not legacy queue files.
 mustHaveAll("local runbook", localRunbook, [
-  "Status: active Phase 5A/5B local execution readiness contract",
+  "Status: active Phase 5A/5B/5C local execution readiness contract",
   "docs/QUEUE_ROUTER.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
@@ -172,6 +172,12 @@ mustHaveAll("local runbook", localRunbook, [
   "Dry-run picker output table:",
   "Dry-run report template:",
   "Dry-run hard stops:",
+  "Phase 5C GitHub evidence validator plan",
+  "Required evidence inputs:",
+  "Validation steps:",
+  "Decision rules:",
+  "Evidence validator report template:",
+  "Validator hard stops:",
   "Stop conditions",
   "Evidence report template",
   "Status / Blocker / Next action / Evidence",
@@ -181,6 +187,7 @@ mustAppearInOrder("local runbook", localRunbook, [
   "## Phase 5A worker contract",
   "## Task-pick decision table",
   "## Phase 5B dry-run picker plan",
+  "## Phase 5C GitHub evidence validator plan",
   "## Stop conditions",
   "## Evidence report template",
   "## Operating default",
@@ -194,7 +201,8 @@ mustHaveAll("automation queue", automationQueue, [
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "docs/queues/KOHEE_PRODUCT.md",
   "Phase 5B dry-run picker plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.",
-  "Phase 5C GitHub evidence validator plan.",
+  "Phase 5C GitHub evidence validator plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.",
+  "Phase 5 bridge low/medium PR exercise loop plan.",
   "Do not resume KOHEE product work unless the maturity gate passes",
   "Do not treat dependency/package changes as LOW by default",
 ]);
