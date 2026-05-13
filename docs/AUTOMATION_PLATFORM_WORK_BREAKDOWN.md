@@ -290,6 +290,137 @@ Hard stops:
 Why here:
 - The platform/product boundary must exist before broad hardening becomes implementation work.
 
+#### Phase 6A separation foundation contract
+
+Purpose:
+- Treat KOHEE as the first managed project, not the automation platform itself.
+- Define reusable automation rules without copying KOHEE product policies into future projects.
+- Keep product queues paused until the platform maturity gate or explicit owner/ChatGPT deferral.
+
+Boundary table:
+
+| Area | Automation platform | KOHEE product |
+| --- | --- | --- |
+| Queue routing | Active lane, active queue, maturity gate, evidence rules | Product backlog and feature priorities |
+| Execution control | Local worker contract, dry-run picker, evidence validator, approval packs | Product implementation work after maturity gate |
+| Safety policy | Generic risk gates, forbidden areas, approvals, auditability | KOHEE-specific public data, cafe lifecycle, CSV, D1 rules |
+| Templates | Reusable task intake, reports, project registry, onboarding | KOHEE-specific UI/API/admin workflows |
+| Runtime | Future platform worker/control plane only after approval | Existing KOHEE app runtime |
+
+Automation status schema draft:
+
+| Status | Meaning |
+| --- | --- |
+| `BACKLOG` | Recorded but not active. |
+| `READY` | Eligible for dry-run selection. |
+| `PICKED` | Selected by dry-run picker or owner/ChatGPT. |
+| `IN_PROGRESS` | Local Codex or ChatGPT is working on it. |
+| `PR_OPEN` | PR exists and needs evidence validation. |
+| `FIX_REQUIRED` | Scope is acceptable but checks/review/evidence require a fix. |
+| `HOLD` | Owner/ChatGPT approval or clearer scope is required. |
+| `MERGED` | PR merged with evidence. |
+| `CLOSED` | Closed without merge, with reason. |
+| `NEXT` | Completed or skipped with a clear follow-up. |
+
+Task intake schema draft:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `id` | yes | Stable short task id. |
+| `project` | yes | `automation-platform`, `kohee-product`, or future project id. |
+| `lane` | yes | Active lane such as `AUTOMATION_PLATFORM`. |
+| `source` | yes | Queue, issue, PR, or owner request. |
+| `goal` | yes | One-sentence outcome. |
+| `risk` | yes | LOW, MEDIUM, HIGH, or HOLD. |
+| `allowed_files` | yes | Expected file paths or globs. |
+| `forbidden_areas` | yes | Areas that must not change. |
+| `checks` | yes | Required validation. |
+| `evidence` | yes | PR/check/thread/issue fields required. |
+| `next_action` | yes | Exact next step. |
+
+State transition policy:
+
+```text
+BACKLOG -> READY -> PICKED -> IN_PROGRESS -> PR_OPEN -> MERGED -> NEXT
+BACKLOG -> HOLD
+READY -> HOLD
+PICKED -> HOLD
+IN_PROGRESS -> FIX_REQUIRED -> IN_PROGRESS
+PR_OPEN -> FIX_REQUIRED -> PR_OPEN
+PR_OPEN -> HOLD
+PR_OPEN -> CLOSED
+```
+
+Transition rules:
+- `MERGED` requires GitHub evidence and successful required checks.
+- `FIX_REQUIRED` requires a concrete failed check, review, scope, wording, or evidence issue.
+- `HOLD` requires owner/ChatGPT decision, clearer scope, or risk approval.
+- `CLOSED` requires reason and follow-up.
+- Product tasks cannot move to `READY` while `AUTOMATION_PLATFORM` is active unless the owner/ChatGPT explicitly defers the automation lane.
+
+Project registry manifest draft:
+
+```json
+{
+  "project_id": "kohee-list",
+  "project_type": "managed_project",
+  "active_queue": "docs/queues/KOHEE_PRODUCT.md",
+  "status": "paused_until_platform_maturity_gate",
+  "risk_profile": ["d1", "auth", "csv", "public_data", "deploy"],
+  "owner_approval_required_for": ["high_risk", "deploy", "schema", "auth", "public_data"]
+}
+```
+
+Project catalog metadata draft:
+
+| Field | Meaning |
+| --- | --- |
+| `project_id` | Stable id for routing. |
+| `repo` | GitHub repository. |
+| `default_branch` | Default branch for evidence checks. |
+| `active_queue` | Queue used when project lane is active. |
+| `paused_reason` | Why project work is paused, if applicable. |
+| `risk_profile` | Project-specific risk areas. |
+| `validation_profile` | Required checks and smoke tests. |
+| `resume_gate` | Condition to resume project work. |
+
+Backlog separation rule:
+- Platform backlog contains reusable automation engine, governance, evidence, policy, templates, and control-plane work.
+- KOHEE product backlog contains cafe/admin/UI/API/CSV/D1/product work.
+- Future project backlog must not inherit KOHEE product constraints unless explicitly mapped in that project's profile.
+
+Repo split preparation:
+- Future target repo name: `dev-automation-platform`.
+- Current repo remains the source while the platform is immature.
+- Do not create or move to the new repo without explicit owner approval.
+- Before split, define exported docs, templates, task schema, project registry, and migration checklist.
+
+Shared template seed plan:
+- Task intake template.
+- Evidence report template.
+- MERGE/FIX/HOLD/NEXT decision template.
+- Project registry entry template.
+- Maturity gate template.
+- Incident/freeze note template.
+
+Project onboarding checklist:
+1. Create project registry entry.
+2. Identify project-specific risk areas.
+3. Identify validation commands and smoke checks.
+4. Define product queue path.
+5. Define forbidden areas and approval requirements.
+6. Confirm evidence fields for PR decisions.
+7. Confirm resume/maturity gate.
+
+Golden path scaffolding design:
+1. Owner request enters ChatGPT.
+2. ChatGPT normalizes to task intake schema.
+3. Dry-run picker evaluates task eligibility.
+4. Local Codex executes only approved/eligible task.
+5. PR opens with evidence report.
+6. Evidence validator returns MERGE/FIX/HOLD/NEXT.
+7. Result is recorded in queue/issue/ledger.
+
 ### Phase 6B: harden the separated platform
 
 Goal:
