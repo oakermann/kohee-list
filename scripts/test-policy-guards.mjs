@@ -70,5 +70,6 @@ assert.ok(commandDispatch.includes("Manual Codex trigger required"));
 
 await import("./test-task-packet.mjs");
 await import("./test-issue-task-bridge.mjs");
+await import("./test-local-codex-watcher-dry-run.mjs");
 
 console.log("[policy-guards] ok");
