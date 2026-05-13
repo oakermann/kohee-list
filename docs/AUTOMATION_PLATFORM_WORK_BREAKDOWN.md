@@ -11,6 +11,9 @@ Source of truth:
 - Active execution queue: `docs/queues/AUTOMATION_PLATFORM.md`
 - Paused product queue: `docs/queues/KOHEE_PRODUCT.md`
 
+Compatibility note:
+- Older references to `Phase 4` now map to the current `Phase 5 bridge` section in this document.
+
 No runtime behavior, repo settings, workflow settings, deployment, credential, D1/schema, auth/session, CSV, or public `/data` behavior is changed by this document.
 
 ## 0. Ordering principle
@@ -297,16 +300,17 @@ Run in this order:
 2. Policy-as-code validator design.
 3. Approval ledger design.
 4. Owner override protocol.
-5. Automation ADR policy.
-6. Webhook idempotency and redelivery design.
-7. Task lease and heartbeat design.
-8. Reusable workflow baseline design.
-9. Supply-chain and CI/CD posture bundle.
-10. Recovery and rollback auditability bundle.
-11. Observability / telemetry / event journal bundle.
-12. Control board data-source mapping and MVP design.
-13. Automation budget and retry guard.
-14. Extra hardening grouped into scoped follow-up PRs.
+5. Protected environment approval gate design.
+6. Automation ADR policy.
+7. Webhook idempotency and redelivery design.
+8. Task lease and heartbeat design.
+9. Reusable workflow baseline design.
+10. Supply-chain and CI/CD posture bundle.
+11. Recovery and rollback auditability bundle.
+12. Observability / telemetry / event journal bundle.
+13. Control board data-source mapping and MVP design.
+14. Automation budget and retry guard.
+15. Extra hardening grouped into scoped follow-up PRs.
 
 Hard stops:
 - Planning/design/audit first.
