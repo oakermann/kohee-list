@@ -14,6 +14,7 @@ Canonical queue files:
 
 Supporting docs:
 
+- `docs/AUTOMATION_OPERATOR_RAIL.md`: click-run operator rail for `진행` mode. Read this before choosing the next local Codex task.
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`: work categories, grouping, and phase order.
 - `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`: advanced automation hardening backlog.
 
@@ -28,8 +29,9 @@ Legacy compatibility files:
 Always read:
 
 1. `docs/QUEUE_ROUTER.md`
-2. If the router says `AUTOMATION_PLATFORM`, read `docs/queues/AUTOMATION_PLATFORM.md`
-3. Current PR / issue / check logs relevant to the task
+2. `docs/AUTOMATION_OPERATOR_RAIL.md`
+3. If the router says `AUTOMATION_PLATFORM`, read `docs/queues/AUTOMATION_PLATFORM.md`
+4. Current PR / issue / check logs relevant to the task
 
 For local PC work, also read:
 
@@ -70,15 +72,16 @@ If MOBILE hits local-tool requirements, move it to LOCAL instead of forcing prog
 
 ## Local Codex
 
-Local Codex should start from GitHub state, not a long pasted prompt:
+Local Codex should start from GitHub state and the operator rail, not a long pasted prompt:
 
 1. Read `docs/QUEUE_ROUTER.md`.
-2. Follow the router to the active queue.
-3. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
-4. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
-5. Inspect issue `#23` and open PRs marked `HOLD_LOCAL_REQUIRED` when relevant.
-6. Work only on the recorded blocker or next active automation task.
-7. Record a short result in `docs/audits/LOCAL_CODEX_AUDIT_LOG.md` and on the target PR or issue.
+2. Read `docs/AUTOMATION_OPERATOR_RAIL.md`.
+3. Follow the router to the active queue.
+4. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
+5. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
+6. Inspect issue `#23`, open PRs, failed checks, and unresolved review threads.
+7. Work only on the recorded blocker or next safe automation task.
+8. Open or update one scoped PR, then stop and report evidence.
 
 ## Parallel work
 
