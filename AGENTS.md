@@ -88,6 +88,10 @@ Do not parallelize HIGH/HOLD work, D1/schema/migrations, public `/data`, CSV imp
 
 ## Report format
 
+Automation lane and GitHub evidence reports use:
+
 ```text
-Status / Changed files / Tests / Remaining risks / Next action / Evidence
+Status / Blocker / Next action / Evidence
 ```
+
+Implementation reports may add changed files, tests, and remaining risks, but they must still include the evidence fields above.
