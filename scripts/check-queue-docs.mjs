@@ -161,7 +161,7 @@ for (const [label, content] of [
 
 // Local runbook must follow router and active queue, not legacy queue files.
 mustHaveAll("local runbook", localRunbook, [
-  "Status: active Phase 5A/5B/5C/5D local execution readiness contract",
+  "Status: active Phase 5A/5B/5C/5D/5E local execution readiness contract",
   "docs/QUEUE_ROUTER.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
@@ -184,6 +184,12 @@ mustHaveAll("local runbook", localRunbook, [
   "Exercise loop steps for each PR:",
   "Exercise result ledger template:",
   "Completion criteria:",
+  "Phase 5E approval and notification readiness",
+  "Approval notification bridge:",
+  "Owner approval pack template:",
+  "Native auto-merge approval pack:",
+  "Local controlled worker loop approval pack:",
+  "Notification readiness hard stops:",
   "Stop conditions",
   "Evidence report template",
   "Status / Blocker / Next action / Evidence",
@@ -195,6 +201,7 @@ mustAppearInOrder("local runbook", localRunbook, [
   "## Phase 5B dry-run picker plan",
   "## Phase 5C GitHub evidence validator plan",
   "## Phase 5D low/medium PR exercise loop plan",
+  "## Phase 5E approval and notification readiness",
   "## Stop conditions",
   "## Evidence report template",
   "## Operating default",
@@ -207,8 +214,8 @@ mustHaveAll("automation queue", automationQueue, [
   "Purpose: active execution queue for the automation-platform lane.",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "docs/queues/KOHEE_PRODUCT.md",
-  "Phase 5D low/medium PR exercise loop plan is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.",
-  "Phase 5 bridge approval and notification readiness.",
+  "Phase 5E approval and notification readiness is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.",
+  "Automation Phase 6A separation foundation.",
   "Do not resume KOHEE product work unless the maturity gate passes",
   "Do not treat dependency/package changes as LOW by default",
 ]);
