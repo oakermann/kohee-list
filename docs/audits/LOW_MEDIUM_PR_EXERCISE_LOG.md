@@ -1,6 +1,6 @@
 # Low/Medium PR Exercise Log
 
-Status: active exercise ledger
+Status: completed baseline exercise loop
 Risk: LOW docs/audit
 
 Purpose: record real LOW/MEDIUM PR exercises that prove the automation platform can process PRs through dry-run selection, GitHub evidence validation, checks, and MERGE/FIX/HOLD/NEXT decisions before stronger automation is considered.
@@ -29,6 +29,20 @@ Rules:
 | decision | MERGE, FIX, HOLD, or NEXT |
 | result | merged, fixed, held, or skipped |
 | follow-up | next action or none |
+
+## Summary
+
+Completed baseline exercises: 3
+
+Observed decisions:
+- Exercise 1: FIX_REQUIRED -> MERGE
+- Exercise 2: MERGE
+- Exercise 3: MERGE
+
+Observed value:
+- The exercise loop caught a real ledger evidence issue in Exercise 1.
+- The FIX_REQUIRED path was used and resolved before merge.
+- Subsequent LOW docs-only PRs completed through expected file checks, required checks, review-thread validation, and merge.
 
 ## Exercise records
 
@@ -72,7 +86,7 @@ follow-up: run exercise 3.
 
 ### Exercise 3 — record second exercise result
 
-Status: IN_PROGRESS
+Status: COMPLETED
 Candidate: Record Exercise 2 outcome and add Exercise 3 to the ledger.
 Source: Low/medium PR exercise loop continuation.
 Risk: LOW
@@ -81,10 +95,10 @@ Expected files:
 Actual changed files:
 - `docs/audits/LOW_MEDIUM_PR_EXERCISE_LOG.md`
 Forbidden areas touched: no
-PR URL: pending
-head SHA at final decision: pending
-checks: pending
-review threads: pending
-decision: pending
-result: pending
-follow-up: decide whether to continue exercise loop or move to policy-as-code implementation planning.
+PR URL: https://github.com/oakermann/kohee-list/pull/182
+head SHA at final decision: `a8416df26feaffdf3a1cb83f8b0a5790cc347ced`
+checks: PR Validate success; Validate / verify success
+review threads: none
+decision: MERGE
+result: merged as `78342a6804bc3b7b84eeb121a5ef52ebad02030e`
+follow-up: baseline loop complete; next recommended step is policy-as-code implementation planning or a second exercise loop with a different LOW/MEDIUM task type.
