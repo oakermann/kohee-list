@@ -1,0 +1,14 @@
+TASK_PACKET:
+task_id: overnight-task-packet-stale
+project: KOHEE LIST
+lane: AUTOMATION_PLATFORM
+risk: LOW
+mode: docs-only
+goal: Demonstrate stale packet handling.
+allowed_files: docs/queues/AUTOMATION_PLATFORM.md
+forbidden_areas: D1/schema/migration, auth/session/security, CSV import/reset, public data behavior, deploy/secrets
+checks: npm run check:queue-docs
+stop_condition: parser returns HOLD
+report_format: Status / Blocker / Next action / Evidence
+merge_policy: strict-evidence-gate
+status: superseded
