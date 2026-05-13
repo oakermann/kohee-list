@@ -23,6 +23,7 @@ The current repo already has earlier automation groundwork. Do not restart from 
 Baseline to preserve:
 - GitHub remains the source of truth for PRs, checks, review threads, issue state, and evidence.
 - Prior status/comment bridge and dry-run classifier work is already part of the automation foundation.
+- Phase 5A local worker contract/runbook is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
 - KOHEE product work remains paused while this automation lane is active.
 - Existing HIGH/HOLD safety rules remain in force.
 
@@ -92,6 +93,12 @@ Expected output:
 - Evidence-based decision system drafted from GitHub evidence.
 - Low/medium PR exercise plan to test the evidence → decision loop using real PRs before stronger automation.
 - No unattended loop yet.
+
+Current artifact:
+- Phase 5A local worker contract, task-pick decision table, stop conditions, and evidence report template are recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.
+
+Next sub-step:
+- Phase 5B dry-run picker plan.
 
 Reference:
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 5 bridge.
