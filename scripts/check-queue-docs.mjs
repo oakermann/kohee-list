@@ -106,6 +106,21 @@ const canonicalPatterns = [
   ["Automation decision log", /Automation decision log/],
 ];
 
+const phase6AItems = [
+  "Phase 6A separation foundation contract",
+  "Boundary table:",
+  "Automation status schema draft:",
+  "Task intake schema draft:",
+  "State transition policy:",
+  "Project registry manifest draft:",
+  "Project catalog metadata draft:",
+  "Backlog separation rule:",
+  "Repo split preparation:",
+  "Shared template seed plan:",
+  "Project onboarding checklist:",
+  "Golden path scaffolding design:",
+];
+
 // Entrypoint/source-of-truth group.
 mustHaveAll("AGENTS", agents, [
   "The active lane is `AUTOMATION_PLATFORM`",
@@ -209,13 +224,31 @@ mustAppearInOrder("local runbook", localRunbook, [
 mustNotHave("local runbook", localRunbook, "Use `docs/KOHEE_ACTIVE_QUEUE.md` as the source of truth.");
 mustNotHave("local runbook", localRunbook, "Pick up to 2 independent LOW tasks from `docs/KOHEE_ACTIVE_QUEUE.md`");
 
+// Phase 6A separation foundation must be recorded in the work breakdown.
+mustHaveAll("work breakdown Phase 6A", workBreakdown, phase6AItems);
+mustAppearInOrder("work breakdown Phase 6A contract", workBreakdown, [
+  "### Phase 6A: separation foundation",
+  "#### Phase 6A separation foundation contract",
+  "Boundary table:",
+  "Automation status schema draft:",
+  "Task intake schema draft:",
+  "State transition policy:",
+  "Project registry manifest draft:",
+  "Project catalog metadata draft:",
+  "Backlog separation rule:",
+  "Repo split preparation:",
+  "Shared template seed plan:",
+  "Project onboarding checklist:",
+  "Golden path scaffolding design:",
+]);
+
 // Active queue must point to the current work-breakdown phase names.
 mustHaveAll("automation queue", automationQueue, [
   "Purpose: active execution queue for the automation-platform lane.",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "docs/queues/KOHEE_PRODUCT.md",
-  "Phase 5E approval and notification readiness is recorded in `docs/LOCAL_CODEX_RUNBOOK.md`.",
-  "Automation Phase 6A separation foundation.",
+  "Phase 6A separation foundation contract is recorded in `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.",
+  "Automation Phase 6B harden the separated platform.",
   "Do not resume KOHEE product work unless the maturity gate passes",
   "Do not treat dependency/package changes as LOW by default",
 ]);
