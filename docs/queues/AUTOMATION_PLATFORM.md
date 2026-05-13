@@ -28,6 +28,7 @@ PR evidence means PR metadata, checks, changed files, and Codex Review/review-th
 - `docs/queues/KOHEE_PRODUCT.md` remains paused until the automation rail can safely manage product work.
 - Enterprise hardening documents are reference/backlog, not the active execution queue.
 - Open PRs, failed checks, unresolved review threads, and issue `#23` blockers come before new work.
+- If this queue and a `TASK_PACKET` conflict, stop and report `HOLD_QUEUE_CONFLICT`.
 
 ## Preserve from automation phases 1-3
 
@@ -40,6 +41,25 @@ Keep these working parts:
 - `MERGE / FIX / HOLD / NEXT` decision language.
 - `scripts/policy-risk-report.mjs` report-only risk classification.
 - Forbidden-area protection for D1/schema, auth/session, CSV import/reset, public data, deploy/settings, credentials, package/lockfile/install-script risk.
+
+## Non-negotiable anti-redesign guardrail
+
+Enterprise hardening must not redesign the operating model.
+
+Allowed improvements:
+- clearer queue wording.
+- docs, schema, fixtures, dry-run scripts, and report-only checkers.
+- observability, decision records, recovery notes, and security audits.
+- project profile and solo-developer operator UX support.
+
+Forbidden unless the owner explicitly approves:
+- changing ChatGPT from orchestrator.
+- changing Local Codex from worker.
+- replacing GitHub evidence as source of truth.
+- bypassing the active queue/router.
+- enabling real GitHub write paths.
+- enabling native auto-merge or unattended loops.
+- touching product runtime, D1/schema/data, auth, CSV, public `/data`, deploy settings, secrets, package, lockfile, or install-script behavior.
 
 ## Correct automation stages
 
@@ -91,8 +111,6 @@ Required outputs:
 4. LOW/MEDIUM auto-merge evidence gate definition, including Codex Review/review-thread resolution: dry-run complete in PR #191.
 5. Cloudflare/GitHub App write path for real task packets and evidence comments: HOLD until explicitly approved.
 
-LOW/MEDIUM auto-merge evidence gate definition, including Codex Review/review-thread resolution.
-
 ### 5. Project profiles
 
 Status: active next work.
@@ -131,61 +149,104 @@ Responsibilities:
 - hold HIGH/HOLD for user approval.
 - support future dashboard/notifications/multi-project control.
 
-## Current next actions
+## Queue operating order
 
-### 5A. Add project profile validator v0
+Run this order exactly unless there is an open PR, failed check, unresolved review thread, or explicit owner direction.
 
-Add a report/check script for managed project profiles.
+### Step 0. Clear active PR/evidence blockers first
+
+Before starting any new task, inspect:
+1. open PRs.
+2. failed checks.
+3. unresolved review threads.
+4. issue `#23` active blockers.
+5. this queue's next unblocked step.
+
+If an open PR exists, do not start unrelated work. Review or fix that PR first.
+
+### Step 1. Finish current validation-ready PRs
+
+Current PR order:
+1. PR #194: project profile validator v0.
+2. PR #196: project profile intake template.
+3. PR #195: automation decision record dry-run.
+4. PR #197: control-plane hardening dry-run.
 
 Rules:
-- `docs/project-profiles/kohee-list.json` must pass required field validation.
-- placeholder projects remain HOLD/not routable until they have real profile data.
-- no GitHub writes, deploys, secrets, product runtime changes, or auto-merge enablement.
+- Merge only after evidence gates pass.
+- If checks fail, report `FIX_REQUIRED`.
+- If review threads are unresolved, report `FIX_REQUIRED` or `HOLD`.
+- If changed files drift outside the PR body, report `HOLD_SCOPE_DRIFT`.
 
-### 5B. Add automation decision record dry-run
+### Step 2. Observability and solo-developer operation
 
-Combine task packet, project profile, policy-risk output, and PR evidence fixtures into one decision record.
+After Step 1, execute these task packets from issue `#23` in this order:
 
-Allowed outputs:
-- `NEXT`
-- `FIX_REQUIRED`
-- `HOLD`
-- `MERGE_READY_DRY_RUN`
+1. `automation-status-snapshot-dry-run-20260514`
+   - Purpose: show active lane, active queue, open PRs, checks, review threads, blockers, stale signals, merge candidates, and next action from GitHub evidence.
+   - Output type: docs/scripts/fixtures dry-run only.
 
-Real merge, GitHub writes, and native auto-merge enablement remain forbidden.
-Codex Review threads resolved or explicitly waived.
+2. `automation-solo-dev-operator-ux-20260514`
+   - Purpose: convert status snapshots into a solo-developer facing summary: Today Summary, Next Best Action, Why Blocked, Safe To Continue, Merge Candidates, Stale Work Warning, Project Quick Switch, and One-Click Next Action wording.
+   - Output type: docs first; optional script dry-run only.
 
-### 5C. Add project profile intake template
+### Step 3. Risk-tier and recovery policy
 
-Define the data needed before adding News app, Handover/internal work app, or Blog/status site as managed projects.
+After Step 2, execute:
 
-Required intake data:
-- repository and default branch.
-- local path policy.
-- active queue and lane.
-- risk rules and forbidden areas.
-- validation commands.
-- deploy policy.
-- product-specific invariants.
+1. `automation-risk-tier-playbook-policy-20260514`
+   - Purpose: define LOW, MEDIUM, HIGH, and CRITICAL execution policy.
+   - Required policy:
+     - LOW may automate after gates.
+     - MEDIUM may automate only when the project profile and evidence gates allow it.
+     - HIGH remains HOLD by default.
+     - only explicitly pre-approved HIGH playbooks may run with rollback evidence.
+     - CRITICAL remains owner-approval-only.
+   - Output type: docs/policy or dry-run checker only.
+   - Do not enable HIGH automation.
 
-### 6A. Control-plane hardening design dry-run
+### Step 4. Phase 6B hardening execution queue
 
-Validate, from docs and fixtures only, the future Cloudflare/GitHub App control-plane flow:
+After Step 3, promote Phase 6B from reference backlog into scoped queue tasks in this order:
 
-- task enqueue.
-- evidence observe.
-- merge decision.
-- HOLD/FIX_REQUIRED reporting.
+1. `6B-1 trust-policy-approval`
+   - Input trust boundary, policy-as-code direction, approval ledger, owner override, protected environment approval, ADR policy.
+   - Docs/schema/design first.
 
-No issue comment write, PR merge, secrets, deploy, native auto-merge, or unattended loop.
+2. `6B-2 event-worker-lease`
+   - Webhook idempotency, redelivery, task lease, heartbeat, stale working detection, duplicate pickup prevention.
+   - Docs/schema/dry-run first.
 
-### HOLD. Real control-plane write path
+3. `6B-3 supply-chain-ci`
+   - Workflow permission audit, action-pinning review, high-risk workflow pattern audit, OIDC readiness, dependency/install safeguards.
+   - Audit/report-only first; do not mutate workflow or package files without approval.
 
-Do not implement without explicit user approval:
-- Cloudflare/GitHub App writes real `TASK_PACKET` comments to issue `#23`.
-- Cloudflare/GitHub App records live PR evidence comments.
-- Cloudflare/GitHub App merges LOW/MEDIUM PRs after gates pass.
-- native auto-merge enablement.
+4. `6B-4 recovery-rollback`
+   - Rollback note, last-known-good SHA policy, failed PR history, blocked-lane history, decision log, incident playbook.
+   - Docs/schema/dry-run first.
+
+5. `6B-5 observability-control-board`
+   - Reconciliation, telemetry/event journal, DORA-lite metrics, snapshot/replay, control-board data-source mapping and MVP design.
+   - Read-only design first; no runtime dashboard without approval.
+
+6. `6B-6 budget-retry-maturity-prep`
+   - Cost/quota guardrail, retry budget, concurrency cap, daily PR/lane cap, Phase 6C readiness checklist, remaining HOLD list.
+   - Run last because it consumes outputs from 6B-1 through 6B-5.
+
+### Step 5. Phase 6C maturity gate
+
+Run only after Step 4 is accounted for.
+
+Gate must answer:
+- Does evidence-based MERGE/FIX/HOLD/NEXT work from GitHub evidence?
+- Does status snapshot/solo-dev UX make the next action clear?
+- Does stale/lease policy exist?
+- Does supply-chain audit exist?
+- Does recovery/rollback/decision log policy exist?
+- Are remaining HIGH/HOLD/CRITICAL items explicit?
+- Can KOHEE product work resume under the platform, or should automation work continue?
+
+Do not resume `docs/queues/KOHEE_PRODUCT.md` unless the maturity gate passes or the owner/ChatGPT explicitly defers the automation lane for an urgent product issue.
 
 ## Active HOLD list
 
@@ -200,10 +261,14 @@ Do not implement without explicit user approval:
 - secrets/credentials.
 - package/lockfile/install-script behavior without review.
 - broad product work while automation lane is active.
+- real GitHub App write path.
+- native auto-merge enablement.
+- unattended worker loop.
+- runtime dashboard/control board.
 
 ## Reference/backlog docs
 
-These documents remain useful but are not the active execution queue:
+These documents remain useful but are not the active execution queue unless Step 4 promotes a scoped task:
 
 - `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`
 - `docs/AUTOMATION_PLATFORM_ENTERPRISE_HARDENING.md`
