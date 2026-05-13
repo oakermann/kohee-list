@@ -1,8 +1,8 @@
 # Local Codex Runbook
 
-Status: active Phase 5A/5B local execution readiness contract
+Status: active Phase 5A/5B/5C local execution readiness contract
 
-Purpose: define how Local Codex selects, executes, reports, and stops work while the active lane is `AUTOMATION_PLATFORM`.
+Purpose: define how Local Codex selects, executes, reports, verifies, and stops work while the active lane is `AUTOMATION_PLATFORM`.
 
 ## Read order
 
@@ -126,6 +126,80 @@ Dry-run hard stops:
 - Do not close issues.
 - Do not enable unattended loop or auto-merge.
 
+## Phase 5C GitHub evidence validator plan
+
+The GitHub evidence validator is the required decision checklist for ChatGPT/owner merge decisions. It validates what actually exists on GitHub before any MERGE / FIX / HOLD / NEXT call.
+
+Required evidence inputs:
+
+| Evidence field | Required source |
+| --- | --- |
+| PR URL and number | GitHub PR metadata |
+| head SHA | GitHub PR metadata |
+| base branch and base SHA | GitHub PR metadata |
+| changed files | GitHub PR changed files list |
+| checks | GitHub Actions workflow runs/jobs for the head SHA |
+| review threads | GitHub review thread API, including resolved/outdated state |
+| comments | PR conversation and review comments when relevant |
+| issue state | issue `#23` and any linked blocker issue when relevant |
+| queue/lane match | `docs/QUEUE_ROUTER.md` and `docs/queues/AUTOMATION_PLATFORM.md` |
+| forbidden-area check | changed files plus risk rules from this runbook |
+
+Validation steps:
+
+1. Confirm the PR is open unless checking a completed merge.
+2. Confirm head SHA in the report matches GitHub PR metadata.
+3. Confirm active lane and active queue still match the PR purpose.
+4. Confirm changed files are expected for the task.
+5. Confirm no forbidden area was touched without explicit owner/ChatGPT approval.
+6. Confirm required checks are complete and successful, or record the exact failed/pending check.
+7. Confirm review threads are resolved or explicitly waived.
+8. Confirm issue blockers are absent, resolved, or intentionally routed around.
+9. Confirm the PR does not enable unattended loop, native auto-merge, direct merge bot behavior, deployment, D1/schema/migration, auth/session, CSV import/reset, or public `/data` changes unless explicitly approved.
+10. Produce a decision: MERGE, FIX, HOLD, or NEXT.
+
+Decision rules:
+
+| Decision | Required condition |
+| --- | --- |
+| MERGE | Active queue/lane match, expected files only, required checks success, review threads resolved, no unapproved forbidden areas, not HIGH/HOLD. |
+| FIX | Scope is acceptable but checks, docs, wording, evidence, or review feedback need a concrete fix. |
+| HOLD | Evidence is missing, risk is HIGH/HOLD, forbidden areas changed, owner approval is required, or the lane/queue does not match. |
+| NEXT | PR is already merged/closed with a clear follow-up and the active queue can safely advance. |
+
+Evidence validator report template:
+
+```text
+Status:
+Blocker:
+Next action:
+Evidence:
+- PR URL:
+- PR number:
+- base branch:
+- base SHA:
+- head branch:
+- head SHA:
+- changed files:
+- expected files only:
+- forbidden areas touched:
+- checks:
+- review threads:
+- comments:
+- issue state:
+- active lane:
+- active queue:
+- decision:
+```
+
+Validator hard stops:
+
+- Do not rely on Codex self-report without GitHub metadata.
+- Do not treat missing checks as success.
+- Do not treat outdated unresolved review feedback as resolved unless the thread is resolved or clearly superseded and owner/ChatGPT waives it.
+- Do not merge if head SHA moved after evidence collection.
+- Do not merge if changed files include unapproved D1/schema/migration, auth/session, CSV import/reset, public `/data`, production deployment, credential, or dependency/install-script changes.
+
 ## Stop conditions
 
 Stop and report instead of continuing when any of these occur:
@@ -170,7 +244,7 @@ For implementation-heavy work, add `Tests` and `Remaining risks`, but keep the r
 
 ## Operating default
 
-Local Codex should run serially by default during Phase 5A/5B.
+Local Codex should run serially by default during Phase 5A/5B/5C.
 
 Parallel LOW work is allowed only when all of the following are true:
 
