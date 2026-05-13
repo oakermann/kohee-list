@@ -9,6 +9,7 @@ const files = {
   localRunbook: "docs/LOCAL_CODEX_RUNBOOK.md",
   workBreakdown: "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   enterpriseHardening: "docs/AUTOMATION_PLATFORM_ENTERPRISE_HARDENING.md",
+  trustPolicyApproval: "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   packageJson: "package.json",
   verifyRelease: "scripts/verify-release.ps1",
@@ -78,6 +79,7 @@ const productQueue = read(files.productQueue);
 const localRunbook = read(files.localRunbook);
 const workBreakdown = read(files.workBreakdown);
 const enterpriseHardening = read(files.enterpriseHardening);
+const trustPolicyApproval = read(files.trustPolicyApproval);
 const extraHardening = read(files.extraHardening);
 const packageJson = read(files.packageJson);
 const verifyRelease = read(files.verifyRelease);
@@ -168,6 +170,20 @@ const enterpriseGapItems = [
   "6B-5 observability-control-board",
   "6B-6 budget-retry-maturity-prep",
   "Minimum Phase 6B completion expectation",
+];
+
+const trustPolicyApprovalItems = [
+  "Phase 6B-1 Trust Policy Approval Contract",
+  "Trust boundary",
+  "Prompt-injection and instruction override defense",
+  "Policy-as-code direction",
+  "Approval ledger design",
+  "Owner override protocol",
+  "Protected environment approval gate",
+  "RACI-style role split",
+  "Data classification direction",
+  "ADR policy",
+  "Completion criteria",
 ];
 
 // Entrypoint/source-of-truth group.
@@ -304,6 +320,7 @@ mustAppearInOrder("work breakdown Phase 6B lane split", workBreakdown, [
 
 // Enterprise hardening map must preserve the searched operating-gap inventory.
 mustHaveAll("enterprise hardening", enterpriseHardening, enterpriseGapItems);
+mustHave("enterprise hardening", enterpriseHardening, "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md");
 mustAppearInOrder("enterprise hardening", enterpriseHardening, [
   "## Enterprise gap inventory",
   "## Lane absorption plan",
@@ -315,6 +332,21 @@ mustAppearInOrder("enterprise hardening", enterpriseHardening, [
   "### 6B-6 budget-retry-maturity-prep",
   "## Enterprise hardening execution rules",
   "## Minimum Phase 6B completion expectation",
+]);
+
+// Phase 6B-1 trust/policy/approval contract must remain complete.
+mustHaveAll("trust policy approval", trustPolicyApproval, trustPolicyApprovalItems);
+mustAppearInOrder("trust policy approval", trustPolicyApproval, [
+  "## 1. Trust boundary",
+  "## 2. Prompt-injection and instruction override defense",
+  "## 3. Policy-as-code direction",
+  "## 4. Approval ledger design",
+  "## 5. Owner override protocol",
+  "## 6. Protected environment approval gate",
+  "## 7. RACI-style role split",
+  "## 8. Data classification direction",
+  "## 9. ADR policy",
+  "## 10. Completion criteria",
 ]);
 
 // Active queue must point to the current work-breakdown phase names.
