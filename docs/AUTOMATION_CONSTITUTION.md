@@ -146,13 +146,13 @@ The automation platform must be designed to manage multiple projects:
 
 Each project must eventually have a project profile that declares repo, local path, risk rules, forbidden areas, test commands, deploy rules, active queue, and product-specific invariants.
 
-## 11. Coupled update groups
+## 11. Drift rule
 
 When one file in a coupled group changes, the task must inspect and update the rest of that group as needed. Do not patch one document and leave its linked queue, rail, runbook, or checker stale.
 
-### Core operating-model group
+### Coupled update groups
 
-Files:
+Core operating-model group:
 
 - `docs/AUTOMATION_CONSTITUTION.md`
 - `AGENTS.md`
@@ -162,7 +162,7 @@ Files:
 - `docs/LOCAL_CODEX_RUNBOOK.md`
 - `scripts/check-queue-docs.mjs`
 
-Triggers:
+Core operating-model triggers:
 
 - role split changes.
 - operating model changes.
@@ -172,28 +172,24 @@ Triggers:
 - Local Codex runbook changes.
 - checker wording or required-section changes.
 
-Requirement:
+Core operating-model requirement:
 
 - update all impacted files in the group in one PR.
 - update `scripts/check-queue-docs.mjs` so future drift is caught.
 - PR evidence must state which files in the group were inspected and which were changed.
 
-### Project profile group
-
-Files:
+Project profile group:
 
 - future project profile files.
 - active project queue.
 - project-specific risk rules.
 - policy-risk checker rules when applicable.
 
-Requirement:
+Project profile requirement:
 
 - a new managed project must include profile, queue, risk rules, checks, forbidden areas, and handoff rules together.
 
-### GitHub App / Cloudflare control-plane group
-
-Files:
+GitHub App / Cloudflare control-plane group:
 
 - Cloudflare Worker/GitHub App implementation.
 - GitHub App permission docs/config.
@@ -201,13 +197,11 @@ Files:
 - evidence/merge gate docs.
 - tests for task routing and merge gating.
 
-Requirement:
+GitHub App / Cloudflare control-plane requirement:
 
 - permission, webhook, task queue, evidence, and tests must be updated together when behavior changes.
 
-### Product safety group
-
-Files/areas:
+Product safety group:
 
 - D1/schema/migrations.
 - auth/session/security.
@@ -215,11 +209,9 @@ Files/areas:
 - public data behavior.
 - deploy/production settings.
 
-Requirement:
+Product safety requirement:
 
 - these are HIGH/HOLD by default and must not be bundled with unrelated LOW/MEDIUM automation work.
-
-## 12. Drift rule
 
 Future changes must not convert the platform into:
 
@@ -232,7 +224,7 @@ Future changes must not convert the platform into:
 
 If a proposed change conflicts with this constitution, it must be HOLD until the user explicitly approves a constitutional amendment.
 
-## 13. Amendment rule
+## 12. Amendment rule
 
 This document can only be changed by an explicit user request that mentions changing the automation constitution or top-level operating model.
 
