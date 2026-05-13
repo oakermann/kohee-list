@@ -1,35 +1,40 @@
 # KOHEE LIST Agent Contract
 
-Purpose: short entrypoint for ChatGPT, Codex, and local Codex.
+Purpose: short entrypoint for ChatGPT, Cloudflare/GitHub App automation, and Local Codex.
 
 ## Current routing
 
-The active lane is `AUTOMATION_PLATFORM` until the platform maturity gate passes or the owner/ChatGPT explicitly defers it for an urgent product bug.
+The active lane is `AUTOMATION_PLATFORM` until the project-factory automation rail can safely manage product work or the owner/ChatGPT explicitly defers it for an urgent product bug.
 
-Canonical queue files:
+Canonical active files:
 
-- `docs/QUEUE_ROUTER.md`: queue router. Read this first.
-- `docs/queues/AUTOMATION_PLATFORM.md`: active automation-platform execution queue. Local Codex should follow this while the automation lane is active.
+- `docs/QUEUE_ROUTER.md`: active lane/router. Read this first.
+- `docs/AUTOMATION_OPERATOR_RAIL.md`: active project-factory operating rail.
+- `docs/queues/AUTOMATION_PLATFORM.md`: active automation-platform execution queue.
 - `docs/queues/KOHEE_PRODUCT.md`: paused KOHEE product queue. Do not start it while the automation lane is active unless explicitly deferred by the owner/ChatGPT.
 
-Supporting docs:
+Reference/backlog docs:
 
-- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`: work categories, grouping, and phase order.
-- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`: advanced automation hardening backlog.
+- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`
+- `docs/AUTOMATION_PLATFORM_ENTERPRISE_HARDENING.md`
+- `docs/AUTOMATION_PLATFORM_6B*.md`
+- `docs/AUTOMATION_PLATFORM_6C_MATURITY_GATE.md`
+- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`
 
-Legacy compatibility files:
+## Fixed operating model
 
-- `docs/KOHEE_ACTIVE_QUEUE.md` redirects to `docs/QUEUE_ROUTER.md`.
-- `docs/AUTOMATION_ACTIVE_QUEUE.md` redirects to `docs/queues/AUTOMATION_PLATFORM.md`.
-- `docs/KOHEE_PRODUCT_QUEUE.md` redirects to `docs/queues/KOHEE_PRODUCT.md`.
+```text
+User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold
+```
 
 ## Read path
 
 Always read:
 
 1. `docs/QUEUE_ROUTER.md`
-2. If the router says `AUTOMATION_PLATFORM`, read `docs/queues/AUTOMATION_PLATFORM.md`
-3. Current PR / issue / check logs relevant to the task
+2. `docs/AUTOMATION_OPERATOR_RAIL.md`
+3. If the router says `AUTOMATION_PLATFORM`, read `docs/queues/AUTOMATION_PLATFORM.md`
+4. Current PR / issue / check logs relevant to the task
 
 For local PC work, also read:
 
@@ -40,18 +45,13 @@ When policy or risk is unclear, read:
 - `docs/KOHEE_MASTER_CONTEXT.md`
 - `kohee.contract.json`
 
-Reference only:
-
-- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`
-- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`
-- `docs/CODEX_AUTOMATION_STATUS.md`
-- `docs/CODEX_WORKFLOW.md`
-- archived audit/planning docs
-
 ## Core rules
 
+- User-facing goal: user says `진행`; ChatGPT routes a task packet; Cloudflare/GitHub App records it; Local Codex works one scoped task; GitHub evidence decides merge or hold.
 - GitHub evidence wins: PR URL, head SHA, changed files, diff, checks, review threads, workflow logs, issue state.
 - Codex self-reports, local branch names, local commits, or `make_pr` metadata are not completion evidence.
+- LOW/MEDIUM can auto-merge only after evidence gates pass and project profile allows it.
+- HIGH/HOLD requires explicit user approval.
 - Keep docs, logs, code, and PR bodies short and action-oriented.
 - No broad refactor.
 - No manager expansion.
@@ -59,32 +59,32 @@ Reference only:
 - No deploy unless explicitly requested.
 - Do not apply D1 migrations.
 - While `AUTOMATION_PLATFORM` is active, do not start KOHEE product work from `docs/queues/KOHEE_PRODUCT.md`.
-- Product work resumes only after the platform maturity gate or an explicit owner/ChatGPT deferral.
 
 ## Tracks
 
-- `MOBILE_TRACK`: ChatGPT/GitHub connector can plan, review, edit docs/queue, inspect PRs/checks, and handle safe GitHub edits.
-- `LOCAL_TRACK`: local Codex should execute when the task needs local tests, `gh`, `wrangler`, Cloudflare checks, or deeper local debugging.
-
-If MOBILE hits local-tool requirements, move it to LOCAL instead of forcing progress.
+- `CHATGPT_CONTROL`: ChatGPT interprets user direction, chooses/normalizes the next task, and creates/requests a task packet.
+- `CLOUDFLARE_GITHUB_APP`: online execution arm for GitHub task packets, issue/PR comments/status, evidence, and allowed LOW/MEDIUM merge actions after gates pass.
+- `LOCAL_CODEX`: actual code worker for local repo edits, checks, commits, pushes, and PR creation/update.
 
 ## Local Codex
 
-Local Codex should start from GitHub state, not a long pasted prompt:
+Local Codex should start from GitHub task/evidence state, not a long user-pasted prompt:
 
 1. Read `docs/QUEUE_ROUTER.md`.
-2. Follow the router to the active queue.
-3. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
-4. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
-5. Inspect issue `#23` and open PRs marked `HOLD_LOCAL_REQUIRED` when relevant.
-6. Work only on the recorded blocker or next active automation task.
-7. Record a short result in `docs/audits/LOCAL_CODEX_AUDIT_LOG.md` and on the target PR or issue.
+2. Read `docs/AUTOMATION_OPERATOR_RAIL.md`.
+3. Follow the router to the active queue.
+4. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
+5. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
+6. Read the active task packet from issue `#23` or the active task queue.
+7. Inspect open PRs, failed checks, and unresolved review threads.
+8. Work only on the current blocker or next routed task.
+9. Open or update one scoped PR, then stop and report evidence.
 
 ## Parallel work
 
 Parallel work is allowed only for LOW/MEDIUM tasks with no file overlap, no risk-area overlap, and no shared test-file overlap.
 
-Do not parallelize HIGH/HOLD work, D1/schema/migrations, public `/data`, CSV import/reset, deploy config, GitHub App control-plane connection, manager removal touching shared server/tests, or same-file changes.
+Do not parallelize HIGH/HOLD work, D1/schema/migrations, public data behavior, CSV import/reset, deploy config, GitHub App control-plane connection, manager removal touching shared server/tests, or same-file changes.
 
 ## Report format
 

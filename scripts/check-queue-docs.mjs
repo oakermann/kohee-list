@@ -4,6 +4,7 @@ import fs from "node:fs";
 const files = {
   agents: "AGENTS.md",
   router: "docs/QUEUE_ROUTER.md",
+  operatorRail: "docs/AUTOMATION_OPERATOR_RAIL.md",
   automationQueue: "docs/queues/AUTOMATION_PLATFORM.md",
   productQueue: "docs/queues/KOHEE_PRODUCT.md",
   localRunbook: "docs/LOCAL_CODEX_RUNBOOK.md",
@@ -82,100 +83,21 @@ const docs = Object.fromEntries(
   Object.entries(files).map(([key, path]) => [key, read(path)]),
 );
 
-const sharedVocabulary = [
-  "Phase 5 bridge",
-  "Phase 6A",
-  "Phase 6B",
-  "Phase 6C",
-  "Evidence-based decision system",
-  "Supply-chain and CI/CD posture",
-  "Recovery and rollback auditability",
-  "Protected environment approval gate design",
-];
-
-const canonicalPatterns = [
-  ["GitHub evidence validator", /GitHub evidence validator/],
-  ["MERGE / FIX / HOLD / NEXT", /MERGE \/ FIX \/ HOLD \/ NEXT/],
-  ["Evidence-first approval/report format", /Evidence-first owner approval\/report format|Evidence-first approval\/report format/],
-  ["Low/medium PR exercise loop", /Low\/medium PR exercise (loop|plan)/],
-  ["Dependency-change gate", /Dependency-change gate/],
-  ["Lifecycle/install-script policy", /Lifecycle\/install-script policy/],
-  ["Lockfile/package-manager-change review", /Lockfile\/package-manager-change review/],
-  ["Supply-chain incident freeze mode", /Supply-chain incident freeze mode/],
-  ["Rollback note", /Rollback note/],
-  ["Last-known-good SHA tracking", /Last-known-good SHA tracking/],
-  ["Failed PR and blocked-lane history", /Failed PR[\s\S]{0,40}blocked-lane history|Failed PR history[\s\S]{0,80}Blocked-lane history/],
-  ["Automation decision log", /Automation decision log/],
-];
-
-const phase6AItems = [
-  "Phase 6A separation foundation contract",
-  "Boundary table:",
-  "Automation status schema draft:",
-  "Task intake schema draft:",
-  "State transition policy:",
-  "Project registry manifest draft:",
-  "Project catalog metadata draft:",
-  "Backlog separation rule:",
-  "Repo split preparation:",
-  "Shared template seed plan:",
-  "Project onboarding checklist:",
-  "Golden path scaffolding design:",
-];
-
-const phase6BItems = [
-  "Phase 6B lane split",
-  "Lane table:",
-  "`6B-1 trust-policy-approval`",
-  "`6B-2 event-worker-lease`",
-  "`6B-3 supply-chain-ci`",
-  "`6B-4 recovery-rollback`",
-  "`6B-5 observability-control-board`",
-  "`6B-6 budget-retry-maturity-prep`",
-  "Lane rules:",
-  "Recommended merge order:",
-  "Parallel eligibility:",
-];
-
-const enterpriseGapItems = [
-  "Automation Platform Enterprise Hardening Map",
-  "Enterprise gap inventory",
-  "DORA / delivery metrics",
-  "Automation SLO / stuck detection",
-  "Policy-as-code enforcement",
-  "Release artifact provenance",
-  "Cloudflare rollback / deployment runbook",
-  "Browser smoke / E2E",
-  "Secrets / OIDC / least privilege",
-  "Dependency / third-party risk scoring",
-  "Threat modeling / prompt injection defense",
-  "Immutable audit / evidence archive",
-  "Incident response / postmortem",
-  "Config / infra drift detection",
-  "Cost / quota guardrail",
-  "Docs simplification",
-  "Reusable template extraction",
-  "Branch protection / ruleset inventory",
-  "Data classification / privacy inventory",
-  "D1 backup / restore drill",
-  "Release notes / changelog automation",
-  "Customer impact / maintenance process",
-  "Lane absorption plan",
-  "6B-1 trust-policy-approval",
-  "6B-2 event-worker-lease",
-  "6B-3 supply-chain-ci",
-  "6B-4 recovery-rollback",
-  "6B-5 observability-control-board",
-  "6B-6 budget-retry-maturity-prep",
-  "Minimum Phase 6B completion expectation",
+const enterpriseContractLinks = [
+  "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md",
+  "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md",
+  "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md",
+  "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md",
+  "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md",
+  "docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md",
 ];
 
 const contractSpecs = [
   {
     label: "trust policy approval",
     content: docs.trustPolicyApproval,
+    title: "Phase 6B-1 Trust Policy Approval Contract",
     required: [
-      "Phase 6B-1 Trust Policy Approval Contract",
       "Trust boundary",
       "Prompt-injection and instruction override defense",
       "Policy-as-code direction",
@@ -203,8 +125,8 @@ const contractSpecs = [
   {
     label: "event worker lease",
     content: docs.eventWorkerLease,
+    title: "Phase 6B-2 Event Worker Lease Contract",
     required: [
-      "Phase 6B-2 Event Worker Lease Contract",
       "Event intake boundary",
       "Webhook idempotency design",
       "Task lease model",
@@ -230,8 +152,8 @@ const contractSpecs = [
   {
     label: "supply chain ci",
     content: docs.supplyChainCi,
+    title: "Phase 6B-3 Supply Chain CI Contract",
     required: [
-      "Phase 6B-3 Supply Chain CI Contract",
       "Secrets and permission inventory",
       "Workflow permission review",
       "Branch protection and ruleset inventory",
@@ -257,8 +179,8 @@ const contractSpecs = [
   {
     label: "recovery rollback",
     content: docs.recoveryRollback,
+    title: "Phase 6B-4 Recovery Rollback Contract",
     required: [
-      "Phase 6B-4 Recovery Rollback Contract",
       "Release checklist",
       "Rollback runbook",
       "Last-known-good SHA policy",
@@ -286,8 +208,8 @@ const contractSpecs = [
   {
     label: "observability control board",
     content: docs.observabilityControlBoard,
+    title: "Phase 6B-5 Observability Control Board Contract",
     required: [
-      "Phase 6B-5 Observability Control Board Contract",
       "Delivery metrics",
       "Automation SLO design",
       "Health alert design",
@@ -313,8 +235,8 @@ const contractSpecs = [
   {
     label: "budget retry maturity prep",
     content: docs.budgetRetryMaturityPrep,
+    title: "Phase 6B-6 Budget Retry Maturity Prep Contract",
     required: [
-      "Phase 6B-6 Budget Retry Maturity Prep Contract",
       "Cost and quota guardrail",
       "Retry budget",
       "Concurrency cap",
@@ -342,8 +264,8 @@ const contractSpecs = [
   {
     label: "maturity gate",
     content: docs.maturityGate,
+    title: "Phase 6C Maturity Gate",
     required: [
-      "Phase 6C Maturity Gate",
       "Gate decision",
       "Evidence checklist",
       "Completed foundation evidence",
@@ -374,13 +296,11 @@ const contractSpecs = [
 mustHaveAll("AGENTS", docs.agents, [
   "The active lane is `AUTOMATION_PLATFORM`",
   "docs/QUEUE_ROUTER.md",
+  "docs/AUTOMATION_OPERATOR_RAIL.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/queues/KOHEE_PRODUCT.md",
-  "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
-  "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   "GitHub evidence wins",
   "Codex self-reports",
-  "Automation lane and GitHub evidence reports use:",
   "Status / Blocker / Next action / Evidence",
 ]);
 mustAppearInOrder("AGENTS read path", docs.agents, [
@@ -393,157 +313,114 @@ mustAppearInOrder("AGENTS read path", docs.agents, [
 
 mustHaveAll("router", docs.router, [
   "`AUTOMATION_PLATFORM`",
+  "docs/AUTOMATION_OPERATOR_RAIL.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/queues/KOHEE_PRODUCT.md",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
   "Status / Blocker / Next action / Evidence",
 ]);
-mustAppearInOrder("router", docs.router, [
-  "## Active lane",
-  "## Active execution queue",
-  "## Paused product queue",
-  "## Supporting automation docs",
+
+mustHaveAll("operator rail", docs.operatorRail, [
+  "Automation Operator Rail",
+  "active operator rail",
+  "User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> automation decision -> merge or hold",
+  "TASK_PACKET",
+  "task_id:",
+  "Cloudflare Worker/GitHub App",
+  "Local Codex",
+  "LOW/MEDIUM",
+  "HIGH/HOLD",
+  "LOW/MEDIUM may be merged by the automation layer only when all gates pass",
+  "HIGH/HOLD never auto-merges",
+  "User says 진행 -> ChatGPT creates task packet -> Cloudflare/GitHub App records it -> Local Codex works",
+]);
+mustAppearInOrder("operator rail", docs.operatorRail, [
+  "## Fixed operating model",
+  "## Roles",
+  "## Command contract",
+  "## Task packet contract",
+  "## Task selection rule",
+  "## Local Codex read order",
+  "## Merge policy",
+  "## Restricted work",
+  "## Required Local Codex output",
+  "## One-run boundary",
+  "## Main workflow",
 ]);
 
-for (const [label, content] of [
-  ["automation queue", docs.automationQueue],
-  ["work breakdown", docs.workBreakdown],
-]) {
-  mustHaveAll(label, content, sharedVocabulary);
-  mustAppearInOrder(label, content, [
-    "Phase 5 bridge",
-    "Phase 6A",
-    "Phase 6B",
-    "Phase 6C",
-  ]);
-  for (const [patternLabel, pattern] of canonicalPatterns) {
-    mustMatch(label, content, pattern, patternLabel);
-  }
-}
+mustHaveAll("automation queue", docs.automationQueue, [
+  "Purpose: active execution queue for the project-factory automation platform.",
+  "Build a reusable automation platform, not a KOHEE-only helper.",
+  "docs/AUTOMATION_OPERATOR_RAIL.md",
+  "Enterprise hardening documents are reference/backlog, not the active execution queue.",
+  "TASK_PACKET",
+  "Cloudflare Worker/GitHub App",
+  "Local Codex",
+  "LOW/MEDIUM can auto-merge only after evidence gates pass",
+  "HIGH/HOLD waits for explicit user approval",
+  "Project profiles",
+  "Status / Blocker / Next action / Evidence",
+]);
+mustAppearInOrder("automation queue", docs.automationQueue, [
+  "## Core objective",
+  "## Active execution rule",
+  "## Preserve from automation phases 1-3",
+  "## Correct automation stages",
+  "### 1. Evidence foundation",
+  "### 2. Local Codex worker discipline",
+  "### 3. Risk and decision gates",
+  "### 4. Click-run task rail",
+  "### 5. Project profiles",
+  "### 6. Cloudflare/GitHub App control plane",
+  "## Current next actions",
+]);
+mustNotHave("automation queue", docs.automationQueue, "Stage A comes first");
+mustNotHave("automation queue", docs.automationQueue, "Stage B comes after Stage A");
 
 mustHaveAll("local runbook", docs.localRunbook, [
-  "Status: active Phase 5A/5B/5C/5D/5E local execution readiness contract",
   "docs/QUEUE_ROUTER.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   "Phase 5A worker contract",
-  "Task-pick decision table",
   "Phase 5B dry-run picker plan",
   "Phase 5C GitHub evidence validator plan",
   "Phase 5D low/medium PR exercise loop plan",
   "Phase 5E approval and notification readiness",
   "Status / Blocker / Next action / Evidence",
 ]);
-mustAppearInOrder("local runbook", docs.localRunbook, [
-  "## Read order",
-  "## Phase 5A worker contract",
-  "## Task-pick decision table",
-  "## Phase 5B dry-run picker plan",
-  "## Phase 5C GitHub evidence validator plan",
-  "## Phase 5D low/medium PR exercise loop plan",
-  "## Phase 5E approval and notification readiness",
-  "## Stop conditions",
-  "## Evidence report template",
-  "## Operating default",
-]);
 mustNotHave("local runbook", docs.localRunbook, "Use `docs/KOHEE_ACTIVE_QUEUE.md` as the source of truth.");
-mustNotHave("local runbook", docs.localRunbook, "Pick up to 2 independent LOW tasks from `docs/KOHEE_ACTIVE_QUEUE.md`");
-
-mustHaveAll("work breakdown Phase 6A", docs.workBreakdown, phase6AItems);
-mustAppearInOrder("work breakdown Phase 6A contract", docs.workBreakdown, [
-  "### Phase 6A: separation foundation",
-  "#### Phase 6A separation foundation contract",
-  "Boundary table:",
-  "Automation status schema draft:",
-  "Task intake schema draft:",
-  "State transition policy:",
-  "Project registry manifest draft:",
-  "Project catalog metadata draft:",
-  "Backlog separation rule:",
-  "Repo split preparation:",
-  "Shared template seed plan:",
-  "Project onboarding checklist:",
-  "Golden path scaffolding design:",
-]);
-
-mustHaveAll("work breakdown Phase 6B", docs.workBreakdown, phase6BItems);
-mustAppearInOrder("work breakdown Phase 6B lane split", docs.workBreakdown, [
-  "### Phase 6B: harden the separated platform",
-  "#### Phase 6B lane split",
-  "Lane table:",
-  "Lane rules:",
-  "Recommended merge order:",
-  "Parallel eligibility:",
-]);
-
-mustHaveAll("enterprise hardening", docs.enterpriseHardening, enterpriseGapItems);
-for (const linkedDoc of [
-  "docs/AUTOMATION_PLATFORM_6B1_TRUST_POLICY_APPROVAL.md",
-  "docs/AUTOMATION_PLATFORM_6B2_EVENT_WORKER_LEASE.md",
-  "docs/AUTOMATION_PLATFORM_6B3_SUPPLY_CHAIN_CI.md",
-  "docs/AUTOMATION_PLATFORM_6B4_RECOVERY_ROLLBACK.md",
-  "docs/AUTOMATION_PLATFORM_6B5_OBSERVABILITY_CONTROL_BOARD.md",
-  "docs/AUTOMATION_PLATFORM_6B6_BUDGET_RETRY_MATURITY_PREP.md",
-]) {
-  mustHave("enterprise hardening", docs.enterpriseHardening, linkedDoc);
-}
-mustAppearInOrder("enterprise hardening", docs.enterpriseHardening, [
-  "## Enterprise gap inventory",
-  "## Lane absorption plan",
-  "### 6B-1 trust-policy-approval",
-  "### 6B-2 event-worker-lease",
-  "### 6B-3 supply-chain-ci",
-  "### 6B-4 recovery-rollback",
-  "### 6B-5 observability-control-board",
-  "### 6B-6 budget-retry-maturity-prep",
-  "## Enterprise hardening execution rules",
-  "## Minimum Phase 6B completion expectation",
-]);
-
-for (const spec of contractSpecs) {
-  mustHaveAll(spec.label, spec.content, spec.required);
-  mustAppearInOrder(spec.label, spec.content, spec.order);
-}
-
-mustHaveAll("automation queue", docs.automationQueue, [
-  "Purpose: active execution queue for the automation-platform lane.",
-  "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
-  "docs/queues/KOHEE_PRODUCT.md",
-  "Phase 6A separation foundation contract is recorded in `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`.",
-  "Automation Phase 6B harden the separated platform.",
-  "Do not resume KOHEE product work unless the maturity gate passes",
-  "Do not treat dependency/package changes as LOW by default",
-]);
-mustAppearInOrder("automation queue execution headings", docs.automationQueue, [
-  "### 0. Merge / activate the queue split",
-  "### 1. Phase 5 bridge — local execution readiness",
-  "### 2. Phase 5 bridge — approval and notification readiness",
-  "### 3. Automation Phase 6A — separation foundation",
-  "### 4. Automation Phase 6B — harden the separated platform",
-  "### 5. Automation Phase 6C — maturity gate",
-]);
-mustNotHave("automation queue", docs.automationQueue, "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4");
-mustNotHave("automation queue", docs.automationQueue, "Reference:\n- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4");
 
 mustHaveAll("work breakdown", docs.workBreakdown, [
   "Source of truth:",
   "docs/QUEUE_ROUTER.md",
   "docs/queues/AUTOMATION_PLATFORM.md",
   "docs/queues/KOHEE_PRODUCT.md",
-  "Compatibility note:",
-  "Older references to `Phase 4` now map to the current `Phase 5 bridge` section",
   "Phase 5 bridge comes first",
   "This document explains grouping and order; it is not the active queue.",
+  "Phase 6A separation foundation contract",
+  "Phase 6B lane split",
 ]);
-mustAppearInOrder("work breakdown execution order", docs.workBreakdown, [
-  "### Phase 5 bridge: local execution and approval readiness",
-  "### Phase 6A: separation foundation",
-  "### Phase 6B: harden the separated platform",
-  "### Phase 6C: maturity gate",
+
+mustHaveAll("enterprise hardening", docs.enterpriseHardening, [
+  "Automation Platform Enterprise Hardening Map",
+  "Enterprise gap inventory",
+  "6B-1 trust-policy-approval",
+  "6B-2 event-worker-lease",
+  "6B-3 supply-chain-ci",
+  "6B-4 recovery-rollback",
+  "6B-5 observability-control-board",
+  "6B-6 budget-retry-maturity-prep",
 ]);
-mustNotHave("work breakdown", docs.workBreakdown, "Stage A comes first");
-mustNotHave("work breakdown", docs.workBreakdown, "Stage B comes after Stage A");
+for (const linkedDoc of enterpriseContractLinks) {
+  mustHave("enterprise hardening", docs.enterpriseHardening, linkedDoc);
+}
+
+for (const spec of contractSpecs) {
+  mustHave(spec.label, spec.content, spec.title);
+  mustHaveAll(spec.label, spec.content, spec.required);
+  mustAppearInOrder(spec.label, spec.content, spec.order);
+}
 
 mustHaveAll("product queue", docs.productQueue, [
   "Paused while the automation-platform lane is active.",
