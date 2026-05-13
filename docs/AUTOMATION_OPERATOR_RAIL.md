@@ -36,7 +36,7 @@ ChatGPT should not ask the user to hand-write a Codex prompt. ChatGPT should cre
 
 ## Task packet contract
 
-A task packet is the standard work order.
+`TASK_PACKET` is the standard work order.
 
 ```text
 task_id:
