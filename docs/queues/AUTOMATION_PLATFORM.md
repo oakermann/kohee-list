@@ -35,6 +35,7 @@ The ten-point automation design is not a new execution queue. It is mapped into 
   - Phase 5B dry-run picker plan.
   - Phase 5C GitHub evidence validator plan for PR URL, head SHA, checks, changed files, review threads, issue state, and queue/lane match.
   - MERGE / FIX / HOLD / NEXT decision criteria based on GitHub evidence, not Codex self-report.
+  - Low/medium PR exercise plan to prove the evidence → FIX/HOLD/MERGE loop works in practice before stronger automation.
 - Phase 6A separation foundation:
   - Automation-platform rules separated from KOHEE-product rules.
   - Project registry, task schema, state transition policy, and reusable onboarding/template direction.
@@ -42,8 +43,10 @@ The ten-point automation design is not a new execution queue. It is mapped into 
   - CI/CD posture review, workflow permission review, action-pinning review plan, and high-risk workflow-pattern audit plan.
   - Recovery and auditability planning: rollback note, last-known-good SHA, failed PR history, blocked-lane history, and automation decision log.
   - Supply-chain posture planning: provenance/attestation/SLSA-lite feasibility and OpenSSF Scorecard or equivalent baseline review.
+  - Operational verification plan for repeated safe Local Codex runs before any unattended behavior is considered.
 - Phase 6C maturity gate:
   - Verify the platform can safely manage project work before KOHEE_PRODUCT resumes.
+  - Verify the recovery/auditability pieces are present, not merely mentioned.
 - After Phase 6:
   - If the owner/ChatGPT keeps the automation lane active, continue repo-independent generalization for news app, blog/status site, and internal handover app reuse.
 
@@ -70,6 +73,7 @@ Expected output:
 - Phase 5B local task picker dry-run plan.
 - Phase 5C GitHub evidence validator plan.
 - MERGE / FIX / HOLD / NEXT criteria drafted from GitHub evidence.
+- Low/medium PR exercise plan to test the full evidence → decision loop using real PRs before any stronger automation.
 - No unattended loop yet.
 
 Reference:
@@ -90,6 +94,7 @@ Expected output:
 - Phase 4C native auto-merge owner approval pack.
 - Phase 5C local controlled worker loop owner approval pack.
 - Evidence-first owner approval format for PR URL, head SHA, checks, changed files, review threads, issue state, and blocker status.
+- Explicit rule that auto-merge or unattended execution remains HOLD until the low/medium PR exercise loop is proven and owner-approved.
 - All stronger behavior remains HOLD until explicit owner approval.
 
 Reference:
@@ -139,7 +144,9 @@ Expected output:
 - Workflow permission review and action-pinning review plan.
 - High-risk workflow-pattern audit plan.
 - Recovery and auditability plan: rollback note, last-known-good SHA, failed PR history, blocked-lane history, and automation decision log.
+- Required evidence that rollback notes, last-known-good SHA tracking, failed PR history, blocked-lane history, and decision-log fields are captured somewhere concrete before maturity gate pass.
 - Provenance/attestation/SLSA-lite feasibility note and OpenSSF Scorecard or equivalent baseline review plan.
+- Operational verification plan for repeated safe Local Codex runs, including at least three low/medium PRs processed with evidence-based MERGE/FIX/HOLD/NEXT decisions.
 - Observability and control board foundation.
 - Extra hardening items grouped into scoped follow-up PRs.
 
@@ -161,8 +168,10 @@ Goal:
 Expected output:
 - Confirm Phase 5 bridge work is accounted for.
 - Confirm Phase 5A/5B/5C local execution readiness and evidence-validation planning exist.
+- Confirm the low/medium PR exercise loop has been run or is explicitly scheduled with a blocker.
 - Confirm Phase 6A separation foundation exists.
 - Confirm Phase 6B hardening docs exist or remaining items are explicitly scheduled.
+- Confirm rollback notes, last-known-good SHA tracking, failed PR history, blocked-lane history, and automation decision logging are defined concretely enough to be used.
 - Confirm remaining HOLD items.
 - Confirm MERGE / FIX / HOLD / NEXT criteria are usable from GitHub evidence.
 - Decide whether KOHEE product work can resume under the platform.
@@ -172,6 +181,7 @@ Reference:
 
 Hard stop:
 - Do not resume KOHEE product work unless the maturity gate passes or the owner/ChatGPT explicitly defers the automation lane.
+- Do not pass the maturity gate on design-only claims if the evidence loop, recovery/auditability fields, and HOLD list are not concrete.
 
 ## After Phase 6
 
@@ -208,6 +218,7 @@ HOLD:
 - Unattended loop or auto-merge enabled or implied.
 - Extra hardening pulled into the active queue without owner/ChatGPT promotion.
 - GitHub evidence insufficient.
+- Maturity gate claims without concrete evidence-loop and recovery/auditability coverage.
 
 NEXT:
 - Current PR is merged or closed with a clear follow-up and the active queue can advance safely.
