@@ -7,6 +7,8 @@ const files = {
   productQueue: "docs/queues/KOHEE_PRODUCT.md",
   workBreakdown: "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
   extraHardening: "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
+  packageJson: "package.json",
+  verifyRelease: "scripts/verify-release.ps1",
 };
 
 const errors = [];
@@ -39,57 +41,149 @@ function mustNotHave(label, content, text) {
   else ok(`${label}: no stale ${text}`);
 }
 
+function mustMatch(label, content, regex, message) {
+  if (regex.test(content)) ok(`${label}: ${message}`);
+  else fail(`${label} missing pattern: ${message}`);
+}
+
+function mustAppearInOrder(label, content, items) {
+  let lastIndex = -1;
+  for (const item of items) {
+    const index = content.indexOf(item);
+    if (index === -1) {
+      fail(`${label} missing ordered item: ${item}`);
+      return;
+    }
+    if (index <= lastIndex) {
+      fail(`${label} order mismatch at: ${item}`);
+      return;
+    }
+    lastIndex = index;
+  }
+  ok(`${label}: ordered items match`);
+}
+
+function mustHaveAll(label, content, items) {
+  for (const item of items) mustHave(label, content, item);
+}
+
 const router = read(files.router);
 const automationQueue = read(files.automationQueue);
 const productQueue = read(files.productQueue);
 const workBreakdown = read(files.workBreakdown);
 const extraHardening = read(files.extraHardening);
+const packageJson = read(files.packageJson);
+const verifyRelease = read(files.verifyRelease);
 
-mustHave("router", router, "`AUTOMATION_PLATFORM`");
-mustHave("router", router, "docs/queues/AUTOMATION_PLATFORM.md");
-mustHave("router", router, "docs/queues/KOHEE_PRODUCT.md");
-mustHave("router", router, "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md");
-mustHave("router", router, "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md");
-mustHave("router", router, "Status / Blocker / Next action / Evidence");
+// Router/source-of-truth group.
+mustHaveAll("router", router, [
+  "`AUTOMATION_PLATFORM`",
+  "docs/queues/AUTOMATION_PLATFORM.md",
+  "docs/queues/KOHEE_PRODUCT.md",
+  "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
+  "docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md",
+  "Status / Blocker / Next action / Evidence",
+]);
+mustAppearInOrder("router", router, [
+  "## Active lane",
+  "## Active execution queue",
+  "## Paused product queue",
+  "## Supporting automation docs",
+]);
 
+// Active queue and work-breakdown must share the same phase vocabulary.
 for (const [label, content] of [
   ["automation queue", automationQueue],
   ["work breakdown", workBreakdown],
 ]) {
-  mustHave(label, content, "Phase 5 bridge");
-  mustHave(label, content, "Phase 6A");
-  mustHave(label, content, "Phase 6B");
-  mustHave(label, content, "Phase 6C");
-  mustHave(label, content, "Evidence-based decision system");
-  mustHave(label, content, "Supply-chain and CI/CD posture");
-  mustHave(label, content, "Recovery and rollback auditability");
+  mustHaveAll(label, content, [
+    "Phase 5 bridge",
+    "Phase 6A",
+    "Phase 6B",
+    "Phase 6C",
+    "Evidence-based decision system",
+    "Supply-chain and CI/CD posture",
+    "Recovery and rollback auditability",
+  ]);
+  mustAppearInOrder(label, content, [
+    "Phase 5 bridge",
+    "Phase 6A",
+    "Phase 6B",
+    "Phase 6C",
+  ]);
 }
 
-mustHave("automation queue", automationQueue, "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md");
-mustHave("automation queue", automationQueue, "docs/queues/KOHEE_PRODUCT.md");
-mustHave("automation queue", automationQueue, "MERGE / FIX / HOLD / NEXT");
-mustHave("automation queue", automationQueue, "KOHEE product work");
-mustHave("automation queue", automationQueue, "dependency/package changes");
-mustNotHave("automation queue", automationQueue, "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4");
+// Active queue must point to the current work-breakdown phase names.
+mustHaveAll("automation queue", automationQueue, [
+  "Purpose: active execution queue for the automation-platform lane.",
+  "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md",
+  "docs/queues/KOHEE_PRODUCT.md",
+  "MERGE / FIX / HOLD / NEXT",
+  "KOHEE product work",
+  "dependency/package changes",
+  "Do not resume KOHEE product work unless the maturity gate passes",
+]);
+mustNotHave(
+  "automation queue",
+  automationQueue,
+  "docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4",
+);
+mustNotHave("automation queue", automationQueue, "Reference:\n- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md` Phase 4");
 
-mustHave("work breakdown", workBreakdown, "Source of truth:");
-mustHave("work breakdown", workBreakdown, "docs/QUEUE_ROUTER.md");
-mustHave("work breakdown", workBreakdown, "docs/queues/AUTOMATION_PLATFORM.md");
-mustHave("work breakdown", workBreakdown, "docs/queues/KOHEE_PRODUCT.md");
-mustHave("work breakdown", workBreakdown, "Protected environment approval gate design");
-mustHave("work breakdown", workBreakdown, "Phase 5 bridge comes first");
+// Work-breakdown must explain that the queue remains the active execution source.
+mustHaveAll("work breakdown", workBreakdown, [
+  "Source of truth:",
+  "docs/QUEUE_ROUTER.md",
+  "docs/queues/AUTOMATION_PLATFORM.md",
+  "docs/queues/KOHEE_PRODUCT.md",
+  "Compatibility note:",
+  "Older references to `Phase 4` now map to the current `Phase 5 bridge` section",
+  "Protected environment approval gate design",
+  "Phase 5 bridge comes first",
+  "This document explains grouping and order; it is not the active queue.",
+]);
+mustAppearInOrder("work breakdown execution order", workBreakdown, [
+  "### Phase 5 bridge: local execution and approval readiness",
+  "### Phase 6A: separation foundation",
+  "### Phase 6B: harden the separated platform",
+  "### Phase 6C: maturity gate",
+]);
+mustNotHave("work breakdown", workBreakdown, "Stage A comes first");
+mustNotHave("work breakdown", workBreakdown, "Stage B comes after Stage A");
 
-mustHave("product queue", productQueue, "Paused while the automation-platform lane is active.");
-mustHave("product queue", productQueue, "docs/queues/AUTOMATION_PLATFORM.md");
-mustHave("product queue", productQueue, "platform maturity gate");
-mustHave("product queue", productQueue, "owner explicitly defers the automation lane");
+// Product queue must remain paused while the automation lane is active.
+mustHaveAll("product queue", productQueue, [
+  "Paused while the automation-platform lane is active.",
+  "docs/queues/AUTOMATION_PLATFORM.md",
+  "platform maturity gate",
+  "owner explicitly defers the automation lane",
+  "Product implementation starts only after project contract and risk policy exist.",
+]);
 
+// Extra hardening remains supporting context, not the active execution queue.
 mustHave("extra hardening", extraHardening, "automation");
 if (/active execution queue/i.test(extraHardening)) {
   fail("extra hardening is marked like an active queue");
 } else {
   ok("extra hardening is not marked as active queue");
 }
+
+// The checker must be reachable from project scripts and release verification.
+mustMatch(
+  "package.json",
+  packageJson,
+  /"check:queue-docs"\s*:\s*"node scripts\/check-queue-docs\.mjs"/,
+  "check:queue-docs script",
+);
+mustHave("verify-release", verifyRelease, "queue docs consistency");
+mustHave("verify-release", verifyRelease, "npm run check:queue-docs");
+mustAppearInOrder("verify-release", verifyRelease, [
+  "deploy source sync",
+  "queue docs consistency",
+  "unit tests",
+  "syntax checks",
+  "repo safety",
+]);
 
 if (errors.length) {
   console.log(`\nResult: FAIL (${errors.length} queue/doc issue(s))`);
