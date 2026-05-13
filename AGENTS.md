@@ -29,6 +29,20 @@ Reference/backlog docs:
 - `docs/AUTOMATION_PLATFORM_6C_MATURITY_GATE.md`
 - `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`
 
+## Codex anti-confusion rule
+
+Use this file as the entrypoint, then follow the router and active queue. Do not scan old planning docs to choose work.
+
+Priority order:
+
+1. GitHub evidence blockers: open PRs, failed checks, unresolved review threads, and issue `#23` blockers.
+2. `docs/QUEUE_ROUTER.md` for the active lane.
+3. `docs/queues/AUTOMATION_PLATFORM.md` for the active execution order.
+4. Issue `#23` task packets only when the active queue says to use them.
+5. Reference/backlog docs only when the active queue or task packet explicitly names them.
+
+Do not treat legacy queue files, old phase docs, audit logs, or reference/backlog docs as executable work unless the active queue explicitly promotes them.
+
 ## Fixed operating model
 
 ```text
@@ -85,7 +99,7 @@ Local Codex should start from GitHub task/evidence state, not a long user-pasted
 4. Follow the router to the active queue.
 5. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
 6. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
-7. Read the active task packet from issue `#23` or the active task queue.
+7. Read the active task packet from issue `#23` only when the active queue points there.
 8. Inspect open PRs, failed checks, and unresolved review threads.
 9. Work only on the current blocker or next routed task.
 10. Open or update one scoped PR, then stop and report evidence.
