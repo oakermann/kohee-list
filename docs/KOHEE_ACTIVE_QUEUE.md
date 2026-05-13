@@ -1,36 +1,23 @@
-# KOHEE Active Queue Router
+# Legacy Queue Router Redirect
 
 Last updated: 2026-05-13
-Purpose: route Codex to the correct queue.
 
-## Current active lane
+This legacy file is kept for compatibility with older Codex prompts.
 
-`AUTOMATION_PLATFORM`
+Use the canonical router instead:
 
-## Source of truth
+- `docs/QUEUE_ROUTER.md`
 
-- Active automation execution queue: `docs/AUTOMATION_ACTIVE_QUEUE.md`
-- Paused KOHEE product queue: `docs/KOHEE_PRODUCT_QUEUE.md`
-- Automation work breakdown: `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`
-- Extra automation hardening backlog: `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`
+Current active lane:
 
-## Rule for Local Codex
+- `AUTOMATION_PLATFORM`
 
-Local Codex must read and follow `docs/AUTOMATION_ACTIVE_QUEUE.md` first.
+Current active execution queue:
 
-Do not start KOHEE product work from `docs/KOHEE_PRODUCT_QUEUE.md` unless:
+- `docs/queues/AUTOMATION_PLATFORM.md`
 
-1. the automation platform maturity gate passes, or
-2. the owner/ChatGPT explicitly defers the automation lane for an urgent product bug.
+Paused KOHEE product queue:
 
-## Current blocker
+- `docs/queues/KOHEE_PRODUCT.md`
 
-Remote merged branch cleanup is `HOLD_USER_APPROVAL` and must not block automation-platform work.
-
-## Reporting rule
-
-Use only:
-
-```text
-Status / Blocker / Next action / Evidence
-```
+Local Codex must follow `docs/QUEUE_ROUTER.md` first, then the active queue named there.
