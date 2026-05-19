@@ -233,9 +233,9 @@ if (contract) {
   if (governanceLane?.files?.includes("AGENTS.md"))
     ok("GOVERNANCE lane includes AGENTS.md");
   else fail("GOVERNANCE lane file allowlist missing AGENTS.md");
-  if (governanceLane?.files?.includes("docs/CODEX_WORKFLOW.md"))
-    ok("GOVERNANCE lane includes docs/CODEX_WORKFLOW.md");
-  else fail("GOVERNANCE lane file allowlist missing docs/CODEX_WORKFLOW.md");
+  if (governanceLane?.files?.includes("docs/KOHEE_MASTER_CONTEXT.md"))
+    ok("GOVERNANCE lane includes docs/KOHEE_MASTER_CONTEXT.md");
+  else fail("GOVERNANCE lane file allowlist missing docs/KOHEE_MASTER_CONTEXT.md");
 
   const inv = contract.invariants || {};
   const requiredInv = {
