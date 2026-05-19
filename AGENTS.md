@@ -1,107 +1,78 @@
 # KOHEE LIST Agent Contract
 
-Purpose: short entrypoint for ChatGPT, Cloudflare/GitHub App automation, and Local Codex.
+KOHEE LIST is a product repository. OAP is maintained separately.
 
-## Supreme rule
+Purpose: keep work scoped to the KOHEE cafe product, its product safety checks,
+and its deploy/D1 guardrails.
 
-- `docs/AUTOMATION_CONSTITUTION.md` is the top-level automation constitution.
-- Read it before changing automation routing, queue, role split, merge policy, or project-factory architecture.
-- If any automation document conflicts with the constitution, the constitution wins.
-- Do not weaken or amend the constitution unless the user explicitly asks to change the automation constitution or top-level operating model.
+## Read First
 
-## Current routing
+Before changing repository behavior, read:
 
-The active lane is `AUTOMATION_PLATFORM` until the project-factory automation rail can safely manage product work or the owner/ChatGPT explicitly defers it for an urgent product bug.
+1. `docs/KOHEE_MASTER_CONTEXT.md`
+2. `kohee.contract.json`
+3. `README.md`
+4. Any product document directly related to the task
 
-Canonical active files:
+## Product Boundary
 
-- `docs/AUTOMATION_CONSTITUTION.md`: supreme automation contract.
-- `docs/QUEUE_ROUTER.md`: active lane/router.
-- `docs/AUTOMATION_OPERATOR_RAIL.md`: active project-factory operating rail.
-- `docs/queues/AUTOMATION_PLATFORM.md`: active automation-platform execution queue.
-- `docs/queues/KOHEE_PRODUCT.md`: paused KOHEE product queue. Do not start it while the automation lane is active unless explicitly deferred by the owner/ChatGPT.
+Do not change product runtime behavior unless the user explicitly asks for that
+specific product change.
 
-Reference/backlog docs:
+Hard no-change areas unless explicitly approved:
 
-- `docs/AUTOMATION_PLATFORM_WORK_BREAKDOWN.md`
-- `docs/AUTOMATION_PLATFORM_ENTERPRISE_HARDENING.md`
-- `docs/AUTOMATION_PLATFORM_6B*.md`
-- `docs/AUTOMATION_PLATFORM_6C_MATURITY_GATE.md`
-- `docs/AUTOMATION_PLATFORM_EXTRA_HARDENING.md`
+- `server/**`
+- `assets/**`
+- `.pages-deploy/**`
+- `migrations/**`
+- `schema.sql`
+- `worker.js`
+- auth/session behavior
+- D1 behavior
+- CSV import/reset behavior
+- public `/data` behavior
+- cafe lifecycle behavior
+- Cloudflare deploy behavior
+- secrets or production config
 
-## Fixed operating model
+## Keep
 
-```text
-User -> ChatGPT -> Cloudflare Worker/GitHub App -> GitHub task/evidence -> Local Codex -> PR -> GitHub Actions -> Codex Review/review threads -> automation decision -> merge or hold
-```
+- KOHEE product code
+- KOHEE product tests
+- deploy safety checks
+- D1 migration blocking
+- CSV/public data/lifecycle safety checks
+- smoke checks
 
-## Read path
-
-Always read:
-
-1. `docs/AUTOMATION_CONSTITUTION.md`
-2. `docs/QUEUE_ROUTER.md`
-3. `docs/AUTOMATION_OPERATOR_RAIL.md`
-4. If the router says `AUTOMATION_PLATFORM`, read `docs/queues/AUTOMATION_PLATFORM.md`
-5. Current PR / issue / check logs relevant to the task
-
-For local PC work, also read:
-
-- `docs/LOCAL_CODEX_RUNBOOK.md`
-
-When policy or risk is unclear, read:
-
-- `docs/KOHEE_MASTER_CONTEXT.md`
-- `kohee.contract.json`
-
-## Core rules
-
-- User-facing goal: user says `진행`; ChatGPT routes a task packet; Cloudflare/GitHub App records it; Local Codex works one scoped task; GitHub evidence decides merge or hold.
-- GitHub evidence wins: PR URL, head SHA, changed files, diff, checks, review threads, workflow logs, issue state.
-- Codex self-reports, local branch names, local commits, or `make_pr` metadata are not completion evidence.
-- LOW/MEDIUM can auto-merge only after evidence gates pass and project profile allows it.
-- HIGH/HOLD requires explicit user approval.
-- Keep docs, logs, code, and PR bodies short and action-oriented.
-- No broad refactor.
-- No manager expansion.
-- No `aaa/aaaa`.
-- No deploy unless explicitly requested.
-- Do not apply D1 migrations.
-- While `AUTOMATION_PLATFORM` is active, do not start KOHEE product work from `docs/queues/KOHEE_PRODUCT.md`.
-
-## Tracks
-
-- `CHATGPT_CONTROL`: ChatGPT interprets user direction, chooses/normalizes the next task, and creates/requests a task packet.
-- `CLOUDFLARE_GITHUB_APP`: online execution arm for GitHub task packets, issue/PR comments/status, evidence, and allowed LOW/MEDIUM merge actions after gates pass.
-- `LOCAL_CODEX`: actual code worker for local repo edits, checks, commits, pushes, and PR creation/update.
-
-## Local Codex
-
-Local Codex should start from GitHub task/evidence state, not a long user-pasted prompt:
-
-1. Read `docs/AUTOMATION_CONSTITUTION.md`.
-2. Read `docs/QUEUE_ROUTER.md`.
-3. Read `docs/AUTOMATION_OPERATOR_RAIL.md`.
-4. Follow the router to the active queue.
-5. If active lane is `AUTOMATION_PLATFORM`, read and follow `docs/queues/AUTOMATION_PLATFORM.md`.
-6. Read `docs/LOCAL_CODEX_RUNBOOK.md`.
-7. Read the active task packet from issue `#23` or the active task queue.
-8. Inspect open PRs, failed checks, and unresolved review threads.
-9. Work only on the current blocker or next routed task.
-10. Open or update one scoped PR, then stop and report evidence.
-
-## Parallel work
-
-Parallel work is allowed only for LOW/MEDIUM tasks with no file overlap, no risk-area overlap, and no shared test-file overlap.
-
-Do not parallelize HIGH/HOLD work, D1/schema/migrations, public data behavior, CSV import/reset, deploy config, GitHub App control-plane connection, manager removal touching shared server/tests, or same-file changes.
-
-## Report format
-
-Automation lane and GitHub evidence reports use:
+Expected validation commands for product-safe repository work:
 
 ```text
-Status / Blocker / Next action / Evidence
+npm run check:deploy-sync
+npm run test:unit
+npm run verify:release
+git diff --check
 ```
 
-Implementation reports may add changed files, tests, and remaining risks, but they must still include the evidence fields above.
+Use `npm run audit:kohee` when product invariants or governance references are
+touched.
+
+## Core Rules
+
+- Preserve public cafe exposure rules.
+- Preserve candidate-first CSV import behavior.
+- Preserve admin/user role boundaries.
+- Preserve manual-review treatment for D1/schema/migrations.
+- Do not add unattended worker, auto-merge, branch deletion, or issue-close
+  features in this repository.
+- Keep reports concise and evidence-based.
+
+## Report Format
+
+Use:
+
+```text
+Status
+Blocker
+Next action
+Evidence
+```

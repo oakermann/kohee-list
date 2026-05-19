@@ -2,29 +2,10 @@
 
 Cloudflare Pages + Workers + D1 based cafe curation platform for KOHEE LIST.
 
-This workspace keeps the live behavior intact while reorganizing the codebase
-into a cleaner, contract-preserving structure.
+KOHEE LIST is a product repository. OAP is maintained separately.
 
-## Automation Status
-
-Current automation source of truth:
-
-- [`docs/KOHEE_MASTER_CONTEXT.md`](docs/KOHEE_MASTER_CONTEXT.md)
-
-Additional automation/runbook details:
-
-- [`docs/CODEX_AUTOMATION_STATUS.md`](docs/CODEX_AUTOMATION_STATUS.md)
-- [`docs/CODEX_WORKFLOW.md`](docs/CODEX_WORKFLOW.md)
-
-Current operating model:
-
-- ChatGPT GitHub connector = primary executor/orchestrator
-- GitHub Actions = validation/deploy gate
-- Codex = reviewer / analysis / PATCH_READY support
-- GitHub evidence = source of truth
-- GitHub App + Cloudflare Worker automation = future dry-run/write-execution layer under ChatGPT/GitHub evidence control
-
-LOW/MEDIUM work may run in parallel when files/risk areas do not overlap. HIGH/HOLD work remains sequential and user-approved.
+This workspace keeps the live behavior intact while organizing the cafe product,
+product validation, deploy safety, and D1/CSV/public-data guardrails.
 
 ## Structure
 
@@ -60,4 +41,5 @@ LOW/MEDIUM work may run in parallel when files/risk areas do not overlap. HIGH/H
 
 There is currently no separate `public/` directory in this repository.
 For Pages deploys, treat `.pages-deploy/` as the authoritative frontend source.
-Root HTML/assets are synced mirrors for repository validation only, not a separate operating surface.
+Root HTML/assets are synced mirrors for repository validation only, not a separate
+operating surface.
