@@ -1,0 +1,51 @@
+name: KOHEE Scheduled Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 0 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kohee-scheduled-smoke
+  cancel-in-progress: false
+
+jobs:
+  product-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check deploy sync
+        run: npm run check:deploy-sync
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Verify release
+        run: npm run verify:release
+
+      - name: Optional live smoke check
+        shell: powershell
+        env:
+          PAGES_URL: ${{ vars.KOHEE_PAGES_URL }}
+          WORKER_URL: ${{ vars.KOHEE_WORKER_URL }}
+        run: |
+          if ($env:PAGES_URL -and $env:WORKER_URL) {
+            npm run smoke:check
+          } else {
+            Write-Host "Skipping live smoke check because KOHEE_PAGES_URL and KOHEE_WORKER_URL are not both configured."
+          }
