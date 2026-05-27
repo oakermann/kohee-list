@@ -1,0 +1,33 @@
+{
+  "mode": "dry-run",
+  "flow": {
+    "taskEnqueue": {
+      "source": "fixture",
+      "writes": false,
+      "taskPacket": true
+    },
+    "evidenceObserve": {
+      "source": "fixture",
+      "writes": false
+    },
+    "mergeDecision": {
+      "source": "fixture",
+      "writes": false,
+      "decision": "HOLD",
+      "nativeAutoMergeEnabled": false
+    },
+    "reporting": {
+      "source": "fixture",
+      "writes": false,
+      "outputs": ["HOLD"]
+    }
+  },
+  "forbidden": {
+    "issueCommentWrite": false,
+    "prMerge": false,
+    "secrets": false,
+    "deploy": false,
+    "nativeAutoMerge": false,
+    "unattendedLoop": false
+  }
+}
