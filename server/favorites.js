@@ -43,6 +43,8 @@ export async function toggleFavorite(req, env) {
     const cafeId = cleanText(body.cafe_id, 80);
     if (!cafeId) throw new HttpError(400, "cafe_id required");
 
+    const action = cleanText(body.action, 20) || "toggle";
+
     const cafe = await env.DB.prepare(
       `SELECT id
        FROM cafes
@@ -52,14 +54,16 @@ export async function toggleFavorite(req, env) {
     )
       .bind(cafeId)
       .first();
-    if (!cafe) throw new HttpError(404, "Cafe not found");
 
     const exists = await env.DB.prepare(
       "SELECT id FROM favorites WHERE user_id = ? AND cafe_id = ?",
     )
       .bind(user.user_id, cafeId)
       .first();
-    const action = cleanText(body.action, 20) || "toggle";
+
+    if (!cafe && action !== "remove") {
+      throw new HttpError(404, "Cafe not found");
+    }
 
     if ((action === "toggle" && !exists) || action === "add") {
       await env.DB.prepare(

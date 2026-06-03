@@ -1485,6 +1485,205 @@ assert.match(
   /WHERE\s+status = 'approved'\s+AND deleted_at IS NULL/i,
 );
 
+function createFavoritesTestEnv({
+  cafeStatus = "approved",
+  deletedAt = null,
+  favoriteExists = false,
+} = {}) {
+  const statements = [];
+  const favoriteRows = [
+    {
+      favorite_id: "fav-approved",
+      created_at: "2026-05-06T00:00:00.000Z",
+      id: "approved-cafe",
+      name: "Approved Cafe",
+      address: "Seoul",
+      desc: "Coffee",
+      lat: 37.5,
+      lng: 127,
+      signature: '["espresso"]',
+      beanShop: "",
+      instagram: "",
+      category: '["espresso"]',
+      oakerman_pick: 1,
+      manager_pick: 0,
+      updated_at: "2026-05-06T00:00:00.000Z",
+      status: "approved",
+      deleted_at: null,
+    },
+    {
+      favorite_id: "fav-candidate",
+      created_at: "2026-05-06T00:00:00.000Z",
+      id: "candidate-cafe",
+      name: "Candidate Cafe",
+      address: "Seoul",
+      desc: "Coffee",
+      status: "candidate",
+      deleted_at: null,
+    },
+    {
+      favorite_id: "fav-hidden",
+      created_at: "2026-05-06T00:00:00.000Z",
+      id: "hidden-cafe",
+      name: "Hidden Cafe",
+      address: "Seoul",
+      desc: "Coffee",
+      status: "hidden",
+      deleted_at: null,
+    },
+    {
+      favorite_id: "fav-deleted",
+      created_at: "2026-05-06T00:00:00.000Z",
+      id: "deleted-cafe",
+      name: "Deleted Cafe",
+      address: "Seoul",
+      desc: "Coffee",
+      status: "approved",
+      deleted_at: "2026-05-06T01:00:00.000Z",
+    },
+  ];
+
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      DB: {
+        prepare(sql) {
+          const statement = { sql, bindings: [] };
+          statements.push(statement);
+          return {
+            bind(...values) {
+              statement.bindings = values;
+              return this;
+            },
+            first: async () => {
+              if (sql.includes("FROM sessions")) {
+                return {
+                  session_id: "session-1",
+                  user_id: "user-1",
+                  username: "user",
+                  role: "user",
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                };
+              }
+              if (sql.includes("FROM cafes")) {
+                if (
+                  /status\s*=\s*'approved'/i.test(sql) &&
+                  /deleted_at\s+IS\s+NULL/i.test(sql) &&
+                  cafeStatus === "approved" &&
+                  !deletedAt
+                ) {
+                  return { id: "cafe-1" };
+                }
+                return null;
+              }
+              if (sql.includes("FROM favorites")) {
+                return favoriteExists ? { id: "favorite-1" } : null;
+              }
+              return null;
+            },
+            all: async () => {
+              if (sql.includes("FROM favorites")) {
+                const appliesPublicFilter =
+                  /c\.status\s*=\s*'approved'/i.test(sql) &&
+                  /c\.deleted_at\s+IS\s+NULL/i.test(sql);
+                return {
+                  results: appliesPublicFilter
+                    ? favoriteRows.filter(
+                        (row) => row.status === "approved" && !row.deleted_at,
+                      )
+                    : favoriteRows,
+                };
+              }
+              return { results: [] };
+            },
+            run: async () => ({ success: true }),
+          };
+        },
+      },
+    },
+  };
+}
+
+async function requestFavorites() {
+  const { env, statements } = createFavoritesTestEnv();
+  const response = await getFavorites(
+    new Request("https://kohee.test/favorites", {
+      headers: { authorization: "Bearer unit-token" },
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+async function requestToggleFavorite(body, options = {}) {
+  const { env, statements } = createFavoritesTestEnv(options);
+  const response = await toggleFavorite(
+    new Request("https://kohee.test/favorite", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer unit-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ cafe_id: "cafe-1", ...body }),
+    }),
+    env,
+  );
+  return { response, statements };
+}
+
+const favoritesResult = await requestFavorites();
+assert.equal(favoritesResult.response.status, 200);
+const favoritesBody = await favoritesResult.response.json();
+assert.deepEqual(
+  favoritesBody.items.map((item) => item.cafe.name),
+  ["Approved Cafe"],
+);
+const favoritesQuery = favoritesResult.statements.find((statement) =>
+  /FROM\s+favorites/i.test(statement.sql),
+);
+assert.match(favoritesQuery.sql, /c\.status\s*=\s*'approved'/i);
+assert.match(favoritesQuery.sql, /c\.deleted_at\s+IS\s+NULL/i);
+
+for (const options of [
+  { cafeStatus: "candidate" },
+  { cafeStatus: "hidden" },
+  { cafeStatus: "approved", deletedAt: "2026-05-06T01:00:00.000Z" },
+]) {
+  for (const action of ["add", "toggle"]) {
+    const blockedFavorite = await requestToggleFavorite({ action }, options);
+    assert.equal(blockedFavorite.response.status, 404);
+    assert.equal(
+      blockedFavorite.statements.some((statement) =>
+        /INSERT\s+OR\s+IGNORE\s+INTO\s+favorites/i.test(statement.sql),
+      ),
+      false,
+    );
+  }
+}
+
+const addFavorite = await requestToggleFavorite({ action: "add" });
+assert.equal(addFavorite.response.status, 200);
+assert.equal((await addFavorite.response.json()).favored, true);
+assert.ok(
+  addFavorite.statements.some((statement) =>
+    /INSERT\s+OR\s+IGNORE\s+INTO\s+favorites/i.test(statement.sql),
+  ),
+);
+
+const staleRemove = await requestToggleFavorite(
+  { action: "remove" },
+  { cafeStatus: "hidden", favoriteExists: true },
+);
+assert.equal(staleRemove.response.status, 200);
+assert.equal((await staleRemove.response.json()).favored, false);
+assert.ok(
+  staleRemove.statements.some((statement) =>
+    /DELETE\s+FROM\s+favorites/i.test(statement.sql),
+  ),
+);
+
 function createResetCsvTestEnv(role = "admin", options = {}) {
   const statements = [];
   let applyAttempts = 0;
