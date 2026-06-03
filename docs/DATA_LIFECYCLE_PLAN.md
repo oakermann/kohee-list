@@ -286,7 +286,8 @@ WHERE f.user_id = ?
   AND c.deleted_at IS NULL
 ```
 
-`POST /favorite`도 승인/미삭제 cafe만 추가 가능해야 한다.
+`POST /favorite`도 승인/미삭제 cafe만 추가 가능해야 한다. 기존 stale favorite row는 DB에 남을 수 있지만,
+조회에서는 공개 cafe만 반환하고 `remove`는 stale row도 제거할 수 있어야 한다.
 
 ### Admin/manager API
 
