@@ -1,5 +1,11 @@
 # KOHEE LIST
 
+## OAP managed-project handoff
+
+KOHEE uses the owner-gated OAP managed profile for repository handoff. Before
+creating a PR, run the profile checks so the managed-project boundary and
+owner-gated requirements are verified.
+
 Cloudflare Pages + Workers + D1 based cafe curation platform for KOHEE LIST.
 
 KOHEE LIST is a product repository. OAP is maintained separately.
