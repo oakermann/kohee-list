@@ -92,6 +92,38 @@ function gitFile(ref, path) {
   }
 }
 
+function filesInDirectory(directory, predicate) {
+  try {
+    return fs
+      .readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && predicate(entry.name))
+      .map((entry) => `${directory}/${entry.name}`);
+  } catch {
+    return [];
+  }
+}
+
+function automationGuardRead(file) {
+  let content = read(file);
+  if (file !== "scripts/audit-kohee.mjs") return content;
+
+  const patternName = "prohibitedAutomation";
+  const patternStart = content.indexOf(`const ${patternName}Patterns = [`);
+  const patternEnd = content.indexOf(`const ${patternName} =`, patternStart);
+  if (patternStart !== -1 && patternEnd !== -1) {
+    content = `${content.slice(0, patternStart)}${content.slice(patternEnd)}`;
+  }
+
+  const okPrefix = `  ok("No ${"prohibited"} `;
+  const okStart = content.indexOf(okPrefix);
+  if (okStart !== -1) {
+    const okEnd = content.indexOf("\n", okStart);
+    content = `${content.slice(0, okStart)}  ok("repository automation guard passed");${content.slice(okEnd)}`;
+  }
+
+  return content;
+}
+
 function firstUsableBaseRef() {
   const fetchedBaseRef = ensureRemoteRef(process.env.GITHUB_BASE_REF);
   const fetchedMainRef = fetchedBaseRef ? "" : ensureRemoteRef("main");
@@ -366,6 +398,53 @@ if (/wrangler\s+d1\s+migrations\s+apply/i.test(d1Sources)) {
   fail("Potential D1 migration auto-apply command detected");
 } else {
   ok("No obvious D1 auto-apply command detected in workflows/routes/scripts");
+}
+
+const automationGuardSources = [
+  ...filesInDirectory(".github/workflows", (name) => /\.ya?ml$/i.test(name)),
+  ...filesInDirectory("scripts", (name) =>
+    /\.(mjs|js|cjs|ps1|sh|cmd|bat)$/i.test(name),
+  ),
+  "package.json",
+];
+const automationGuardContent = automationGuardSources
+  .map((file) => `${file}\n${automationGuardRead(file)}`)
+  .join("\n");
+const prohibitedAutomationPatterns = [
+  {
+    label: "unattended worker",
+    regex: /\bunattended[-_\s]?worker\b/i,
+  },
+  {
+    label: "auto-merge",
+    regex:
+      /\b(auto[-_\s]?merge|enablePullRequestAutoMerge|enable_auto_merge|gh\s+pr\s+merge[^\n\r]*--auto)\b/i,
+  },
+  {
+    label: "branch deletion",
+    regex:
+      /\b(branch[-_\s]?deletion|delete[-_\s]?branch|deleteBranchOnMerge|gh\s+pr\s+merge[^\n\r]*--delete-branch|git\s+branch\s+-D|git\s+push[^\n\r]*--delete)\b/i,
+  },
+  {
+    label: "issue close automation",
+    regex: /\b(issue[-_\s]?close|close[-_\s]?issue|gh\s+issue\s+close)\b/i,
+  },
+  {
+    label: "review/check gate bypass",
+    regex:
+      /\b(bypass[-_\s]?(review|check|gate)|override[-_\s]?(review|check|gate)|skip[-_\s]?required[-_\s]?(review|check|status))\b/i,
+  },
+];
+const prohibitedAutomation = prohibitedAutomationPatterns
+  .filter(({ regex }) => regex.test(automationGuardContent))
+  .map(({ label }) => label);
+
+if (prohibitedAutomation.length > 0) {
+  fail(
+    `Prohibited repository automation detected: ${prohibitedAutomation.join(", ")}`,
+  );
+} else {
+  ok("No prohibited unattended worker/auto-merge/branch-delete/issue-close/gate-bypass automation detected");
 }
 
 const changed = changedFilesFromGit();
