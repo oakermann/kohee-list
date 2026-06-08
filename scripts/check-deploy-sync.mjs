@@ -14,6 +14,11 @@ const files = [
   "assets/login.js",
   "assets/submit.js",
   "assets/mypage.js",
+  "assets/admin.css",
+  "assets/index.css",
+  "assets/login.css",
+  "assets/submit.css",
+  "assets/mypage.css",
 ];
 
 function normalizeNewlines(value) {
