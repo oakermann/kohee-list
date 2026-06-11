@@ -61,7 +61,7 @@ export async function toggleFavorite(req, env) {
       .bind(user.user_id, cafeId)
       .first();
 
-    if (!cafe && action !== "remove") {
+    if (!cafe && !(action === "remove" || (action === "toggle" && exists))) {
       throw new HttpError(404, "Cafe not found");
     }
 

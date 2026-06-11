@@ -1684,6 +1684,18 @@ assert.ok(
   ),
 );
 
+const staleToggle = await requestToggleFavorite(
+  { action: "toggle" },
+  { cafeStatus: "hidden", favoriteExists: true },
+);
+assert.equal(staleToggle.response.status, 200);
+assert.equal((await staleToggle.response.json()).favored, false);
+assert.ok(
+  staleToggle.statements.some((statement) =>
+    /DELETE\s+FROM\s+favorites/i.test(statement.sql),
+  ),
+);
+
 function createResetCsvTestEnv(role = "admin", options = {}) {
   const statements = [];
   let applyAttempts = 0;
