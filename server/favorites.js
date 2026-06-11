@@ -44,6 +44,9 @@ export async function toggleFavorite(req, env) {
     if (!cafeId) throw new HttpError(400, "cafe_id required");
 
     const action = cleanText(body.action, 20) || "toggle";
+    if (action !== "toggle" && action !== "add" && action !== "remove") {
+      throw new HttpError(400, "Invalid action");
+    }
 
     const cafe = await env.DB.prepare(
       `SELECT id

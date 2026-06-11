@@ -1684,6 +1684,9 @@ assert.ok(
   ),
 );
 
+const invalidAction = await requestToggleFavorite({ action: "invalid-action-name" });
+assert.equal(invalidAction.response.status, 400);
+
 function createResetCsvTestEnv(role = "admin", options = {}) {
   const statements = [];
   let applyAttempts = 0;

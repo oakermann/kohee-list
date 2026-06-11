@@ -174,31 +174,32 @@ function assetVersion(html, assetPath) {
   return match?.[1] || "";
 }
 
-function checkAdminAssetVersion(assetPath) {
-  const rootHtml = read("admin.html");
-  const deployHtml = read(".pages-deploy/admin.html");
+function checkAssetVersion(htmlFile, assetPath) {
+  const rootHtml = read(htmlFile);
+  const deployHtml = read(`.pages-deploy/${htmlFile}`);
   const rootVersion = assetVersion(rootHtml, assetPath);
   const deployVersion = assetVersion(deployHtml, assetPath);
+  const pageLabel = htmlFile.replace(".html", "");
   const label = assetPath.replace("./assets/", "");
 
   if (!rootVersion) {
-    fail(`admin.html missing cache-busted ${assetPath}?v=... reference`);
+    fail(`${htmlFile} missing cache-busted ${assetPath}?v=... reference`);
     return;
   }
   if (!deployVersion) {
-    fail(`.pages-deploy/admin.html missing cache-busted ${assetPath}?v=... reference`);
+    fail(`.pages-deploy/${htmlFile} missing cache-busted ${assetPath}?v=... reference`);
     return;
   }
   if (rootVersion !== deployVersion) {
     fail(
-      `admin ${label} cache-bust mismatch: root=${rootVersion}, .pages-deploy=${deployVersion}`,
+      `${pageLabel} ${label} cache-bust mismatch: root=${rootVersion}, .pages-deploy=${deployVersion}`,
     );
   } else {
-    ok(`admin ${label} cache-bust versions match (${rootVersion})`);
+    ok(`${pageLabel} ${label} cache-bust versions match (${rootVersion})`);
   }
 }
 
-function checkAdminAssetBump({ assetFile, assetPath, htmlFile, baseRef }) {
+function checkAssetBump({ assetFile, assetPath, htmlFile, baseRef }) {
   if (!baseRef) {
     warn(
       `${assetFile} changed but no base ref was available to confirm ${htmlFile} version bump`,
@@ -448,34 +449,40 @@ if (prohibitedAutomation.length > 0) {
 }
 
 const changed = changedFilesFromGit();
-checkAdminAssetVersion("./assets/admin.js");
-checkAdminAssetVersion("./assets/admin.css");
 
-const adminAssetChecks = [
-  { assetFile: "assets/admin.js", assetPath: "./assets/admin.js" },
-  {
-    assetFile: ".pages-deploy/assets/admin.js",
-    assetPath: "./assets/admin.js",
-  },
-  { assetFile: "assets/admin.css", assetPath: "./assets/admin.css" },
-  {
-    assetFile: ".pages-deploy/assets/admin.css",
-    assetPath: "./assets/admin.css",
-  },
+const assetChecks = [
+  { htmlFile: "admin.html", assetPath: "./assets/admin.js", assetFile: "assets/admin.js" },
+  { htmlFile: "admin.html", assetPath: "./assets/admin.css", assetFile: "assets/admin.css" },
+  { htmlFile: "index.html", assetPath: "./assets/index.js", assetFile: "assets/index.js" },
+  { htmlFile: "index.html", assetPath: "./assets/index.css", assetFile: "assets/index.css" },
+  { htmlFile: "mypage.html", assetPath: "./assets/mypage.js", assetFile: "assets/mypage.js" },
+  { htmlFile: "mypage.html", assetPath: "./assets/mypage.css", assetFile: "assets/mypage.css" },
+  { htmlFile: "login.html", assetPath: "./assets/login.js", assetFile: "assets/login.js" },
+  { htmlFile: "login.html", assetPath: "./assets/login.css", assetFile: "assets/login.css" },
+  { htmlFile: "submit.html", assetPath: "./assets/submit.js", assetFile: "assets/submit.js" },
+  { htmlFile: "submit.html", assetPath: "./assets/submit.css", assetFile: "assets/submit.css" },
 ];
 
-for (const check of adminAssetChecks) {
-  if (!changed.files.has(check.assetFile)) continue;
-  checkAdminAssetBump({
-    ...check,
-    htmlFile: "admin.html",
-    baseRef: changed.baseRef,
-  });
-  checkAdminAssetBump({
-    ...check,
-    htmlFile: ".pages-deploy/admin.html",
-    baseRef: changed.baseRef,
-  });
+for (const check of assetChecks) {
+  checkAssetVersion(check.htmlFile, check.assetPath);
+}
+
+for (const check of assetChecks) {
+  if (changed.files.has(check.assetFile)) {
+    checkAssetBump({
+      ...check,
+      htmlFile: check.htmlFile,
+      baseRef: changed.baseRef,
+    });
+  }
+  const deployAssetFile = `.pages-deploy/${check.assetFile}`;
+  if (changed.files.has(deployAssetFile)) {
+    checkAssetBump({
+      ...check,
+      htmlFile: `.pages-deploy/${check.htmlFile}`,
+      baseRef: changed.baseRef,
+    });
+  }
 }
 
 for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
