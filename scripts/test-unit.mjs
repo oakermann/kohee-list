@@ -1684,6 +1684,40 @@ assert.ok(
   ),
 );
 
+const invalidAction = await requestToggleFavorite({ action: "invalid" });
+assert.equal(invalidAction.response.status, 400);
+assert.deepEqual(await invalidAction.response.json(), {
+  ok: false,
+  error: "Invalid action",
+  code: "VALIDATION_ERROR",
+});
+
+const redundantAdd = await requestToggleFavorite(
+  { action: "add" },
+  { favoriteExists: true },
+);
+assert.equal(redundantAdd.response.status, 200);
+assert.equal((await redundantAdd.response.json()).favored, true);
+assert.equal(
+  redundantAdd.statements.some((statement) =>
+    /INSERT\s+OR\s+IGNORE\s+INTO\s+favorites/i.test(statement.sql),
+  ),
+  false,
+);
+
+const redundantRemove = await requestToggleFavorite(
+  { action: "remove" },
+  { favoriteExists: false },
+);
+assert.equal(redundantRemove.response.status, 200);
+assert.equal((await redundantRemove.response.json()).favored, false);
+assert.equal(
+  redundantRemove.statements.some((statement) =>
+    /DELETE\s+FROM\s+favorites/i.test(statement.sql),
+  ),
+  false,
+);
+
 function createResetCsvTestEnv(role = "admin", options = {}) {
   const statements = [];
   let applyAttempts = 0;
