@@ -1,25 +1,21 @@
 # KOHEE LIST Agent Contract
 
-KOHEE LIST is a product repository. OAP is maintained separately.
+KOHEE LIST is a cafe curation product repository. OAP is maintained separately.
 
-Purpose: keep work scoped to the KOHEE cafe product, its product safety checks,
-and its deploy/D1 guardrails.
+## Required Read Order
 
-## Read First
+1. `kohee.contract.json`
+2. `docs/KOHEE_MASTER_CONTEXT.md`
+3. `docs/KOHEE_CONSTITUTION.md`
+4. Task-specific policy docs linked from the master context
+5. The exact files needed for the task
 
-Before changing repository behavior, read:
+Do not use chat memory as source of truth. If instructions conflict, follow
+`docs/KOHEE_CONSTITUTION.md` and `kohee.contract.json` first.
 
-1. `docs/KOHEE_MASTER_CONTEXT.md`
-2. `kohee.contract.json`
-3. `README.md`
-4. Any product document directly related to the task
+## Protected Areas
 
-## Product Boundary
-
-Do not change product runtime behavior unless the user explicitly asks for that
-specific product change.
-
-Hard no-change areas unless explicitly approved:
+Do not change these without explicit scoped approval:
 
 - `server/**`
 - `assets/**`
@@ -32,47 +28,38 @@ Hard no-change areas unless explicitly approved:
 - CSV import/reset behavior
 - public `/data` behavior
 - cafe lifecycle behavior
-- Cloudflare deploy behavior
-- secrets or production config
+- deploy behavior, secrets, or production config
 
-## Keep
+For HIGH/HOLD areas, stop and report instead of modifying.
 
-- KOHEE product code
-- KOHEE product tests
-- deploy safety checks
-- D1 migration blocking
-- CSV/public data/lifecycle safety checks
-- smoke checks
+## Repository Boundary
 
-Expected validation commands for product-safe repository work:
+- Do not restore OAP platform artifacts.
+- Do not add task packet systems, watchers, bridges, GitHub App workers,
+  decision engines, project profiles, control-plane dry-runs, auto-merge bots,
+  branch deletion, or issue-close automation here.
+- Product runtime must not be changed by docs-only cleanup.
+
+## Required Validation
+
+Run the validation listed in `kohee.contract.json` for the task risk. For
+docs/contract work, run at minimum:
 
 ```text
 npm run check:deploy-sync
 npm run test:unit
+npm run audit:kohee
 npm run verify:release
 git diff --check
+node scripts/detect-changed-areas.mjs --working-tree
 ```
 
-Use `npm run audit:kohee` when product invariants or governance references are
-touched.
+## Final Report
 
-## Core Rules
+Always include:
 
-- Preserve public cafe exposure rules.
-- Preserve candidate-first CSV import behavior.
-- Preserve admin/user role boundaries.
-- Preserve manual-review treatment for D1/schema/migrations.
-- Do not add unattended worker, auto-merge, branch deletion, or issue-close
-  features in this repository.
-- Keep reports concise and evidence-based.
-
-## Report Format
-
-Use:
-
-```text
-Status
-Blocker
-Next action
-Evidence
-```
+- changed files
+- validation results
+- risk
+- unverified items
+- remaining risks or HOLD blockers

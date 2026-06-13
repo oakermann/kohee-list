@@ -242,48 +242,109 @@ try {
 
 if (contract) {
   const keys = [
-    "project",
-    "authModelTarget",
-    "legacyRoles",
+    "schemaVersion",
+    "repo",
+    "sourceOfTruth",
+    "precedence",
     "invariants",
+    "protectedAreas",
     "lanes",
-    "verify",
+    "riskPolicy",
+    "requiredChecks",
+    "decisionPolicy",
     "reportFormat",
-    "forbidden",
   ];
   for (const key of keys) {
     if (Object.hasOwn(contract, key)) ok(`contract key present: ${key}`);
     else fail(`contract key missing: ${key}`);
   }
 
-  const deployLane = contract?.lanes?.DEPLOY_SAFETY;
-  if (deployLane?.files?.includes("scripts"))
-    ok("DEPLOY_SAFETY lane includes scripts");
-  else fail("DEPLOY_SAFETY lane file allowlist missing scripts");
+  if (contract?.repo?.name === "KOHEE LIST") ok("contract repo name matched");
+  else fail("contract repo name mismatch");
+  if (contract?.repo?.type === "product") ok("contract repo type is product");
+  else fail("contract repo type must be product");
+  if (contract?.repo?.oap === "external") ok("contract marks OAP as external");
+  else fail("contract must mark OAP as external");
 
-  const governanceLane = contract?.lanes?.GOVERNANCE;
-  if (governanceLane?.files?.includes("AGENTS.md"))
-    ok("GOVERNANCE lane includes AGENTS.md");
-  else fail("GOVERNANCE lane file allowlist missing AGENTS.md");
-  if (governanceLane?.files?.includes("docs/KOHEE_MASTER_CONTEXT.md"))
-    ok("GOVERNANCE lane includes docs/KOHEE_MASTER_CONTEXT.md");
-  else fail("GOVERNANCE lane file allowlist missing docs/KOHEE_MASTER_CONTEXT.md");
+  const requiredDocs = [
+    "docs/KOHEE_MASTER_CONTEXT.md",
+    "docs/KOHEE_CONSTITUTION.md",
+    "docs/KOHEE_PRODUCT_RULES.md",
+    "docs/KOHEE_DATA_POLICY.md",
+    "docs/KOHEE_D1_DEPLOY_RUNBOOK.md",
+    "docs/KOHEE_ROADMAP.md",
+    "docs/KOHEE_EXECUTION_LOG.md",
+  ];
+  for (const doc of requiredDocs) {
+    if (contract.sourceOfTruth?.includes(doc)) ok(`source of truth includes ${doc}`);
+    else fail(`source of truth missing ${doc}`);
+    if (read(doc)) ok(`source doc exists: ${doc}`);
+    else fail(`source doc missing: ${doc}`);
+  }
 
-  const inv = contract.invariants || {};
+  const docsLane = contract?.lanes?.docs;
+  if (docsLane?.allowedFiles?.includes("AGENTS.md"))
+    ok("docs lane includes AGENTS.md");
+  else fail("docs lane allowlist missing AGENTS.md");
+  if (docsLane?.allowedFiles?.includes("docs/**"))
+    ok("docs lane includes docs/**");
+  else fail("docs lane allowlist missing docs/**");
+
+  const deployLane = contract?.lanes?.deploy;
+  if (deployLane?.allowedFiles?.includes("scripts/**"))
+    ok("deploy lane includes scripts/**");
+  else fail("deploy lane allowlist missing scripts/**");
+
+  const protectedText = JSON.stringify(contract.protectedAreas || []);
+  for (const required of [
+    "server/**",
+    "assets/**",
+    ".pages-deploy/**",
+    "migrations/**",
+    "schema.sql",
+    "worker.js",
+    "auth/session",
+    "D1/schema/migrations",
+    "CSV import/reset",
+    "public /data",
+    "deploy/secrets",
+  ]) {
+    if (protectedText.includes(required)) ok(`protected area includes ${required}`);
+    else fail(`protected area missing ${required}`);
+  }
+
+  const invariantById = new Map(
+    Array.isArray(contract.invariants)
+      ? contract.invariants.map((item) => [item.id, item])
+      : [],
+  );
   const requiredInv = {
-    publicCafeWhere: "status = 'approved' AND deleted_at IS NULL",
-    newCafeDefaultStatus: "candidate",
-    publicApprovalGate: "approveCafe",
-    holdDefinition: "status = 'hidden' AND hidden_at IS NOT NULL",
-    legacyHiddenDefinition: "status = 'hidden' AND hidden_at IS NULL",
-    csvApprovedStagesAs: "candidate",
-    csvHiddenStagesAs: "hidden_with_hidden_at",
-    resetCsvSafeError: "CSV reset failed",
+    "public-approved-nondeleted-only": "status = 'approved' AND deleted_at IS NULL",
+    "new-cafe-default-status": "candidate",
+    "admin-approval-required": "approveCafe",
+    "hold-definition": "status = 'hidden' AND hidden_at IS NOT NULL",
+    "legacy-hidden-definition": "status = 'hidden' AND hidden_at IS NULL",
+    "csv-approved-stages-as-candidate": "candidate",
+    "csv-reset-safe-error": "CSV reset failed",
   };
   for (const [k, v] of Object.entries(requiredInv)) {
-    if (inv[k] === v) ok(`invariant matched: ${k}`);
+    if (invariantById.get(k)?.value === v) ok(`invariant matched: ${k}`);
     else fail(`invariant mismatch: ${k}`);
   }
+
+  if (contract.decisionPolicy?.MERGE?.includes("required checks are green"))
+    ok("MERGE requires green checks");
+  else fail("MERGE policy must require green checks");
+  if (contract.decisionPolicy?.MERGE?.includes("no unresolved review threads"))
+    ok("MERGE requires no unresolved review threads");
+  else fail("MERGE policy must require no unresolved review threads");
+  if (
+    contract.decisionPolicy?.HOLD?.some((item) =>
+      /public-data|auth|D1|CSV|deploy/i.test(item),
+    )
+  )
+    ok("HOLD policy covers protected product risks");
+  else fail("HOLD policy missing protected product risks");
 }
 
 const cafes = read("server/cafes.js");

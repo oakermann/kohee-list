@@ -1,142 +1,325 @@
 {
-  "project": "KOHEE LIST",
-  "authModelTarget": "admin_user",
-  "legacyRoles": [
-    "manager"
-  ],
-  "sourceOfTruth": "docs/KOHEE_MASTER_CONTEXT.md",
-  "invariants": {
-    "publicCafeWhere": "status = 'approved' AND deleted_at IS NULL",
-    "newCafeDefaultStatus": "candidate",
-    "publicApprovalGate": "approveCafe",
-    "holdDefinition": "status = 'hidden' AND hidden_at IS NOT NULL",
-    "legacyHiddenDefinition": "status = 'hidden' AND hidden_at IS NULL",
-    "csvApprovedStagesAs": "candidate",
-    "csvHiddenStagesAs": "hidden_with_hidden_at",
-    "resetCsvSafeError": "CSV reset failed"
+  "schemaVersion": "2026-05-19",
+  "repo": {
+    "name": "KOHEE LIST",
+    "type": "product",
+    "oap": "external",
+    "github": "oakermann/kohee-list",
+    "defaultBranch": "main"
   },
-  "lanes": {
-    "PUBLIC_EXPOSURE": {
-      "purpose": "Prevent candidate, hidden, rejected, or deleted cafes from public/user exposure.",
-      "files": [
-        "server/cafes.js",
-        "server/favorites.js",
-        "assets/index.js",
-        "assets/mypage.js",
-        "scripts/test-unit.mjs"
-      ]
+  "sourceOfTruth": [
+    "kohee.contract.json",
+    "docs/KOHEE_MASTER_CONTEXT.md",
+    "docs/KOHEE_CONSTITUTION.md",
+    "docs/KOHEE_PRODUCT_RULES.md",
+    "docs/KOHEE_DATA_POLICY.md",
+    "docs/KOHEE_D1_DEPLOY_RUNBOOK.md",
+    "docs/KOHEE_ROADMAP.md",
+    "docs/KOHEE_EXECUTION_LOG.md"
+  ],
+  "precedence": [
+    "docs/KOHEE_CONSTITUTION.md",
+    "kohee.contract.json",
+    "docs/KOHEE_MASTER_CONTEXT.md",
+    "task-specific policy docs",
+    "README.md",
+    "historical notes and audits"
+  ],
+  "invariants": [
+    {
+      "id": "public-approved-nondeleted-only",
+      "statement": "Public /data exposes only status='approved' AND deleted_at IS NULL.",
+      "value": "status = 'approved' AND deleted_at IS NULL"
     },
-    "AUTH_ROLE": {
-      "purpose": "Authentication, CSRF, roles, admin/user authorization, and manager removal.",
-      "files": [
-        "server/routes.js",
-        "server/shared.js",
+    {
+      "id": "candidate-public-separation",
+      "statement": "Candidate, hidden/hold, rejected, deleted, and internal-review rows must not appear in public data."
+    },
+    {
+      "id": "admin-approval-required",
+      "statement": "Submission acceptance or review processing does not equal public approval.",
+      "value": "approveCafe"
+    },
+    {
+      "id": "new-cafe-default-status",
+      "statement": "New cafe-like records default to candidate/hold, not public.",
+      "value": "candidate"
+    },
+    {
+      "id": "hold-definition",
+      "statement": "Hold rows are status='hidden' AND hidden_at IS NOT NULL.",
+      "value": "status = 'hidden' AND hidden_at IS NOT NULL"
+    },
+    {
+      "id": "legacy-hidden-definition",
+      "statement": "Legacy imported hidden rows are status='hidden' AND hidden_at IS NULL.",
+      "value": "status = 'hidden' AND hidden_at IS NULL"
+    },
+    {
+      "id": "csv-approved-stages-as-candidate",
+      "statement": "CSV status=approved must not directly publish cafes.",
+      "value": "candidate"
+    },
+    {
+      "id": "csv-reset-safe-error",
+      "statement": "CSV reset failures must use a safe error message.",
+      "value": "CSV reset failed"
+    },
+    {
+      "id": "private-fields-stay-internal",
+      "statement": "Submitter data, evidence, confidence, review notes, operator/admin identity, hold reasons, hidden/deleted metadata, and audit logs remain internal."
+    },
+    {
+      "id": "roles-admin-user-target",
+      "statement": "Target runtime roles are admin and user. Do not add new role systems or expand legacy manager behavior."
+    },
+    {
+      "id": "category-set",
+      "statement": "Allowed categories are espresso, drip, decaf, instagram, and dessert."
+    },
+    {
+      "id": "oap-external",
+      "statement": "OAP platform implementation must not live in this repository."
+    }
+  ],
+  "protectedAreas": [
+    {
+      "area": "product runtime",
+      "paths": [
+        "server/**",
+        "assets/**",
+        ".pages-deploy/**",
+        "worker.js"
+      ],
+      "defaultDecision": "HOLD unless explicitly scoped"
+    },
+    {
+      "area": "D1/schema/migrations",
+      "paths": [
+        "migrations/**",
+        "schema.sql"
+      ],
+      "defaultDecision": "HIGH/HOLD"
+    },
+    {
+      "area": "auth/session",
+      "paths": [
         "server/auth.js",
         "server/security.js",
+        "server/shared.js",
         "server/users.js",
-        "assets/admin.js",
-        "scripts/test-unit.mjs"
-      ]
+        "server/routes.js"
+      ],
+      "defaultDecision": "HIGH/HOLD"
     },
-    "LIFECYCLE": {
-      "purpose": "Cafe lifecycle transitions: candidate, hold, approved, deleted, restore.",
-      "files": [
-        "server/cafes.js",
+    {
+      "area": "CSV import/reset",
+      "paths": [
         "server/csv.js",
-        "server/submissions.js",
+        "server/cafes.js",
+        "server/submissions.js"
+      ],
+      "defaultDecision": "HIGH/HOLD"
+    },
+    {
+      "area": "public /data",
+      "paths": [
+        "server/cafes.js",
         "server/favorites.js",
-        "schema.sql",
-        "scripts/test-unit.mjs",
-        "docs/DATA_LIFECYCLE_PLAN.md"
+        "server/routes.js",
+        "worker.js",
+        "assets/index.js",
+        "assets/mypage.js"
+      ],
+      "defaultDecision": "HIGH/HOLD"
+    },
+    {
+      "area": "deploy/secrets",
+      "paths": [
+        ".github/workflows/**",
+        "wrangler.toml",
+        ".env*",
+        "*secret*",
+        "*credential*",
+        "*private-key*"
+      ],
+      "defaultDecision": "HIGH/HOLD"
+    }
+  ],
+  "lanes": {
+    "docs": {
+      "defaultRisk": "LOW",
+      "allowedFiles": [
+        "AGENTS.md",
+        "README.md",
+        "kohee.contract.json",
+        "docs/**"
       ]
     },
-    "CSV_PIPELINE": {
-      "purpose": "CSV import, reset, rollback, review exports, and future reviewed import staging.",
-      "files": [
+    "frontend": {
+      "defaultRisk": "MEDIUM",
+      "allowedFiles": [
+        "admin.html",
+        "index.html",
+        "login.html",
+        "mypage.html",
+        "submit.html",
+        "assets/**",
+        ".pages-deploy/**"
+      ]
+    },
+    "worker": {
+      "defaultRisk": "HIGH",
+      "allowedFiles": [
+        "worker.js",
+        "server/**"
+      ]
+    },
+    "d1": {
+      "defaultRisk": "HIGH",
+      "allowedFiles": [
+        "schema.sql",
+        "migrations/**",
+        "docs/**"
+      ]
+    },
+    "csv": {
+      "defaultRisk": "HIGH",
+      "allowedFiles": [
         "server/csv.js",
         "server/cafes.js",
         "server/submissions.js",
         "assets/admin.js",
-        "scripts/test-unit.mjs",
-        "docs/DATA_LIFECYCLE_PLAN.md"
+        ".pages-deploy/assets/admin.js",
+        "docs/**"
       ]
     },
-    "FRONTEND_RENDERING": {
-      "purpose": "Frontend rendering safety, admin/mypage/index UI, XSS-safe DOM updates, and external links.",
-      "files": [
-        "assets/common.js",
-        "assets/index.js",
-        "assets/mypage.js",
-        "assets/admin.js",
-        "index.html",
-        "mypage.html",
-        "admin.html",
-        "submit.html",
-        "login.html",
-        ".pages-deploy"
+    "auth": {
+      "defaultRisk": "HIGH",
+      "allowedFiles": [
+        "server/auth.js",
+        "server/security.js",
+        "server/shared.js",
+        "server/users.js",
+        "server/routes.js",
+        "docs/**"
       ]
     },
-    "DEPLOY_SAFETY": {
-      "purpose": "GitHub Actions, Cloudflare deploy safety, D1 migration blocking, repo safety, and deploy sync.",
-      "files": [
-        "package.json",
-        "scripts",
-        ".github/workflows",
-        "_headers",
-        ".pages-deploy/_headers",
-        "wrangler.toml"
+    "deploy": {
+      "defaultRisk": "HIGH",
+      "allowedFiles": [
+        ".github/workflows/**",
+        "wrangler.toml",
+        "scripts/**",
+        "docs/**"
       ]
     },
-    "GOVERNANCE": {
-      "purpose": "Repository governance, agent contracts, product findings ledger, and governance validation tooling.",
-      "files": [
-        "AGENTS.md",
-        "kohee.contract.json",
-        "docs/KOHEE_MASTER_CONTEXT.md",
-        "docs/audits/KOHEE_FINDINGS.md",
-        ".github/pull_request_template.md",
-        "scripts/audit-kohee.mjs",
-        "package.json"
+    "test": {
+      "defaultRisk": "MEDIUM",
+      "allowedFiles": [
+        "scripts/**",
+        "docs/**"
+      ]
+    },
+    "audit": {
+      "defaultRisk": "LOW",
+      "allowedFiles": [
+        "docs/**",
+        "scripts/audit-kohee.mjs"
       ]
     }
   },
-  "verify": {
+  "riskPolicy": {
     "LOW": [
-      "npm run check:deploy-sync",
-      "npm run test:unit",
-      "git diff --check"
+      "docs-only",
+      "audit-only",
+      "no product runtime behavior change"
     ],
     "MEDIUM": [
-      "npm run check:deploy-sync",
-      "npm run test:unit",
-      "powershell -ExecutionPolicy Bypass -File .\\scripts\\check-syntax.ps1",
-      "npm run format:check",
-      "git diff --check"
+      "frontend rendering cleanup without API behavior change",
+      "test/tooling changes without deploy or production writes",
+      "server refactor only when behavior is proven unchanged"
     ],
     "HIGH": [
+      "D1/schema/migrations",
+      "auth/session/security",
+      "CSV import/reset",
+      "public /data behavior",
+      "cafe lifecycle behavior",
+      "deploy/secrets/production config"
+    ],
+    "HOLD": [
+      "missing explicit approval for HIGH area",
+      "unclear product behavior impact",
+      "conflicting docs",
+      "unresolved public-data, auth, D1, CSV, or deploy uncertainty",
+      "OAP platform implementation in this repo"
+    ]
+  },
+  "requiredChecks": {
+    "docsContract": [
       "npm run check:deploy-sync",
       "npm run test:unit",
-      "powershell -ExecutionPolicy Bypass -File .\\scripts\\check-syntax.ps1",
+      "npm run audit:kohee",
       "npm run verify:release",
-      "npm run format:check",
       "git diff --check",
-      "npm run check:repo-safety"
+      "node scripts/detect-changed-areas.mjs --working-tree"
+    ],
+    "productRuntime": [
+      "npm run check:deploy-sync",
+      "npm run test:unit",
+      "npm run audit:kohee",
+      "npm run verify:release",
+      "git diff --check",
+      "node scripts/detect-changed-areas.mjs --working-tree",
+      "manual review for protected areas"
+    ],
+    "highRisk": [
+      "explicit user approval",
+      "backup/rollback plan where applicable",
+      "npm run verify:release",
+      "manual evidence review"
+    ]
+  },
+  "decisionPolicy": {
+    "MERGE": [
+      "changed files match approved scope",
+      "required checks are green",
+      "no unresolved review threads",
+      "no unapproved HIGH/HOLD area",
+      "product invariants remain intact"
+    ],
+    "FIX": [
+      "checks failed",
+      "review requested changes",
+      "changed files exceed scope but are fixable",
+      "documentation is ambiguous but not unsafe"
+    ],
+    "HOLD": [
+      "HIGH-risk area lacks explicit approval",
+      "D1/schema/migration uncertainty",
+      "public-data risk",
+      "auth/session risk",
+      "CSV import/reset risk",
+      "deploy/secrets risk",
+      "unresolved uncertainty",
+      "conflicting docs",
+      "OAP platform artifact would be restored or implemented"
+    ],
+    "NEXT": [
+      "no merge target exists",
+      "current task is complete and next roadmap task can be prepared",
+      "work should stop before crossing into HIGH/HOLD scope"
     ]
   },
   "reportFormat": [
-    "Risk",
-    "Lane",
-    "Commit or PR",
+    "Status",
     "Changed files",
-    "Changed functions",
-    "Tests",
-    "Remaining risks"
-  ],
-  "forbidden": [
-    "broad refactor",
-    "manager expansion",
-    "aaa/aaaa changes",
-    "deploy unless explicitly requested",
-    "changes outside allowlist"
+    "Validation",
+    "Risk",
+    "Decision",
+    "Unverified items",
+    "Remaining risks",
+    "Next action"
   ]
 }
