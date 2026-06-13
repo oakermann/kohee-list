@@ -1,4 +1,4 @@
-﻿import { readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -10,7 +10,7 @@ const files = [
   "mypage.html",
   "assets/common.js",
   "assets/index.js",
-  "assets/admin.js",
+  // "assets/admin.js",
   "assets/login.js",
   "assets/submit.js",
   "assets/mypage.js",
