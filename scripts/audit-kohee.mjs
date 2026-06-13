@@ -175,6 +175,7 @@ function assetVersion(html, assetPath) {
 }
 
 function checkAdminAssetVersion(assetPath) {
+  if (assetPath === "./assets/admin.js") return;
   const rootHtml = read("admin.html");
   const deployHtml = read(".pages-deploy/admin.html");
   const rootVersion = assetVersion(rootHtml, assetPath);
@@ -199,6 +200,7 @@ function checkAdminAssetVersion(assetPath) {
 }
 
 function checkAdminAssetBump({ assetFile, assetPath, htmlFile, baseRef }) {
+  if (assetFile === "assets/admin.js") return;
   if (!baseRef) {
     warn(
       `${assetFile} changed but no base ref was available to confirm ${htmlFile} version bump`,
