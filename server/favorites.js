@@ -44,6 +44,9 @@ export async function toggleFavorite(req, env) {
     if (!cafeId) throw new HttpError(400, "cafe_id required");
 
     const action = cleanText(body.action, 20) || "toggle";
+    if (action !== "toggle" && action !== "add" && action !== "remove") {
+      throw new HttpError(400, "Invalid action", "VALIDATION_ERROR");
+    }
 
     const cafe = await env.DB.prepare(
       `SELECT id
@@ -63,6 +66,14 @@ export async function toggleFavorite(req, env) {
 
     if (!cafe && action !== "remove") {
       throw new HttpError(404, "Cafe not found");
+    }
+
+    if (action === "add" && exists) {
+      return json({ ok: true, favored: true }, 200, req, env);
+    }
+
+    if (action === "remove" && !exists) {
+      return json({ ok: true, favored: false }, 200, req, env);
     }
 
     if ((action === "toggle" && !exists) || action === "add") {
