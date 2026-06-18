@@ -57,32 +57,6 @@
           </button>
         </div>
         <div id="review-console-list" class="list"></div>
-      </section>
-
-      <section id="legacy-review-panel" class="panel hidden">
-        <h2>기존 검수/CSV 패널 (fallback)</h2>
-        <div class="meta admin-section-label">
-          필요 시 기존 검수/CSV 흐름을 그대로 사용할 수 있습니다.
-        </div>
-
-        <h3 class="legacy-heading">제보 검토 / 카페 관리</h3>
-        <div class="meta admin-section-label">검토 대기 제보</div>
-        <div id="sub-list" class="list"></div>
-
-        <hr class="admin-separator" />
-        <div class="meta admin-section-label">
-          카페 관리 (검색/수정/신규/수정 후 승인)
-        </div>
-        <select id="cafe-lifecycle" aria-label="카페 표시 범위">
-          <option value="active">활성</option>
-          <option value="deleted">삭제됨</option>
-          <option value="all">전체</option>
-        </select>
-        <input id="cafe-search" placeholder="카페명/주소 검색" />
-        <div id="cafe-count" class="meta admin-count">
-          카페 데이터 확인 중...
-        </div>
-        <div id="cafe-list" class="list"></div>
         <div class="btns admin-actions">
           <button id="new-cafe-btn" class="primary" type="button">
             신규 등록
@@ -146,6 +120,32 @@
             <button id="delete-btn" class="warn" type="button">닫기</button>
           </div>
         </div>
+      </section>
+
+      <section id="legacy-review-panel" class="panel hidden">
+        <h2>기존 검수/CSV 패널 (fallback)</h2>
+        <div class="meta admin-section-label">
+          필요 시 기존 검수/CSV 흐름을 그대로 사용할 수 있습니다.
+        </div>
+
+        <h3 class="legacy-heading">제보 검토 / 카페 관리</h3>
+        <div class="meta admin-section-label">검토 대기 제보</div>
+        <div id="sub-list" class="list"></div>
+
+        <hr class="admin-separator" />
+        <div class="meta admin-section-label">
+          카페 관리 (검색/수정/신규/수정 후 승인)
+        </div>
+        <select id="cafe-lifecycle" aria-label="카페 표시 범위">
+          <option value="active">활성</option>
+          <option value="deleted">삭제됨</option>
+          <option value="all">전체</option>
+        </select>
+        <input id="cafe-search" placeholder="카페명/주소 검색" />
+        <div id="cafe-count" class="meta admin-count">
+          카페 데이터 확인 중...
+        </div>
+        <div id="cafe-list" class="list"></div>
 
         <h3 class="legacy-heading">CSV 운영 (보조)</h3>
         <div class="file-pick">
