@@ -661,7 +661,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 
 ### Phase 6.5. purge/archive 정책 구현
 
-- 목표: soft deleted 데이터가 장기간 누적될 때 안전하게 완전 삭제하거나 archive하는 별도 위험 작업을 제공한다.
+- 목표: soft deleted 데이터가 장기간 누적될 때, 이를 안전하게 완전 삭제하거나 archive 처리하는 별도의 위험 작업을 제공한다.
 - 상태: 미구현. 별도 승인된 위험 작업으로만 진행한다.
 - 수정 파일: 별도 설계 후 결정한다.
 - 위험도: 높음.
