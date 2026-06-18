@@ -2,6 +2,7 @@ name: Validate
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -35,5 +36,6 @@ jobs:
           }
 
       - name: Verify release
+        if: github.event_name == 'push'
         shell: powershell
         run: npm run verify:release
