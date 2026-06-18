@@ -1,6 +1,6 @@
 # KOHEE LIST
 
-Cloudflare Pages + Workers + D1 based cafe curation platform for KOHEE LIST.
+Cloudflare Pages + Workers + D1-based cafe curation platform for KOHEE LIST.
 
 KOHEE LIST is a product repository. OAP is maintained separately.
 
