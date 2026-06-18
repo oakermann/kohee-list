@@ -7,7 +7,7 @@ KOHEE LIST is a product repository. OAP is maintained separately.
 This document is the source of truth for KOHEE LIST product behavior, safety
 rules, lifecycle rules, CSV policy, deployment risk handling, and product
 backlog. When this document conflicts with older scattered notes, this document
-wins unless the user gives a newer explicit instruction.
+takes precedence unless the user gives a newer explicit instruction.
 
 ## 1. Project Baseline
 
