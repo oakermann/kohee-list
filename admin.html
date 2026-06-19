@@ -193,10 +193,23 @@
       </section>
 
       <section id="user-sec" class="panel hidden">
-        <h2>5) 회원 목록 (admin)</h2>
-        <input id="user-search" placeholder="아이디 검색" />
-        <div id="user-count" class="meta admin-count">회원 목록 확인 중...</div>
-        <div id="user-list" class="list"></div>
+        <div class="admin-accordion-head">
+          <h2 id="user-sec-title">5) 회원 목록 (admin)</h2>
+          <button
+            id="user-toggle"
+            class="admin-accordion-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="user-body"
+          >
+            회원 목록 펼치기
+          </button>
+        </div>
+        <div id="user-body" class="admin-accordion-body hidden" role="region" aria-labelledby="user-sec-title">
+          <input id="user-search" placeholder="아이디 검색" />
+          <div id="user-count" class="meta admin-count">회원 목록 확인 중...</div>
+          <div id="user-list" class="list"></div>
+        </div>
       </section>
 
       <section id="role-sec" class="panel hidden">
