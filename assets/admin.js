@@ -1514,6 +1514,14 @@ async function init() {
     );
   });
 
+  $("user-toggle").addEventListener("click", () => {
+    const expanded = !$("user-body").classList.toggle("hidden");
+    $("user-toggle").textContent = expanded
+      ? "회원 목록 접기"
+      : "회원 목록 펼치기";
+    $("user-toggle").setAttribute("aria-expanded", expanded.toString());
+  });
+
   const tasks = [
     loadCafes(),
     loadSubmissions(),
