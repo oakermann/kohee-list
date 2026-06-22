@@ -489,65 +489,78 @@ function reviewConsoleEmpty(message) {
   return empty;
 }
 
-function reviewConsoleSubmissionItem(submission) {
+function btn(p, t, c, f) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = c;
+  b.textContent = t;
+  b.addEventListener("click", () => {
+    const res = f();
+    if (res && typeof res.catch === "function") {
+      res.catch((e) => alert(e.message));
+    }
+  });
+  p.append(b);
+}
+function addMini(p, t) {
+  const d = document.createElement("div");
+  d.className = "mini";
+  d.textContent = t;
+  p.append(d);
+}
+
+function reviewConsoleSubmissionItem(s) {
   const item = document.createElement("div");
   item.className = "item";
-
-  const title = document.createElement("h3");
-  title.textContent = submission.name || "";
-
-  const address = document.createElement("div");
-  address.className = "mini";
-  address.textContent = submission.address || "";
-
-  const status = document.createElement("div");
-  status.className = "mini";
-  status.textContent = `상태: ${statusLabel(submission.status)}`;
-
-  item.append(title, address, status);
+  const h = document.createElement("h3");
+  h.append(document.createTextNode(s.name || ""));
+  const u = document.createElement("small");
+  u.className = "admin-small";
+  u.textContent = ` (${s.username || ""})`;
+  h.append(u);
+  item.append(h);
+  if (s.address) addMini(item, s.address);
+  if (s.desc) addMini(item, s.desc);
+  if (s.reason) addMini(item, `추천 이유: ${s.reason}`);
+  addMini(item, `상태: ${statusLabel(s.status)}`);
+  if (isAdmin()) {
+    const acts = document.createElement("div");
+    acts.className = "btns admin-actions";
+    btn(acts, "승인", "s-approve", () => approve(s.id, false));
+    btn(acts, "수정 후 승인", "s-edit-approve", () => approve(s.id, true));
+    btn(acts, "반려", "s-reject warn", () => reject(s.id));
+    btn(acts, "중복 처리", "s-dup", () => markDuplicate(s.id));
+    item.append(acts);
+  }
   return item;
 }
 
-function reviewConsoleCafeItem(cafe) {
+function reviewConsoleCafeItem(c) {
   const item = document.createElement("div");
   item.className = "item";
-
-  const title = document.createElement("h3");
-  title.textContent = cafe.name || "";
-
-  const address = document.createElement("div");
-  address.className = "mini";
-  address.textContent = cafe.address || "";
-
-  const status = document.createElement("div");
-  status.className = "mini";
-  status.textContent = `상태: ${statusLabel(cafe.status)}`;
-
-  item.append(title, address, status);
-
+  const h = document.createElement("h3");
+  h.textContent = c.name || "";
+  item.append(h);
+  if (c.address) addMini(item, c.address);
+  addMini(item, `상태: ${statusLabel(c.status)}`);
   if (isAdmin()) {
-    const actions = document.createElement("div");
-    actions.className = "item-actions";
-
-    if (cafe.status === "candidate") {
-      const hold = document.createElement("button");
-      hold.type = "button";
-      hold.textContent = "보류";
-      hold.addEventListener("click", () => holdCafe(cafe.id));
-      actions.append(hold);
+    const acts = document.createElement("div");
+    acts.className = "btns admin-actions";
+    btn(acts, "선택", "pick-cafe", () => {
+      clearEditApproveMode(false);
+      fillCafeForm(c);
+      $("save-cafe-btn").textContent = "저장";
+      $("delete-btn").textContent = isAdmin() ? "삭제" : "닫기";
+      openCafeForm();
+    });
+    if (c.status === "candidate") {
+      btn(acts, "승인", "approve-cafe", () => approveCafe(c.id));
+      btn(acts, "보류", "hold-cafe", () => holdCafe(c.id));
+    } else if (c.status === "hidden" && c.hidden_at) {
+      btn(acts, "후보로 복귀", "unhold-cafe", () => unholdCafe(c.id));
     }
-
-    if (cafe.status === "hidden" && cafe.hidden_at) {
-      const unhold = document.createElement("button");
-      unhold.type = "button";
-      unhold.textContent = "후보로 복귀";
-      unhold.addEventListener("click", () => unholdCafe(cafe.id));
-      actions.append(unhold);
-    }
-
-    if (actions.children.length) item.append(actions);
+    if (acts.children.length) item.append(acts);
   }
-
   return item;
 }
 
@@ -562,11 +575,33 @@ function toggleLegacyReviewPanel() {
     : "기존 검수/CSV 패널 숨기기";
 }
 
+function reviewConsoleTabCounts() {
+  const active = state.cafes.filter((cafe) => !cafe.deleted_at);
+  return {
+    submissions: state.submissions.length,
+    candidates: active.filter((cafe) => cafe.status === "candidate").length,
+    hold: active.filter(
+      (cafe) => cafe.status === "hidden" && cafe.hidden_at,
+    ).length,
+    approved: active.filter((cafe) => cafe.status === "approved").length,
+  };
+}
+function renderReviewConsoleTabCounts() {
+  const counts = reviewConsoleTabCounts();
+  document
+    .querySelectorAll("#review-console-tabs [data-count]")
+    .forEach((el) => {
+      const value = counts[el.dataset.count];
+      el.textContent = Number.isFinite(value) ? `(${value})` : "";
+    });
+}
+
 function renderReviewConsole() {
   const list = $("review-console-list");
   const note = $("review-console-note");
   if (!list || !note) return;
   renderReviewConsoleExportAction();
+  renderReviewConsoleTabCounts();
 
   if (state.reviewConsoleTab === "submissions") {
     note.textContent = "검토 대기 제보를 기존 제보 목록과 함께 확인합니다.";
@@ -1499,6 +1534,14 @@ async function init() {
         }),
       180,
     );
+  });
+
+  $("user-toggle").addEventListener("click", () => {
+    const expanded = !$("user-body").classList.toggle("hidden");
+    $("user-toggle").textContent = expanded
+      ? "회원 목록 접기"
+      : "회원 목록 펼치기";
+    $("user-toggle").setAttribute("aria-expanded", expanded.toString());
   });
 
   const tasks = [

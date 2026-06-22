@@ -575,11 +575,33 @@ function toggleLegacyReviewPanel() {
     : "기존 검수/CSV 패널 숨기기";
 }
 
+function reviewConsoleTabCounts() {
+  const active = state.cafes.filter((cafe) => !cafe.deleted_at);
+  return {
+    submissions: state.submissions.length,
+    candidates: active.filter((cafe) => cafe.status === "candidate").length,
+    hold: active.filter(
+      (cafe) => cafe.status === "hidden" && cafe.hidden_at,
+    ).length,
+    approved: active.filter((cafe) => cafe.status === "approved").length,
+  };
+}
+function renderReviewConsoleTabCounts() {
+  const counts = reviewConsoleTabCounts();
+  document
+    .querySelectorAll("#review-console-tabs [data-count]")
+    .forEach((el) => {
+      const value = counts[el.dataset.count];
+      el.textContent = Number.isFinite(value) ? `(${value})` : "";
+    });
+}
+
 function renderReviewConsole() {
   const list = $("review-console-list");
   const note = $("review-console-note");
   if (!list || !note) return;
   renderReviewConsoleExportAction();
+  renderReviewConsoleTabCounts();
 
   if (state.reviewConsoleTab === "submissions") {
     note.textContent = "검토 대기 제보를 기존 제보 목록과 함께 확인합니다.";

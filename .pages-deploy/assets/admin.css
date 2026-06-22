@@ -443,6 +443,14 @@ input[type="file"]::file-selector-button {
   padding-left: 5px;
   padding-right: 5px;
 }
+.tab-count {
+  margin-left: 3px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+.tab-count:empty {
+  display: none;
+}
 .review-console-actions {
   margin: 0 0 6px;
 }
