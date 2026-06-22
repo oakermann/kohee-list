@@ -285,7 +285,11 @@ input[type="file"]::file-selector-button {
   min-height: 32px;
 }
 .mini-tabs button.active {
-  background: var(--line);
+  background: #000;
+  color: #fff !important;
+}
+.mini-tabs button.active .tab-label,
+.mini-tabs button.active .tab-count {
   color: #fff !important;
 }
 #sub-list,
