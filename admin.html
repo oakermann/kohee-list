@@ -9,6 +9,38 @@
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
     />
     <link rel="stylesheet" href="./assets/admin.css?v=20260509-2" />
+    <style>
+      /* 5) 회원 목록 accordion — toggle full-width under title, inverts when expanded */
+      .admin-accordion-head {
+        display: block;
+      }
+      .admin-accordion-toggle {
+        width: 100%;
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        transition: background 0.12s ease, color 0.12s ease;
+      }
+      .admin-accordion-toggle::after {
+        content: "▾";
+        font-weight: 900;
+        line-height: 1;
+        transition: transform 0.15s ease;
+      }
+      .admin-accordion-toggle[aria-expanded="true"] {
+        background: var(--line);
+        color: #fff !important;
+        box-shadow: 2px 2px 0 rgba(255, 90, 0, 0.22);
+      }
+      .admin-accordion-toggle[aria-expanded="true"]::after {
+        transform: rotate(180deg);
+      }
+      .admin-accordion-body {
+        margin-top: 8px;
+      }
+    </style>
   </head>
   <body>
     <main class="wrap">
