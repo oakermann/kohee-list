@@ -8,7 +8,7 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
     />
-    <link rel="stylesheet" href="./assets/admin.css?v=20260509-2" />
+    <link rel="stylesheet" href="./assets/admin.css?v=20260622-1" />
   </head>
   <body>
     <main class="wrap">
@@ -36,7 +36,7 @@
       </section>
 
       <section class="panel">
-        <h2>카페 검수 관리</h2>
+        <h2>2) 카페 검수 관리</h2>
         <div id="review-console-tabs" class="mini-tabs review-console-tabs">
           <button type="button" data-tab="submissions" class="active">
             제보
@@ -57,32 +57,6 @@
           </button>
         </div>
         <div id="review-console-list" class="list"></div>
-      </section>
-
-      <section id="legacy-review-panel" class="panel hidden">
-        <h2>기존 검수/CSV 패널 (fallback)</h2>
-        <div class="meta admin-section-label">
-          필요 시 기존 검수/CSV 흐름을 그대로 사용할 수 있습니다.
-        </div>
-
-        <h3 class="legacy-heading">2) 제보 검토 / 카페 관리</h3>
-        <div class="meta admin-section-label">검토 대기 제보</div>
-        <div id="sub-list" class="list"></div>
-
-        <hr class="admin-separator" />
-        <div class="meta admin-section-label">
-          카페 관리 (검색/수정/신규/수정 후 승인)
-        </div>
-        <select id="cafe-lifecycle" aria-label="카페 표시 범위">
-          <option value="active">활성</option>
-          <option value="deleted">삭제됨</option>
-          <option value="all">전체</option>
-        </select>
-        <input id="cafe-search" placeholder="카페명/주소 검색" />
-        <div id="cafe-count" class="meta admin-count">
-          카페 데이터 확인 중...
-        </div>
-        <div id="cafe-list" class="list"></div>
         <div class="btns admin-actions">
           <button id="new-cafe-btn" class="primary" type="button">
             신규 등록
@@ -146,8 +120,34 @@
             <button id="delete-btn" class="warn" type="button">닫기</button>
           </div>
         </div>
+      </section>
 
-        <h3 class="legacy-heading">3) CSV 운영 (보조)</h3>
+      <section id="legacy-review-panel" class="panel hidden">
+        <h2>기존 검수/CSV 패널 (fallback)</h2>
+        <div class="meta admin-section-label">
+          필요 시 기존 검수/CSV 흐름을 그대로 사용할 수 있습니다.
+        </div>
+
+        <h3 class="legacy-heading">제보 검토 / 카페 관리</h3>
+        <div class="meta admin-section-label">검토 대기 제보</div>
+        <div id="sub-list" class="list"></div>
+
+        <hr class="admin-separator" />
+        <div class="meta admin-section-label">
+          카페 관리 (검색/수정/신규/수정 후 승인)
+        </div>
+        <select id="cafe-lifecycle" aria-label="카페 표시 범위">
+          <option value="active">활성</option>
+          <option value="deleted">삭제됨</option>
+          <option value="all">전체</option>
+        </select>
+        <input id="cafe-search" placeholder="카페명/주소 검색" />
+        <div id="cafe-count" class="meta admin-count">
+          카페 데이터 확인 중...
+        </div>
+        <div id="cafe-list" class="list"></div>
+
+        <h3 class="legacy-heading">CSV 운영 (보조)</h3>
         <div class="file-pick">
           <label for="csv-file" class="btn file-trigger">파일 선택</label>
           <div id="csv-file-name" class="file-name">선택된 파일 없음</div>
@@ -170,7 +170,7 @@
       </section>
 
       <section class="panel">
-        <h2>4) 오류 제보 내역</h2>
+        <h2>3) 오류 제보 내역</h2>
         <div id="error-tabs" class="mini-tabs">
           <button type="button" data-status="open" class="active">
             확인 대기
@@ -181,7 +181,7 @@
       </section>
 
       <section class="panel">
-        <h2>5) 승인/반려 내역</h2>
+        <h2>4) 승인/반려 내역</h2>
         <div id="reviewed-note" class="meta admin-section-label"></div>
         <div id="reviewed-tabs" class="mini-tabs">
           <button type="button" data-status="approved" class="active">
@@ -193,14 +193,27 @@
       </section>
 
       <section id="user-sec" class="panel hidden">
-        <h2>6) 회원 목록 (admin)</h2>
-        <input id="user-search" placeholder="아이디 검색" />
-        <div id="user-count" class="meta admin-count">회원 목록 확인 중...</div>
-        <div id="user-list" class="list"></div>
+        <div class="admin-accordion-head">
+          <h2 id="user-sec-title">5) 회원 목록 (admin)</h2>
+          <button
+            id="user-toggle"
+            class="admin-accordion-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="user-body"
+          >
+            회원 목록 펼치기
+          </button>
+        </div>
+        <div id="user-body" class="admin-accordion-body hidden" role="region" aria-labelledby="user-sec-title">
+          <input id="user-search" placeholder="아이디 검색" />
+          <div id="user-count" class="meta admin-count">회원 목록 확인 중...</div>
+          <div id="user-list" class="list"></div>
+        </div>
       </section>
 
       <section id="role-sec" class="panel hidden">
-        <h2>7) 권한 관리 (admin)</h2>
+        <h2>6) 권한 관리 (admin)</h2>
         <div class="row2">
           <input id="role-username" placeholder="username" />
           <select id="role-value">

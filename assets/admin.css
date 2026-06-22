@@ -471,3 +471,22 @@ input[type="file"]::file-selector-button {
   margin: 2px 0 6px;
   text-align: center;
 }
+
+/* 5) 회원 목록 — 아코디언 토글 */
+.admin-accordion-head {
+  display: block;
+}
+.admin-accordion-toggle {
+  width: 100%;
+  margin: 2px 0 6px;
+}
+.admin-accordion-toggle[aria-expanded="true"] {
+  background: var(--point);
+  border-color: var(--point);
+  color: #fff !important;
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.18);
+}
+.admin-accordion-body {
+  display: grid;
+  gap: 6px;
+}
