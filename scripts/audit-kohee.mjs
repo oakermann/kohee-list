@@ -177,7 +177,7 @@ function assetVersion(html, assetPath) {
 function checkAdminAssetVersion(assetPath) {
   if (assetPath === "./assets/admin.js") return;
   const rootHtml = read("admin.html");
-  const deployHtml = read(".pages-deploy/admin.html");
+  const deployHtml = read("admin.html");
   const rootVersion = assetVersion(rootHtml, assetPath);
   const deployVersion = assetVersion(deployHtml, assetPath);
   const label = assetPath.replace("./assets/", "");
@@ -475,7 +475,7 @@ for (const check of adminAssetChecks) {
   });
   checkAdminAssetBump({
     ...check,
-    htmlFile: ".pages-deploy/admin.html",
+    htmlFile: "admin.html",
     baseRef: changed.baseRef,
   });
 }

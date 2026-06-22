@@ -471,3 +471,33 @@ input[type="file"]::file-selector-button {
   margin: 2px 0 6px;
   text-align: center;
 }
+.admin-accordion-head {
+  display: grid;
+  gap: 7px;
+}
+.admin-accordion-head h2 {
+  margin-bottom: 0;
+}
+.admin-accordion-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.admin-accordion-toggle::after {
+  content: "▾";
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+.admin-accordion-toggle[aria-expanded="true"] {
+  background: var(--line);
+  color: #fff !important;
+}
+.admin-accordion-toggle[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+.admin-accordion-body {
+  margin-top: 7px;
+}
