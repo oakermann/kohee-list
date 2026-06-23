@@ -117,8 +117,7 @@ button.primary {
   color: #fff !important;
 }
 button.warn {
-  border-color: #b40000;
-  color: #b40000 !important;
+  border-color: var(--line);
 }
 input,
 textarea,
@@ -493,8 +492,8 @@ input[type="file"]::file-selector-button {
   margin: 2px 0 6px;
 }
 .admin-accordion-toggle[aria-expanded="true"] {
-  background: var(--point);
-  border-color: var(--point);
+  background: #000;
+  border-color: #000;
   color: #fff !important;
   box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.18);
 }
