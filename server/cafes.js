@@ -142,6 +142,30 @@ export function normalizeCafePayload(payload) {
   };
 }
 
+// Distance ("내 주변") relies on real coordinates. A cafe stored with lat/lng of
+// 0 (the missing-value default) is silently excluded from the nearby list, so we
+// require valid coordinates wherever a cafe is created.
+export function assertValidCafeCoords(payload) {
+  const lat = Number(payload.lat);
+  const lng = Number(payload.lng);
+  const valid =
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180 &&
+    lat !== 0 &&
+    lng !== 0;
+  if (!valid) {
+    throw new HttpError(
+      400,
+      "Cafe coordinates (lat/lng) are required",
+      "COORDS_REQUIRED",
+    );
+  }
+}
+
 export async function addCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
@@ -151,6 +175,7 @@ export async function addCafe(req, env) {
     const payload = normalizeCafePayload(body);
     if (!payload.name || !payload.address || !payload.desc)
       throw new HttpError(400, "name/address/desc required");
+    assertValidCafeCoords(payload);
 
     const id = crypto.randomUUID();
     const updatedAt = nowIso();
@@ -215,6 +240,7 @@ export async function editCafe(req, env) {
     const payload = normalizeCafePayload(body);
     if (!payload.name || !payload.address || !payload.desc)
       throw new HttpError(400, "name/address/desc required");
+    assertValidCafeCoords(payload);
 
     const updatedAt = nowIso();
     await env.DB.prepare(

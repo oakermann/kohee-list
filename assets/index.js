@@ -25,7 +25,11 @@ const FAVORITE_SYNC_KEY = "kohee-favorites-sync";
 const GEO_HIGH_ACCURACY_TIMEOUT_MS = 7000;
 const GEO_FALLBACK_TIMEOUT_MS = 4000;
 const GEO_APPROX_THRESHOLD_M = 1200;
+// Sentinel distance for cafes without usable coordinates (kept out of results).
 const GEO_DISTANCE_LIMIT_KM = 9999;
+// Actual "near me" radius. Cafes farther than this are not shown in nearby mode.
+// Tune this single value to widen/narrow the nearby search.
+const GEO_NEARBY_RADIUS_KM = 20;
 
 let lastFavoriteSync = "";
 let lastPositionAccuracyM = null;
@@ -69,10 +73,14 @@ function cafeCategories(cafe) {
 }
 
 function cafeTags(cafe) {
-  const tags = [];
-  if (cafe.oakerman_pick) tags.push("오커맨픽");
-  cafeCategories(cafe).forEach((tag) => tags.push(CAT_MAP[tag]));
-  return tags;
+  return cafeCategories(cafe).map((tag) => CAT_MAP[tag]);
+}
+
+function makePickBadge() {
+  const badge = document.createElement("span");
+  badge.className = "tag-small tag-pick";
+  badge.textContent = "오커맨픽";
+  return badge;
 }
 
 function appendLines(node, lines) {
@@ -229,15 +237,21 @@ function createCafeCard(cafe) {
   appendTags(tagGroup, cafe);
   meta.appendChild(tagGroup);
 
+  const metaRight = document.createElement("div");
+  metaRight.className = "meta-right";
+  if (cafe.oakerman_pick) metaRight.appendChild(makePickBadge());
+
   if (cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM) {
     const distance = formatDistance(cafe.dis);
     if (distance) {
       const badge = document.createElement("span");
       badge.className = "distance-badge";
       badge.textContent = distance;
-      meta.appendChild(badge);
+      metaRight.appendChild(badge);
     }
   }
+
+  if (metaRight.childElementCount) meta.appendChild(metaRight);
 
   const title = document.createElement("h4");
   title.textContent = safeText(cafe.name);
@@ -334,24 +348,28 @@ function render() {
   const query = $("search").value.toLowerCase().trim();
 
   if (nearbyMode) {
-    let nearbyCafes = data
-      .filter(
-        (cafe) => Number.isFinite(cafe.dis) && cafe.dis < GEO_DISTANCE_LIMIT_KM,
-      )
-      .sort((a, b) => a.dis - b.dis);
+    const located = data.filter(
+      (cafe) => Number.isFinite(cafe.dis) && cafe.dis < GEO_DISTANCE_LIMIT_KM,
+    );
 
-    if (selectedCategory) {
-      nearbyCafes = nearbyCafes.filter((cafe) =>
-        cafeCategories(cafe).includes(selectedCategory),
-      );
+    // No cafe has usable coordinates -> the cause is missing cafe data, not GPS.
+    if (!located.length) {
+      renderCenterMessage([
+        "주변 카페의 위치 정보가 아직 부족합니다.",
+        "카페명 또는 주소로 검색해 주세요.",
+      ]);
+      return;
     }
 
-    nearbyCafes = nearbyCafes.slice(0, 20);
+    const nearbyCafes = located
+      .filter((cafe) => cafe.dis <= GEO_NEARBY_RADIUS_KM)
+      .sort((a, b) => a.dis - b.dis)
+      .slice(0, 20);
 
     if (!nearbyCafes.length) {
       renderCenterMessage([
-        "근처에 해당 카페가 없습니다.",
-        "GPS를 다시 확인해 주세요.",
+        `${GEO_NEARBY_RADIUS_KM}km 이내에 등록된 카페가 없습니다.`,
+        "카페명 또는 주소로 검색해 보세요.",
       ]);
       return;
     }
@@ -386,8 +404,15 @@ function render() {
   renderCafeCards(filtered);
 }
 
+function clearCategorySelection() {
+  selectedCategory = null;
+  document
+    .querySelectorAll(".tab")
+    .forEach((tab) => tab.classList.remove("active"));
+}
+
 function toggleFilter(categoryKey) {
-  nearbyMode = false;
+  if (nearbyMode) exitNearbyMode();
   if (selectedCategory !== categoryKey) $("search").value = "";
   selectedCategory = selectedCategory === categoryKey ? null : categoryKey;
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -399,12 +424,9 @@ function toggleFilter(categoryKey) {
 }
 
 function handleSearchInput() {
-  nearbyMode = false;
+  if (nearbyMode) exitNearbyMode();
   if ($("search").value.trim().length > 0) {
-    selectedCategory = null;
-    document
-      .querySelectorAll(".tab")
-      .forEach((tab) => tab.classList.remove("active"));
+    clearCategorySelection();
   }
   render();
 }
@@ -527,6 +549,21 @@ function setNearbyLoading(isLoading) {
   btn.classList.toggle("is-loading", isLoading);
 }
 
+function setNearbyActive(active) {
+  const btn = $("nearby-btn");
+  if (!btn) return;
+  btn.classList.toggle("is-on", active);
+  btn.setAttribute("aria-pressed", active ? "true" : "false");
+}
+
+// Leave nearby mode and drop all distance state so distance badges and the
+// distance note do not linger in search/category results.
+function exitNearbyMode() {
+  nearbyMode = false;
+  clearDistances();
+  setNearbyActive(false);
+}
+
 function geolocationErrorMessage(error) {
   const permissionDenied = 1;
   const positionUnavailable = 2;
@@ -547,6 +584,13 @@ function geolocationErrorMessage(error) {
 }
 
 async function handleNearbyClick() {
+  // Toggle: pressing the button again while active returns to the default view.
+  if (nearbyMode) {
+    exitNearbyMode();
+    render();
+    return;
+  }
+
   if (!navigator.geolocation) {
     alert(geolocationErrorMessage());
     return;
@@ -557,12 +601,13 @@ async function handleNearbyClick() {
     const pos = await requestUserPosition();
     applyUserPosition(pos);
     nearbyMode = true;
+    clearCategorySelection();
+    setNearbyActive(true);
     $("search").value = "";
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (error) {
-    clearDistances();
-    nearbyMode = false;
+    exitNearbyMode();
     render();
     alert(geolocationErrorMessage(error));
     console.error(error);
@@ -577,6 +622,7 @@ function openModal(cafeId) {
 
   openModalCafeId = String(cafe.id);
   appendTags($("m-tags"), cafe);
+  if (cafe.oakerman_pick) $("m-tags").prepend(makePickBadge());
   updateFavoriteButton(cafe.id);
   setButtonAction("btn-favorite", async () => {
     try {

@@ -4,6 +4,8 @@
   --thick: 4px;
   --thin: 2px;
   --point: #ff5a00;
+  --shadow: 4px 4px 0 var(--border);
+  --shadow-sm: 2px 2px 0 var(--border);
 }
 * {
   font-family: "Pretendard Variable", sans-serif !important;
@@ -92,11 +94,11 @@ h1 {
   display: flex;
   align-items: center;
   border: var(--thin) solid var(--border);
-  background: white;
+  background: var(--bg);
   overflow: hidden;
   border-radius: 0;
   min-height: 44px;
-  box-shadow: 3px 3px 0 rgba(26, 26, 26, 0.1);
+  box-shadow: var(--shadow);
 }
 .input {
   flex: 1;
@@ -115,7 +117,7 @@ h1 {
   font-weight: 800;
 }
 .input-wrapper:focus-within {
-  background: #fffdf8;
+  background: var(--bg);
   box-shadow: 3px 3px 0 rgba(255, 90, 0, 0.24);
 }
 #nearby-btn {
@@ -157,8 +159,8 @@ h1 {
   grid-template-columns: repeat(5, 1fr);
   margin: 9px 0 12px;
   border: var(--thin) solid var(--border);
-  background: white;
-  box-shadow: 3px 3px 0 rgba(26, 26, 26, 0.08);
+  background: var(--bg);
+  box-shadow: var(--shadow);
 }
 .tab {
   min-height: 38px;
@@ -200,6 +202,18 @@ h1 {
   border: var(--thin) solid var(--border);
   cursor: pointer;
   width: 100%;
+  box-shadow: var(--shadow);
+  transition:
+    transform 0.05s ease,
+    box-shadow 0.05s ease;
+}
+.cafe-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--border);
+}
+.cafe-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 .cafe-card h4 {
   font-size: 1.25rem;
@@ -234,9 +248,16 @@ h1 {
   padding: 2px 6px;
   font-weight: 900;
   margin-right: 0;
-  background: white;
+  background: var(--bg);
   line-height: 1.2;
   white-space: nowrap;
+}
+.tag-pick {
+  background: var(--border);
+  color: #fff !important;
+  border-color: var(--border);
+  letter-spacing: 0.02em;
+  box-shadow: var(--shadow-sm);
 }
 .sig-inline {
   display: block;
@@ -304,7 +325,7 @@ footer {
   justify-content: center;
 }
 .modal {
-  background: white;
+  background: var(--bg);
   width: 88%;
   max-width: 380px;
   padding: 20px;
@@ -334,7 +355,7 @@ footer {
 .modal-copy-text {
   padding: 12px;
   border: 1px dashed var(--border);
-  background: #fff;
+  background: var(--bg);
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.7;
@@ -404,12 +425,24 @@ footer {
   width: 100%;
   padding: 12px 10px;
   border: var(--thin) solid var(--border);
-  background: white;
+  background: var(--bg);
   font-weight: 900;
   letter-spacing: -0.01rem;
   cursor: pointer;
   margin-bottom: 0;
   text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.05s ease,
+    box-shadow 0.05s ease;
+}
+.modal-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--border);
+}
+.modal-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
 }
 .notice-inline {
   margin-top: 8px;
@@ -437,7 +470,7 @@ footer {
 .auth-link,
 .auth-menu button {
   border: var(--thin) solid var(--border);
-  background: white;
+  background: var(--bg);
   padding: 7px 12px;
   font-size: 0.72rem;
   font-weight: 900;
@@ -449,7 +482,20 @@ footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.1);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.05s ease,
+    box-shadow 0.05s ease;
+}
+.auth-link:hover,
+.auth-menu button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--border);
+}
+.auth-link:active,
+.auth-menu button:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
 }
 .auth-menu.is-guest > :last-child:nth-child(odd),
 .auth-menu.is-logged-in > :last-child:nth-child(even) {
@@ -469,7 +515,7 @@ footer {
 }
 .meta-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 5px;
@@ -482,13 +528,21 @@ footer {
   min-width: 0;
 }
 
+.meta-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
 .distance-badge {
   flex-shrink: 0;
   font-size: 0.66rem;
   font-weight: 900;
-  color: var(--point) !important;
+  color: var(--border) !important;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--bg);
   padding: 2px 6px;
   line-height: 1.2;
   white-space: nowrap;
@@ -499,7 +553,7 @@ footer {
   margin: -4px 0 9px;
   padding: 6px 8px;
   border: 1px dashed rgba(26, 26, 26, 0.45);
-  background: #fff;
+  background: var(--bg);
   font-size: 0.68rem;
   font-weight: 900;
   line-height: 1.35;
@@ -517,4 +571,27 @@ footer {
   border-bottom: var(--thick) solid var(--border);
   padding-bottom: 10px;
   margin-bottom: 15px;
+}
+
+/* 탭 / 내주변 버튼 호버·누름 (mono) */
+.tab {
+  transition: background 0.05s ease;
+}
+.tab:hover:not(.active) {
+  background: rgba(26, 26, 26, 0.06);
+}
+.tab:active {
+  background: rgba(26, 26, 26, 0.12);
+}
+#nearby-btn {
+  transition:
+    background 0.05s ease,
+    transform 0.05s ease;
+}
+#nearby-btn:not(:disabled):hover {
+  background: rgba(26, 26, 26, 0.06);
+}
+#nearby-btn:not(:disabled):active {
+  background: rgba(26, 26, 26, 0.14);
+  transform: translate(1px, 1px);
 }
