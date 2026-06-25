@@ -14,6 +14,7 @@ const files = [
   "assets/login.js",
   "assets/submit.js",
   "assets/mypage.js",
+  "assets/base.css",
   "assets/admin.css",
   "assets/index.css",
   "assets/login.css",
