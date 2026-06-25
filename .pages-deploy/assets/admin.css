@@ -159,8 +159,7 @@ textarea::placeholder {
 input:focus,
 textarea:focus,
 select:focus {
-  background: var(--bg);
-  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.22);
+  box-shadow: 3px 3px 0 var(--line);
 }
 input:disabled {
   background: #e5e5df;

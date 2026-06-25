@@ -171,8 +171,7 @@ textarea::placeholder {
 
 input:focus,
 textarea:focus {
-  background: var(--bg);
-  box-shadow: 3px 3px 0 rgba(26, 26, 26, 0.22);
+  box-shadow: 4px 4px 0 var(--line);
 }
 
 textarea {

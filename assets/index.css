@@ -54,16 +54,7 @@ h1 {
   line-height: 1.2;
 }
 .hero-title {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-.hero-title-bracket {
-  position: relative;
-  top: 0.04em;
-}
-.hero-title-text {
-  display: inline-block;
+  line-height: 1.2;
 }
 
 .main-box {
@@ -117,8 +108,7 @@ h1 {
   font-weight: 800;
 }
 .input-wrapper:focus-within {
-  background: var(--bg);
-  box-shadow: 3px 3px 0 rgba(26, 26, 26, 0.24);
+  box-shadow: 6px 6px 0 var(--border);
 }
 #nearby-btn {
   width: 44px;
