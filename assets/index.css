@@ -1,17 +1,6 @@
 /* design tokens live in base.css */
 * {
-  font-family: "Pretendard Variable", sans-serif !important;
-  box-sizing: border-box;
   color: var(--border) !important;
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-  -webkit-tap-highlight-color: transparent;
-}
-html {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
 }
 body {
   min-height: 100vh;
