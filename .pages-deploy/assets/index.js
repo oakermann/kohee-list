@@ -235,11 +235,11 @@ function createCafeCard(cafe) {
   const tagGroup = document.createElement("div");
   tagGroup.className = "tag-group";
   appendTags(tagGroup, cafe);
+  if (cafe.oakerman_pick) tagGroup.prepend(makePickBadge());
   meta.appendChild(tagGroup);
 
   const metaRight = document.createElement("div");
   metaRight.className = "meta-right";
-  if (cafe.oakerman_pick) metaRight.appendChild(makePickBadge());
 
   if (cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM) {
     const distance = formatDistance(cafe.dis);
