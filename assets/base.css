@@ -1,0 +1,13 @@
+/* Shared foundation for all KOHEE pages. Load before each page's own CSS. */
+:root {
+  --bg: #f0f0f0;
+  --ink: #1a1a1a;
+  --line: #1a1a1a;
+  --border: #1a1a1a;
+  --soft: #ebebe6;
+  --point: #ff5a00;
+  --thick: 4px;
+  --thin: 2px;
+  --shadow: 4px 4px 0 var(--line);
+  --shadow-sm: 2px 2px 0 var(--line);
+}
