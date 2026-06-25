@@ -385,7 +385,9 @@ function renderSubmissions() {
     approveBtn.dataset.id = submission.id;
     approveBtn.textContent = "승인";
     approveBtn.addEventListener("click", () =>
-      approve(approveBtn.dataset.id, false),
+      approve(approveBtn.dataset.id, false).catch((error) =>
+        alert(error.message),
+      ),
     );
 
     const editApproveBtn = document.createElement("button");
@@ -394,7 +396,9 @@ function renderSubmissions() {
     editApproveBtn.dataset.id = submission.id;
     editApproveBtn.textContent = "수정 후 승인";
     editApproveBtn.addEventListener("click", () =>
-      approve(editApproveBtn.dataset.id, true),
+      approve(editApproveBtn.dataset.id, true).catch((error) =>
+        alert(error.message),
+      ),
     );
 
     const rejectBtn = document.createElement("button");
@@ -402,7 +406,9 @@ function renderSubmissions() {
     rejectBtn.className = "s-reject warn";
     rejectBtn.dataset.id = submission.id;
     rejectBtn.textContent = "반려";
-    rejectBtn.addEventListener("click", () => reject(rejectBtn.dataset.id));
+    rejectBtn.addEventListener("click", () =>
+      reject(rejectBtn.dataset.id).catch((error) => alert(error.message)),
+    );
 
     const duplicateBtn = document.createElement("button");
     duplicateBtn.type = "button";
@@ -410,7 +416,9 @@ function renderSubmissions() {
     duplicateBtn.dataset.id = submission.id;
     duplicateBtn.textContent = "중복 처리";
     duplicateBtn.addEventListener("click", () =>
-      markDuplicate(duplicateBtn.dataset.id),
+      markDuplicate(duplicateBtn.dataset.id).catch((error) =>
+        alert(error.message),
+      ),
     );
 
     actions.append(approveBtn, editApproveBtn, rejectBtn, duplicateBtn);
@@ -784,11 +792,29 @@ async function approve(id, withEdit) {
     return;
   }
 
-  await jsonApi("/approve", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ submissionId: id }),
-  });
+  try {
+    await jsonApi("/approve", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ submissionId: id }),
+    });
+  } catch (error) {
+    // New cafes now require coordinates. Rather than fail, drop the admin into
+    // the edit-approve form so they can enter lat/lng before approving.
+    if (error.code === "COORDS_REQUIRED") {
+      alert(
+        "승인하려면 위도/경도가 필요합니다. 좌표를 입력한 뒤 '수정 후 승인 저장'을 눌러 주세요.",
+      );
+      fillCafeFormFromSubmission(submission);
+      setEditApproveMode(submission);
+      $("cafe-form-wrap").scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      return;
+    }
+    throw error;
+  }
   await Promise.all([
     loadSubmissions(),
     loadCafes(),

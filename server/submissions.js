@@ -10,7 +10,11 @@ import {
   requireRole,
   withGuard,
 } from "./shared.js";
-import { normalizeCafePayload, parseCafeCategories } from "./cafes.js";
+import {
+  assertValidCafeCoords,
+  normalizeCafePayload,
+  parseCafeCategories,
+} from "./cafes.js";
 import { consumeRateLimit, safeWriteAuditLog } from "./security.js";
 
 const USER_FACING_OPERATOR_LABEL = "운영진";
@@ -198,6 +202,7 @@ export async function approveSubmission(req, env) {
       if (!merged.name || !merged.address || !merged.desc) {
         throw new HttpError(400, "name, address, desc required for approval");
       }
+      assertValidCafeCoords(merged);
 
       linkedCafeId = crypto.randomUUID();
       const createdAt = nowIso();

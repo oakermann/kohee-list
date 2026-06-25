@@ -147,6 +147,8 @@ export function apiErrorMessage(data = {}) {
     RATE_LIMITED: "시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
     CSRF_REQUIRED: "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.",
     CSRF_INVALID: "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.",
+    COORDS_REQUIRED:
+      "위도/경도(좌표)를 입력해 주세요. '내 주변' 거리 기능에 필요합니다.",
     FORBIDDEN_ORIGIN: "허용되지 않은 접속 경로입니다.",
     FIRST_ADMIN_CODE_NOT_CONFIGURED:
       "최초 관리자 코드가 서버에 설정되지 않았습니다.",

@@ -552,7 +552,7 @@ function createAddCafeTestEnv(role = "manager") {
   };
 }
 
-async function requestAddCafe(role = "manager") {
+async function requestAddCafe(role = "manager", overrides = {}) {
   const { env, statements } = createAddCafeTestEnv(role);
   const response = await addCafe(
     new Request("https://kohee.test/add", {
@@ -565,7 +565,10 @@ async function requestAddCafe(role = "manager") {
         name: "New Cafe",
         address: "Seoul",
         desc: "Coffee",
+        lat: 37.5,
+        lng: 127,
         category: ["espresso"],
+        ...overrides,
       }),
     }),
     env,
@@ -588,6 +591,19 @@ const adminAddInsert = adminAdd.statements.find((statement) =>
   /INSERT\s+INTO\s+cafes/i.test(statement.sql),
 );
 assert.equal(adminAddInsert.bindings[12], "candidate");
+
+// Coordinates are mandatory: a cafe with no usable lat/lng must be rejected and
+// never inserted, otherwise it would be invisible to the distance feature.
+const addCafeNoCoords = await requestAddCafe("admin", { lat: 0, lng: 0 });
+assert.equal(addCafeNoCoords.response.status, 400);
+const addCafeNoCoordsBody = await addCafeNoCoords.response.json();
+assert.equal(addCafeNoCoordsBody.code, "COORDS_REQUIRED");
+assert.equal(
+  addCafeNoCoords.statements.some((statement) =>
+    /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+  ),
+  false,
+);
 
 function createDeleteCafeTestEnv(role = "manager") {
   const statements = [];
@@ -1417,7 +1433,10 @@ assert.equal(
 );
 
 for (const role of ["admin"]) {
-  const { response, statements } = await requestApproveSubmission(role);
+  const { response, statements } = await requestApproveSubmission(role, {
+    lat: 37.5,
+    lng: 127,
+  });
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.ok(body.linked_cafe_id);
@@ -1447,6 +1466,19 @@ for (const role of ["admin"]) {
   assert.match(audit.bindings[6], /"duplicate":false/);
   assert.doesNotMatch(audit.bindings[6], /password|session|secret/i);
 }
+
+// Approving a non-duplicate submission creates a public-track cafe, so it must
+// also require coordinates and must not insert a coordinate-less cafe.
+const approveNoCoords = await requestApproveSubmission("admin");
+assert.equal(approveNoCoords.response.status, 400);
+const approveNoCoordsBody = await approveNoCoords.response.json();
+assert.equal(approveNoCoordsBody.code, "COORDS_REQUIRED");
+assert.equal(
+  approveNoCoords.statements.some((statement) =>
+    /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+  ),
+  false,
+);
 
 const duplicateApprove = await requestApproveSubmission("admin", {
   duplicate: true,

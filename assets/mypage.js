@@ -37,7 +37,7 @@ function cafeTags(cafe) {
 function tagNodes(cafe) {
   return cafeTags(cafe).map((tag) => {
     const node = document.createElement("span");
-    node.className = "tag-small";
+    node.className = tag === "오커맨픽" ? "tag-small tag-pick" : "tag-small";
     node.textContent = tag;
     return node;
   });

@@ -6,6 +6,8 @@
   --point: #ff5a00;
   --thick: 4px;
   --thin: 2px;
+  --shadow: 4px 4px 0 var(--line);
+  --shadow-sm: 2px 2px 0 var(--line);
 }
 * {
   box-sizing: border-box;
@@ -39,12 +41,13 @@ body {
   width: 92%;
   max-width: 500px;
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 .panel {
   border: var(--thick) solid var(--line);
-  background: #fff;
+  background: var(--bg);
   padding: 9px;
+  box-shadow: var(--shadow);
 }
 h1 {
   font-size: clamp(1.6rem, 7vw, 2.25rem);
@@ -55,7 +58,7 @@ h1 {
   letter-spacing: -0.04rem;
 }
 h2 {
-  font-size: 0.84rem;
+  font-size: 0.95rem;
   font-weight: 900;
   margin: 0 -9px 8px;
   padding: 0 9px 7px;
@@ -96,7 +99,7 @@ small {
 button,
 .btn {
   border: var(--thin) solid var(--line);
-  background: #fff;
+  background: var(--bg);
   padding: 7px 12px;
   font-weight: 900;
   font-size: 0.72rem;
@@ -110,7 +113,20 @@ button,
   justify-content: center;
   line-height: 1.14;
   letter-spacing: -0.01rem;
-  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.08);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.05s ease,
+    box-shadow 0.05s ease;
+}
+button:not(:disabled):hover,
+.btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--line);
+}
+button:not(:disabled):active,
+.btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
 }
 button.primary {
   background: var(--line);
@@ -128,7 +144,7 @@ select {
   font-weight: 800;
   font-size: 0.78rem;
   margin-bottom: 5px;
-  background: #fff;
+  background: var(--bg);
   border-radius: 0;
   line-height: 1.32;
   letter-spacing: -0.01rem;
@@ -143,8 +159,8 @@ textarea::placeholder {
 input:focus,
 textarea:focus,
 select:focus {
-  background: #fffdf8;
-  box-shadow: 2px 2px 0 rgba(255, 90, 0, 0.22);
+  background: var(--bg);
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.22);
 }
 input:disabled {
   background: #e5e5df;
@@ -179,7 +195,7 @@ input[type="file"] {
 input[type="file"]::file-selector-button {
   border: none;
   border-right: var(--thin) solid var(--line);
-  background: #fff;
+  background: var(--bg);
   padding: 8px 10px;
   margin-right: 10px;
   font-family: inherit !important;
@@ -218,7 +234,7 @@ input[type="file"]::file-selector-button {
   text-align: center;
   min-height: 37px;
   line-height: 1.08;
-  background: #fff;
+  background: var(--bg);
   letter-spacing: -0.02rem;
   cursor: pointer;
   box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.07);
@@ -233,7 +249,7 @@ input[type="file"]::file-selector-button {
 .chip:has(input:checked) {
   background: var(--line);
   color: #fff !important;
-  box-shadow: 2px 2px 0 rgba(255, 90, 0, 0.3);
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.3);
 }
 .list {
   display: grid;
@@ -260,7 +276,7 @@ input[type="file"]::file-selector-button {
   letter-spacing: -0.01rem;
 }
 .empty-state {
-  background: #fff;
+  background: var(--bg);
   text-align: center;
   font-size: 0.73rem;
   font-weight: 900;
@@ -335,7 +351,7 @@ input[type="file"]::file-selector-button {
 }
 .file-name {
   border: var(--thin) solid var(--line);
-  background: #fff;
+  background: var(--bg);
   min-height: 36px;
   padding: 8px 10px;
   display: flex;
@@ -367,7 +383,7 @@ input[type="file"]::file-selector-button {
 .reply-block textarea {
   min-height: 56px;
   margin-bottom: 0;
-  background: #fff;
+  background: var(--bg);
 }
 .reply-meta {
   font-size: 0.66rem;
