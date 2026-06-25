@@ -68,13 +68,12 @@ input {
 }
 
 input::placeholder {
-  color: rgba(31, 31, 31, 0.45);
+  color: rgba(26, 26, 26, 0.45);
   font-weight: 800;
 }
 
 input:focus {
-  background: var(--bg);
-  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.22);
+  box-shadow: 4px 4px 0 var(--line);
 }
 
 button.primary {
