@@ -172,7 +172,7 @@ textarea::placeholder {
 input:focus,
 textarea:focus {
   background: var(--bg);
-  box-shadow: 3px 3px 0 rgba(255, 90, 0, 0.22);
+  box-shadow: 3px 3px 0 rgba(26, 26, 26, 0.22);
 }
 
 textarea {
@@ -215,7 +215,7 @@ textarea {
 
 .chip:has(input:checked) {
   background: var(--line);
-  box-shadow: 2px 2px 0 rgba(255, 90, 0, 0.32);
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.32);
 }
 
 .chip:has(input:checked) span {

@@ -41,12 +41,13 @@ body {
   width: 92%;
   max-width: 500px;
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 .panel {
   border: var(--thick) solid var(--line);
   background: var(--bg);
   padding: 9px;
+  box-shadow: var(--shadow);
 }
 h1 {
   font-size: clamp(1.6rem, 7vw, 2.25rem);
@@ -57,7 +58,7 @@ h1 {
   letter-spacing: -0.04rem;
 }
 h2 {
-  font-size: 0.84rem;
+  font-size: 0.95rem;
   font-weight: 900;
   margin: 0 -9px 8px;
   padding: 0 9px 7px;
@@ -159,7 +160,7 @@ input:focus,
 textarea:focus,
 select:focus {
   background: var(--bg);
-  box-shadow: 2px 2px 0 rgba(255, 90, 0, 0.22);
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.22);
 }
 input:disabled {
   background: #e5e5df;
@@ -248,7 +249,7 @@ input[type="file"]::file-selector-button {
 .chip:has(input:checked) {
   background: var(--line);
   color: #fff !important;
-  box-shadow: 2px 2px 0 rgba(255, 90, 0, 0.3);
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.3);
 }
 .list {
   display: grid;

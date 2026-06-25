@@ -74,7 +74,7 @@ input::placeholder {
 
 input:focus {
   background: var(--bg);
-  box-shadow: 2px 2px 0 rgba(255, 90, 0, 0.22);
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.22);
 }
 
 button.primary {

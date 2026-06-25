@@ -118,7 +118,7 @@ h1 {
 }
 .input-wrapper:focus-within {
   background: var(--bg);
-  box-shadow: 3px 3px 0 rgba(255, 90, 0, 0.24);
+  box-shadow: 3px 3px 0 rgba(26, 26, 26, 0.24);
 }
 #nearby-btn {
   width: 44px;
