@@ -43,3 +43,5 @@ There is currently no separate `public/` directory in this repository.
 For Pages deploys, treat `.pages-deploy/` as the authoritative frontend source.
 Root HTML/assets are synced mirrors for repository validation only, not a separate
 operating surface.
+
+The input "ㅁㄴㅇㄻㄴㅇㄹ" is random Korean keyboard characters — not a meaningful request. There's nothing to specify or plan. | Please send a real task or question.
