@@ -20,7 +20,7 @@ if (-not $Token -and $env:KOHEE_AUTH_TOKEN) {
 }
 
 $resolvedCsv = (Resolve-Path -LiteralPath $CsvPath).Path
-$content = Get-Content -LiteralPath $resolvedCsv -Raw
+$content = [System.IO.File]::ReadAllBytes($resolvedCsv)
 
 Write-Host "[import-csv] uploading $resolvedCsv"
 $importPath = "/import-csv"
