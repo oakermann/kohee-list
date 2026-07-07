@@ -11,7 +11,7 @@
     "check:policy-risk": "node scripts/policy-risk-report.mjs",
     "detect:changed": "node scripts/detect-changed-areas.mjs",
     "smoke:check": "node scripts/smoke-check.mjs",
-    "test:unit": "node scripts/test-unit.mjs && node scripts/test-manager-role-removal.mjs && node scripts/test-operator-redaction.mjs && node scripts/test-policy-guards.mjs && node scripts/test-policy-risk-report.mjs && node scripts/test-csv-export.mjs && node scripts/test-category-whitelist.mjs",
+    "test:unit": "node scripts/test-unit.mjs && node scripts/test-manager-role-removal.mjs && node scripts/test-operator-redaction.mjs && node scripts/test-policy-guards.mjs && node scripts/test-policy-risk-report.mjs && node scripts/test-csv-export.mjs && node scripts/test-category-whitelist.mjs && node scripts/test-pipa.mjs",
     "verify:release": "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify-release.ps1",
     "audit:kohee": "node scripts/audit-kohee.mjs",
     "audit:kohee:strict": "node scripts/audit-kohee.mjs --strict"
