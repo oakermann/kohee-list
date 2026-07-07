@@ -32,9 +32,15 @@
           <div class="guide">
             제보는 즉시 공개되지 않고 운영진 검토 후 반영됩니다.
           </div>
+          <div class="pii-notice">
+            타인의 이름·연락처 등 개인정보는 입력하지 마세요.
+          </div>
           <input id="name" placeholder="카페명 *" />
           <input id="address" placeholder="주소 *" />
-          <textarea id="desc" placeholder="카페 설명 *"></textarea>
+          <textarea
+            id="desc"
+            placeholder="카페 설명 * (타인의 개인정보 입력 금지)"
+          ></textarea>
           <textarea id="reason" placeholder="추천 이유"></textarea>
 
           <div class="cat-grid">
@@ -80,9 +86,15 @@
             카페 정보 오류, 링크 오류, 화면 오류 등을 알려주시면 운영진이
             확인합니다.
           </div>
+          <div class="pii-notice">
+            타인의 이름·연락처 등 개인정보는 입력하지 마세요.
+          </div>
           <input id="error-title" placeholder="오류 제목 *" />
           <input id="error-page" placeholder="관련 카페명 또는 페이지 (선택)" />
-          <textarea id="error-content" placeholder="오류 내용 *"></textarea>
+          <textarea
+            id="error-content"
+            placeholder="오류 내용 * (타인의 개인정보 입력 금지)"
+          ></textarea>
           <button id="error-submit-btn" class="mini-btn primary" type="button">
             오류 제보 저장
           </button>

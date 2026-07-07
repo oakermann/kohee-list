@@ -82,13 +82,32 @@ function scrubAuditValue(value) {
   if (value === null || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(scrubAuditValue);
 
+  // PIPA Article 21 (minimization): audit snapshots must not retain
+  // re-identifiable PII. Drop secrets AND personal/free-text fields so
+  // audit_logs JSON keeps only non-identifying operational data
+  // (status/id/timestamps/actor_role).
   const blocked = new Set([
+    // secrets
     "password",
     "password_hash",
     "token",
     "token_hash",
     "csrf_token",
     "csrf_token_hash",
+    // personal / free-text PII carried by SELECT * snapshots
+    "username",
+    "user_id",
+    "name",
+    "address",
+    "desc",
+    "reason",
+    "content",
+    "message",
+    "reply_message",
+    "instagram",
+    "beanShop",
+    "ip_hash",
+    "user_agent",
   ]);
   const output = {};
   for (const [key, item] of Object.entries(value)) {

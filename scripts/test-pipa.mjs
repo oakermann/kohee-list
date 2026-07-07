@@ -344,3 +344,49 @@ for (const path of ["assets/login.js", ".pages-deploy/assets/login.js"]) {
 }
 
 console.log("[pipa-consent] ok");
+
+// ---------------------------------------------------------------------------
+// #4 Audit scrub hardening + third-party PII minimization (PIPA Article 21)
+// ---------------------------------------------------------------------------
+{
+  const security = read("server/security.js");
+  // The audit scrub blocklist must cover re-identifiable PII keys.
+  for (const key of [
+    "username",
+    "content",
+    "name",
+    "address",
+    "desc",
+    "reason",
+    "user_id",
+  ]) {
+    assert.ok(
+      security.includes(`"${key}"`),
+      `scrubAuditValue must block "${key}"`,
+    );
+  }
+}
+
+// End-to-end: with the hardened scrub, the delete-account audit JSON no longer
+// carries the re-identifiable username in before/after.
+{
+  const { env, statements } = createDeleteAccountEnv();
+  await deleteAccount(deleteAccountRequest(CORRECT_PASSWORD), env);
+  const audit = statements.find((s) =>
+    /INSERT\s+INTO\s+audit_logs/i.test(s.sql),
+  );
+  assert.ok(audit);
+  assert.doesNotMatch(audit.bindings[5] || "", /coffee-user/);
+  assert.doesNotMatch(audit.bindings[6] || "", /coffee-user/);
+}
+
+// Third-party PII minimization notices on free-text inputs.
+for (const path of ["submit.html", ".pages-deploy/submit.html"]) {
+  const html = read(path);
+  assert.ok(
+    html.includes("타인의 이름·연락처 등 개인정보는 입력하지 마세요"),
+    `${path} missing PII-minimization notice`,
+  );
+}
+
+console.log("[pipa-audit] ok");

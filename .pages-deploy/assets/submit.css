@@ -249,3 +249,14 @@ textarea {
   text-decoration: none;
   border-bottom: 1px solid var(--line);
 }
+
+.pii-notice {
+  border: 1px solid var(--point);
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.45;
+  color: var(--point) !important;
+  word-break: keep-all;
+}
