@@ -83,6 +83,14 @@ export async function deleteAccount(req, env) {
       env.DB.prepare(
         "UPDATE cafes SET created_by = NULL WHERE created_by = ?",
       ).bind(id),
+      // Login rate-limit keys are `login:<ipHash>:<username_lowercased>` and
+      // retain the plaintext username, so purge this user's key-space too.
+      // NB: `_` in a username is a SQLite LIKE single-char wildcard, but it is
+      // benign here — given the [a-z0-9_] username charset the pattern only
+      // ever matches the deleting user's own login rate-limit keys.
+      env.DB.prepare("DELETE FROM rate_limits WHERE key LIKE ?").bind(
+        `login:%:${user.username.toLowerCase()}`,
+      ),
       env.DB.prepare("DELETE FROM users WHERE id = ?").bind(id),
     ]);
 

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { deleteAccount } from "../server/account.js";
 import { signup } from "../server/auth.js";
 import { hashPassword } from "../server/shared.js";
+import { writeAuditLog } from "../server/security.js";
 
 function read(path) {
   return fs.readFileSync(path, "utf8");
@@ -390,3 +391,123 @@ for (const path of ["submit.html", ".pages-deploy/submit.html"]) {
 }
 
 console.log("[pipa-audit] ok");
+
+// ---------------------------------------------------------------------------
+// Review fixes (adversarial review of the PIPA diff)
+// ---------------------------------------------------------------------------
+
+// FIX 1 — historic PII backfill: the one-time migration nulls before/after
+// snapshots so pre-scrub audit rows can no longer re-identify a deleted user.
+// Model the migration as the transform it applies (drift-proof: null-all) and
+// assert a seeded raw pre-scrub row keeps no PII.
+{
+  const migration = read("migrations/0007_scrub_audit_history.sql");
+  // Drift-proof form: null both snapshot columns for ALL rows (no allowlist).
+  assert.match(
+    migration,
+    /UPDATE\s+audit_logs\s+SET\s+before_json\s*=\s*NULL\s*,\s*after_json\s*=\s*NULL\s*;/i,
+    "backfill migration must null all historic audit snapshots",
+  );
+  assert.doesNotMatch(
+    migration,
+    /WHERE/i,
+    "backfill must not use an action allowlist (drifts)",
+  );
+
+  // A raw pre-scrub audit row with PII, run through the migration transform.
+  const preScrubRow = {
+    id: "audit-legacy-1",
+    actor_user_id: "admin-1",
+    action: "submission.approve",
+    before_json: JSON.stringify({
+      username: "coffee-user",
+      name: "친구 이름",
+      address: "서울시 어딘가 010-1234-5678",
+      desc: "third party's phone leaked here",
+    }),
+    after_json: JSON.stringify({ status: "approved" }),
+  };
+  const applyBackfill = (row) => ({
+    ...row,
+    before_json: null,
+    after_json: null,
+  });
+  const scrubbed = applyBackfill(preScrubRow);
+  const blob = `${scrubbed.before_json ?? ""}${scrubbed.after_json ?? ""}`;
+  assert.equal(scrubbed.before_json, null);
+  assert.equal(scrubbed.after_json, null);
+  assert.doesNotMatch(blob, /coffee-user|친구 이름|010-1234-5678|phone/);
+  // No reader parses these columns, so NULL is safe (JSON.parse(null) never
+  // runs on the audit path).
+}
+
+// FIX 2 — write-time scrub now drops error_reports free-text keys title/page.
+// Runtime assertion via the real writeAuditLog scrub, not just source text.
+{
+  for (const key of ["title", "page"]) {
+    assert.ok(
+      read("server/security.js").includes(`"${key}"`),
+      `scrubAuditValue must block "${key}"`,
+    );
+  }
+
+  let insertedBefore = "";
+  const env = {
+    DB: {
+      prepare() {
+        return {
+          bind(...values) {
+            // audit_logs INSERT: before_json is bindings index 5.
+            insertedBefore = values[5];
+            return this;
+          },
+          run: async () => ({ success: true }),
+        };
+      },
+    },
+  };
+  await writeAuditLog(env, {
+    actorUserId: "admin-1",
+    action: "error_report.reply",
+    targetType: "error_report",
+    targetId: "er-1",
+    // Simulates the error_report.reply before:SELECT* snapshot.
+    before: {
+      id: "er-1",
+      status: "open",
+      title: "친구 김철수 010-9999-8888 신고",
+      page: "카페 상세 010-0000-1111",
+      content: "third party PII",
+    },
+    after: { status: "resolved" },
+  });
+  assert.doesNotMatch(
+    insertedBefore,
+    /친구 김철수|010-9999-8888|010-0000-1111/,
+  );
+  assert.doesNotMatch(insertedBefore, /"title"|"page"|"content"/);
+  // Non-PII operational fields still retained.
+  assert.match(insertedBefore, /"status":"open"/);
+  assert.match(insertedBefore, /"id":"er-1"/);
+}
+
+// FIX 3 — the delete batch also purges the user's login rate-limit keys
+// (which retain the plaintext lowercased username).
+{
+  const { env, batches } = createDeleteAccountEnv();
+  await deleteAccount(deleteAccountRequest(CORRECT_PASSWORD), env);
+  assert.equal(batches.length, 1);
+  const rateLimitDelete = batches[0].find((s) =>
+    /DELETE\s+FROM\s+rate_limits\s+WHERE\s+key\s+LIKE/i.test(s.sql),
+  );
+  assert.ok(rateLimitDelete, "delete batch must purge login rate-limit keys");
+  assert.deepEqual(rateLimitDelete.bindings, ["login:%:coffee-user"]);
+  // Purged before users are deleted (still inside the same atomic batch).
+  const rlIdx = batches[0].indexOf(rateLimitDelete);
+  const usersIdx = batches[0].findIndex((s) =>
+    /DELETE\s+FROM\s+users/i.test(s.sql),
+  );
+  assert.ok(rlIdx < usersIdx, "rate_limits purge must precede user delete");
+}
+
+console.log("[pipa-review-fixes] ok");

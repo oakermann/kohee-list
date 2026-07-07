@@ -104,6 +104,8 @@ function scrubAuditValue(value) {
     "content",
     "message",
     "reply_message",
+    "title",
+    "page",
     "instagram",
     "beanShop",
     "ip_hash",

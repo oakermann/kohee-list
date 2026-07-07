@@ -1,0 +1,18 @@
+-- PIPA Article 21 (완전한 파기): one-time backfill for historic audit PII.
+--
+-- scrubAuditValue only runs at write-time, so audit_logs rows written BEFORE
+-- the hardened scrub deployed still hold the acting/deleted user's PII
+-- (username + free-text submission/error-report SELECT* snapshots) in
+-- before_json / after_json. Those rows are actor-keyed to the reviewing admin,
+-- so the account-deletion batch (#2) never touches them and the user's data
+-- survives deletion.
+--
+-- Drift-proof fix: null out ALL existing historic snapshots. An action
+-- allowlist would drift as new audited actions are added; nulling every row is
+-- complete and safe because future rows are already scrubbed at write-time.
+-- Only the JSON snapshots are removed; the operational columns
+-- (actor_user_id, action, target_type, target_id, created_at) are preserved so
+-- the audit trail of WHAT happened remains intact.
+--
+-- Data migration only: no schema change, nothing reflected in schema.sql.
+UPDATE audit_logs SET before_json = NULL, after_json = NULL;
