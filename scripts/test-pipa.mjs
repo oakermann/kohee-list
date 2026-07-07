@@ -230,3 +230,117 @@ function deleteAccountRequest(password) {
 }
 
 console.log("[pipa-account] ok");
+
+// ---------------------------------------------------------------------------
+// #3 Signup consent (PIPA Article 15/22)
+// ---------------------------------------------------------------------------
+function createSignupEnv({ userCount = 5 } = {}) {
+  const statements = [];
+  return {
+    statements,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      FIRST_ADMIN_CODE: "admin-code",
+      DB: {
+        prepare(sql) {
+          const statement = {
+            sql,
+            bindings: [],
+            bind(...values) {
+              this.bindings = values;
+              statements.push(this);
+              return this;
+            },
+            first: async () => {
+              if (/SELECT\s+id\s+FROM\s+users\s+WHERE\s+username/i.test(sql)) {
+                return null; // username available
+              }
+              if (/COUNT\(\*\)/i.test(sql)) {
+                return { c: userCount };
+              }
+              if (/FROM\s+rate_limits/i.test(sql)) {
+                return null;
+              }
+              return null;
+            },
+            run: async () => ({ success: true }),
+          };
+          return statement;
+        },
+      },
+    },
+  };
+}
+
+function signupRequest(body) {
+  return new Request("https://kohee.test/signup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+// Signup without consent -> 400 CONSENT_REQUIRED and no user INSERT.
+{
+  const { env, statements } = createSignupEnv();
+  const response = await signup(
+    signupRequest({ username: "newuser1", password: "password123" }),
+    env,
+  );
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).code, "CONSENT_REQUIRED");
+  assert.equal(
+    statements.some((s) => /INSERT\s+INTO\s+users/i.test(s.sql)),
+    false,
+    "no user created without consent",
+  );
+}
+
+// Signup with consent -> 201 and consent_at/consent_version stamped.
+{
+  const { env, statements } = createSignupEnv();
+  const response = await signup(
+    signupRequest({
+      username: "newuser2",
+      password: "password123",
+      consent: true,
+    }),
+    env,
+  );
+  assert.equal(response.status, 201);
+  const insert = statements.find((s) => /INSERT\s+INTO\s+users/i.test(s.sql));
+  assert.ok(insert, "user must be inserted");
+  assert.match(insert.sql, /consent_at/);
+  assert.match(insert.sql, /consent_version/);
+  // consent_version bound value must equal the privacy policy version.
+  assert.ok(
+    insert.bindings.includes("v1.0"),
+    "consent_version v1.0 must be stored",
+  );
+}
+
+// Frontend: consent checkbox + privacy link + consent:true in the request.
+for (const path of ["login.html", ".pages-deploy/login.html"]) {
+  const html = read(path);
+  assert.ok(
+    html.includes('id="signup-consent"'),
+    `${path} missing consent checkbox`,
+  );
+  assert.match(
+    html,
+    /href="privacy\.html"/,
+    `${path} signup consent must link privacy.html`,
+  );
+}
+for (const path of ["assets/login.js", ".pages-deploy/assets/login.js"]) {
+  const js = read(path);
+  // Reads the consent checkbox and includes it in the signup request body.
+  assert.match(js, /signup-consent/, `${path} must read the consent checkbox`);
+  assert.match(
+    js,
+    /"\/signup",\s*\{\s*username,\s*password,\s*consent/,
+    `${path} must send consent in the signup request`,
+  );
+}
+
+console.log("[pipa-consent] ok");

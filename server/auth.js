@@ -37,11 +37,23 @@ function clientRole(role) {
   return role === "admin" ? "admin" : "user";
 }
 
+// Privacy-policy version the signup consent is recorded against. Must match
+// the version published on privacy.html (see #1).
+const CONSENT_VERSION = "v1.0";
+
 export async function signup(req, env) {
   return withGuard(req, env, async () => {
     const body = await readJson(req);
     const username = cleanText(body.username, 40).toLowerCase();
     const password = String(body.password || "");
+
+    // PIPA Article 15/22: refuse signup without explicit consent to the
+    // privacy policy.
+    const consented = body.consent === true || body.agree === true;
+    if (!consented) {
+      throw new HttpError(400, "약관 동의가 필요합니다", "CONSENT_REQUIRED");
+    }
+
     const signupKey = await rateLimitKey(req, env, "signup");
     await consumeRateLimit(env, signupKey, 5, 10);
 
@@ -102,10 +114,19 @@ export async function signup(req, env) {
 
     const id = crypto.randomUUID();
     const passwordHash = await hashPassword(password);
+    const createdAt = nowIso();
     await env.DB.prepare(
-      "INSERT INTO users(id, username, password_hash, role, created_at) VALUES(?, ?, ?, ?, ?)",
+      "INSERT INTO users(id, username, password_hash, role, created_at, consent_at, consent_version) VALUES(?, ?, ?, ?, ?, ?, ?)",
     )
-      .bind(id, username, passwordHash, role, nowIso())
+      .bind(
+        id,
+        username,
+        passwordHash,
+        role,
+        createdAt,
+        createdAt,
+        CONSENT_VERSION,
+      )
       .run();
 
     return json({ ok: true, username, role }, 201, req, env);

@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'manager', 'admin')),
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  consent_at TEXT,
+  consent_version TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
