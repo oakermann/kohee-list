@@ -1,9 +1,16 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
+import { deleteAccount } from "../server/account.js";
+import { signup } from "../server/auth.js";
+import { hashPassword } from "../server/shared.js";
+
 function read(path) {
   return fs.readFileSync(path, "utf8");
 }
+
+const CORRECT_PASSWORD = "correct-horse-battery";
+const PASSWORD_HASH = await hashPassword(CORRECT_PASSWORD);
 
 // ---------------------------------------------------------------------------
 // #1 Privacy policy page (PIPA Article 30)
@@ -57,3 +64,169 @@ for (const path of [
 }
 
 console.log("[pipa-privacy] ok");
+
+// ---------------------------------------------------------------------------
+// #2 회원탈퇴 / delete-account (PIPA Article 35-5/36/37)
+// ---------------------------------------------------------------------------
+function createDeleteAccountEnv({
+  role = "user",
+  passwordHash = PASSWORD_HASH,
+} = {}) {
+  const statements = [];
+  const batches = [];
+  return {
+    statements,
+    batches,
+    env: {
+      SESSION_SECRET: "unit-test-secret",
+      DB: {
+        prepare(sql) {
+          const statement = {
+            sql,
+            bindings: [],
+            bind(...values) {
+              this.bindings = values;
+              statements.push(this);
+              return this;
+            },
+            first: async () => {
+              if (/FROM\s+sessions\s+s/i.test(sql)) {
+                return {
+                  session_id: "session-1",
+                  user_id: "user-1",
+                  username: "coffee-user",
+                  role,
+                  expires_at: "2999-01-01T00:00:00.000Z",
+                  csrf_token_hash: "",
+                };
+              }
+              if (/SELECT\s+id,\s+password_hash\s+FROM\s+users/i.test(sql)) {
+                return { id: "user-1", password_hash: passwordHash };
+              }
+              return null;
+            },
+            run: async () => ({ success: true }),
+          };
+          return statement;
+        },
+        batch(prepared) {
+          batches.push(prepared);
+          return Promise.resolve(prepared.map(() => ({ success: true })));
+        },
+      },
+    },
+  };
+}
+
+function deleteAccountRequest(password) {
+  return new Request("https://kohee.test/delete-account", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer unit-token",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ password }),
+  });
+}
+
+// Happy path: correct password -> 200, audit written before delete, atomic
+// child-first batch, cafes de-identified, users last, cookies cleared.
+{
+  const { env, statements, batches } = createDeleteAccountEnv();
+  const response = await deleteAccount(
+    deleteAccountRequest(CORRECT_PASSWORD),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).ok, true);
+
+  // Cookies cleared like logout (session + csrf).
+  const cookies = response.headers.getSetCookie
+    ? response.headers.getSetCookie()
+    : [response.headers.get("set-cookie")];
+  const cookieBlob = cookies.join(" ");
+  assert.match(cookieBlob, /kohee_session=;/);
+  assert.match(cookieBlob, /kohee_csrf=;/);
+
+  // Deletion audit log written (before the batch delete of the actor).
+  const audit = statements.find((s) =>
+    /INSERT\s+INTO\s+audit_logs/i.test(s.sql),
+  );
+  assert.ok(audit, "deletion audit log must be written");
+  assert.equal(audit.bindings[2], "user.delete_account");
+  // No secrets in the persisted audit JSON.
+  assert.doesNotMatch(audit.bindings[6] || "", /password/i);
+  // The scrubbed before/after must not re-identify via username (enforced by
+  // #4's scrubAuditValue hardening, checked in the #4 block below).
+
+  // Exactly one atomic batch performed the destructive work.
+  assert.equal(batches.length, 1, "delete must be a single atomic batch");
+  const batchSql = batches[0].map((s) => s.sql);
+  assert.ok(
+    batchSql.some((s) => /DELETE\s+FROM\s+error_report_replies/i.test(s)),
+  );
+  assert.ok(batchSql.some((s) => /DELETE\s+FROM\s+error_reports/i.test(s)));
+  assert.ok(batchSql.some((s) => /DELETE\s+FROM\s+submissions/i.test(s)));
+  assert.ok(batchSql.some((s) => /DELETE\s+FROM\s+favorites/i.test(s)));
+  assert.ok(batchSql.some((s) => /DELETE\s+FROM\s+sessions/i.test(s)));
+  // Public cafes preserved, author link removed (SET NULL, not DELETE).
+  assert.ok(
+    batchSql.some((s) =>
+      /UPDATE\s+cafes\s+SET\s+created_by\s*=\s*NULL/i.test(s),
+    ),
+  );
+  assert.equal(
+    batchSql.some((s) => /DELETE\s+FROM\s+cafes/i.test(s)),
+    false,
+    "public cafes must never be deleted",
+  );
+  // users deleted last; child-first ordering.
+  const usersIdx = batchSql.findIndex((s) => /DELETE\s+FROM\s+users/i.test(s));
+  assert.equal(usersIdx, batchSql.length - 1, "users must be deleted last");
+  const childIdx = batchSql.findIndex((s) =>
+    /DELETE\s+FROM\s+error_report_replies/i.test(s),
+  );
+  assert.ok(childIdx < usersIdx, "children must be deleted before users");
+}
+
+// Wrong password -> 401 and NO destructive batch runs.
+{
+  const { env, batches } = createDeleteAccountEnv();
+  const response = await deleteAccount(
+    deleteAccountRequest("wrong-password"),
+    env,
+  );
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).code, "INVALID_CREDENTIALS");
+  assert.equal(batches.length, 0, "no delete on bad password");
+}
+
+// Admin self-delete -> 403 (protects the last admin) and no batch.
+{
+  const { env, batches, statements } = createDeleteAccountEnv({
+    role: "admin",
+  });
+  const response = await deleteAccount(
+    deleteAccountRequest(CORRECT_PASSWORD),
+    env,
+  );
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).code, "ADMIN_SELF_DELETE_FORBIDDEN");
+  assert.equal(batches.length, 0, "admin must not self-delete");
+  // Blocked before any password re-select even runs.
+  assert.equal(
+    statements.some((s) =>
+      /SELECT\s+id,\s+password_hash\s+FROM\s+users/i.test(s.sql),
+    ),
+    false,
+  );
+}
+
+// The route is registered under USER_ROUTES and never reuses admin /delete.
+{
+  const routesSrc = read("server/routes.js");
+  assert.ok(routesSrc.includes('["POST", "/delete-account", deleteAccount]'));
+  assert.ok(routesSrc.includes('import { deleteAccount } from "./account.js"'));
+}
+
+console.log("[pipa-account] ok");

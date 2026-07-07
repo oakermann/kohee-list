@@ -8,6 +8,7 @@ import {
   withGuard,
 } from "./shared.js";
 import { login, logout, me, signup } from "./auth.js";
+import { deleteAccount } from "./account.js";
 import {
   addCafe,
   approveCafe,
@@ -117,6 +118,7 @@ export const USER_ROUTES = [
   ["POST", "/error-report", submitErrorReport],
   ["GET", "/favorites", getFavorites],
   ["POST", "/favorite", toggleFavorite],
+  ["POST", "/delete-account", deleteAccount],
 ];
 
 export const ADMIN_OPERATION_ROUTES = [
