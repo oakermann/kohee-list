@@ -14,7 +14,7 @@ import {
   setStorageValue,
   shareCafe,
   statusLabel,
-} from "./common.js?v=20260426-1";
+} from "./common.js?v=20260721-1";
 
 let currentUser = null;
 let favoriteItems = [];

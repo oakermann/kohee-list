@@ -401,7 +401,7 @@ console.log("[pipa-audit] ok");
 // Model the migration as the transform it applies (drift-proof: null-all) and
 // assert a seeded raw pre-scrub row keeps no PII.
 {
-  const migration = read("migrations/0007_scrub_audit_history.sql");
+  const migration = read("migrations/0008_scrub_audit_history.sql");
   // Drift-proof form: null both snapshot columns for ALL rows (no allowlist).
   assert.match(
     migration,

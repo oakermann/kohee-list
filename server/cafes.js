@@ -55,6 +55,7 @@ export function toCafeResponse(row) {
     signature: parseJsonArray(row.signature),
     beanShop: cleanUrl(row.beanShop),
     instagram: cleanUrl(row.instagram),
+    naver_url: cleanUrl(row.naver_url),
     category: parseJsonArray(row.category),
     oakerman_pick: !!row.oakerman_pick,
     updated_at: row.updated_at,
@@ -80,7 +81,7 @@ export function toAdminCafeResponse(row) {
 export async function getData(req, env) {
   return withGuard(req, env, async () => {
     const rows = await env.DB.prepare(
-      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
+      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
         oakerman_pick, updated_at
        FROM cafes
        WHERE status = 'approved'
@@ -107,7 +108,7 @@ export async function listCafes(req, env) {
           : "WHERE deleted_at IS NULL";
 
     const rows = await env.DB.prepare(
-      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
+      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
         oakerman_pick, updated_at, status, deleted_at, hidden_at, hidden_by
        FROM cafes
        ${where}
@@ -137,6 +138,7 @@ export function normalizeCafePayload(payload) {
     signature: JSON.stringify(parseJsonArray(payload.signature)),
     beanShop: cleanUrl(payload.beanShop),
     instagram: cleanUrl(payload.instagram),
+    naver_url: cleanUrl(payload.naver_url),
     category: JSON.stringify(parseCafeCategories(payload.category)),
     oakerman_pick: normalizeBool(payload.oakerman_pick),
   };
@@ -182,9 +184,9 @@ export async function addCafe(req, env) {
     const status = "candidate";
     await env.DB.prepare(
       `INSERT INTO cafes(
-        id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
+        id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
         oakerman_pick, manager_pick, status, created_by, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -196,6 +198,7 @@ export async function addCafe(req, env) {
         payload.signature,
         payload.beanShop,
         payload.instagram,
+        payload.naver_url,
         payload.category,
         payload.oakerman_pick,
         0,
@@ -245,7 +248,7 @@ export async function editCafe(req, env) {
     const updatedAt = nowIso();
     await env.DB.prepare(
       `UPDATE cafes SET
-        name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
+        name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, naver_url = ?, category = ?,
         oakerman_pick = ?, manager_pick = 0, updated_at = ?
        WHERE id = ?`,
     )
@@ -258,6 +261,7 @@ export async function editCafe(req, env) {
         payload.signature,
         payload.beanShop,
         payload.instagram,
+        payload.naver_url,
         payload.category,
         payload.oakerman_pick,
         updatedAt,

@@ -1,9 +1,5 @@
 /* design tokens live in base.css */
 
-* {
-  color: var(--ink) !important;
-}
-
 body {
   min-height: 100vh;
   width: 100%;
@@ -41,10 +37,10 @@ body {
 
 .account-line {
   padding: 0 14px 14px;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 900;
   line-height: 1.45;
-  opacity: 0.78;
+  color: var(--muted);
   word-break: keep-all;
 }
 
@@ -61,10 +57,10 @@ body {
 .mini-btn,
 .mini-btn:visited {
   border: var(--thin) solid var(--line);
-  background: var(--bg);
-  min-height: 32px;
-  padding: 7px 12px;
-  font-size: 0.72rem;
+  background: var(--card);
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: var(--fs-xs);
   font-weight: 900;
   line-height: 1.14;
   text-decoration: none;
@@ -101,7 +97,7 @@ body {
 .section-head {
   padding: 11px 12px 9px;
   text-align: center;
-  font-size: 0.94rem;
+  font-size: var(--fs-md);
   font-weight: 900;
   line-height: 1.2;
 }
@@ -118,13 +114,13 @@ body {
 }
 
 .guide {
-  border: 1px dashed rgba(26, 26, 26, 0.55);
+  border: 1px dashed var(--faint);
   padding: 12px 10px;
   text-align: center;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 800;
   line-height: 1.5;
-  opacity: 0.74;
+  color: var(--muted);
   word-break: keep-all;
 }
 
@@ -132,10 +128,10 @@ input,
 textarea {
   width: 100%;
   border: var(--thin) solid var(--line);
-  background: var(--bg);
+  background: var(--card);
   border-radius: 0;
   padding: 9px 10px;
-  font-size: 0.82rem;
+  font-size: 1rem;
   font-weight: 800;
   line-height: 1.35;
   letter-spacing: -0.01rem;
@@ -145,7 +141,7 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: rgba(26, 26, 26, 0.45) !important;
+  color: var(--faint);
   font-weight: 800;
 }
 
@@ -167,8 +163,8 @@ textarea {
 
 .chip {
   border: 1px solid var(--line);
-  background: var(--bg);
-  min-height: 42px;
+  background: var(--card);
+  min-height: 44px;
   padding: 6px 4px;
   display: flex;
   flex-direction: column;
@@ -176,7 +172,7 @@ textarea {
   justify-content: center;
   gap: 4px;
   text-align: center;
-  font-size: 0.63rem;
+  font-size: var(--fs-xs);
   font-weight: 900;
   line-height: 1.15;
   letter-spacing: -0.02rem;
@@ -203,11 +199,11 @@ textarea {
 
 .msg {
   min-height: 18px;
-  font-size: 0.76rem;
+  font-size: var(--fs-sm);
   font-weight: 900;
   line-height: 1.45;
   text-align: center;
-  opacity: 0.82;
+  color: var(--muted);
   word-break: keep-all;
 }
 
