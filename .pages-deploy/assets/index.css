@@ -154,12 +154,7 @@ h1 {
 .tab.active {
   background: #fff !important;
   color: var(--ink) !important;
-  position: relative;
-  z-index: 1;
-  transform: translate(-2px, -2px);
-  box-shadow:
-    var(--shadow),
-    inset 0 -4px 0 var(--ink);
+  box-shadow: inset 0 -4px 0 var(--point);
 }
 .divider {
   border-top: var(--thick) dashed var(--border);
@@ -563,7 +558,6 @@ footer {
 .tab:active {
   background: rgba(26, 26, 26, 0.12);
   transform: translate(1px, 1px);
-  box-shadow: none;
 }
 #nearby-btn {
   transition:
