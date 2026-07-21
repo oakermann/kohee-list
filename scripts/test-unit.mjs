@@ -210,6 +210,7 @@ assert.deepEqual(
     signature: '["espresso"]',
     beanShop: "https://example.com",
     instagram: "javascript:alert(1)",
+    naver_url: "https://map.naver.com/p/entry/place/1449266862",
     category: '["espresso"]',
     oakerman_pick: 1,
     manager_pick: 0,
@@ -230,6 +231,7 @@ assert.deepEqual(
     signature: ["espresso"],
     beanShop: "https://example.com/",
     instagram: "",
+    naver_url: "https://map.naver.com/p/entry/place/1449266862",
     category: ["espresso"],
     oakerman_pick: true,
     manager_pick: false,
@@ -289,6 +291,7 @@ assert.deepEqual(Object.keys(publicCafeBody[0]).sort(), [
   "lng",
   "manager_pick",
   "name",
+  "naver_url",
   "oakerman_pick",
   "signature",
   "updated_at",
@@ -583,14 +586,38 @@ const managerAddInsert = managerAdd.statements.find((statement) =>
 );
 assert.ok(managerAddInsert);
 assert.match(managerAddInsert.sql, /status/i);
-assert.equal(managerAddInsert.bindings[12], "candidate");
+assert.equal(managerAddInsert.bindings[13], "candidate");
 
 const adminAdd = await requestAddCafe("admin");
 assert.equal(adminAdd.response.status, 201);
 const adminAddInsert = adminAdd.statements.find((statement) =>
   /INSERT\s+INTO\s+cafes/i.test(statement.sql),
 );
-assert.equal(adminAddInsert.bindings[12], "candidate");
+assert.equal(adminAddInsert.bindings[13], "candidate");
+
+// naver_url: place URL은 저장되고, 위험 스킴은 cleanUrl이 비운다.
+const addWithNaver = await requestAddCafe("admin", {
+  naver_url: "https://map.naver.com/p/entry/place/1449266862",
+});
+assert.equal(addWithNaver.response.status, 201);
+const addWithNaverInsert = addWithNaver.statements.find((statement) =>
+  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+);
+assert.match(addWithNaverInsert.sql, /naver_url/i);
+assert.equal(
+  addWithNaverInsert.bindings[9],
+  "https://map.naver.com/p/entry/place/1449266862",
+);
+const addBadNaver = await requestAddCafe("admin", {
+  naver_url: "javascript:alert(1)",
+});
+assert.equal(addBadNaver.response.status, 201);
+assert.equal(
+  addBadNaver.statements.find((statement) =>
+    /INSERT\s+INTO\s+cafes/i.test(statement.sql),
+  ).bindings[9],
+  "",
+);
 
 // Coordinates are mandatory: a cafe with no usable lat/lng must be rejected and
 // never inserted, otherwise it would be invisible to the distance feature.
@@ -1105,7 +1132,7 @@ class AdminNode {
 
 const adminSource = await fs.readFile("assets/admin.js", "utf8");
 const adminBody = adminSource
-  .replace(/import[\s\S]*?from "\.\/common\.js\?v=20260426-1";\s*/, "")
+  .replace(/import[\s\S]*?from "\.\/common\.js\?v=[^"]+";\s*/, "")
   .replace(/init\(\)\.catch[\s\S]*$/, "");
 const adminElements = new Map([
   ["csv-msg", new AdminNode()],

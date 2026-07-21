@@ -292,11 +292,25 @@ export function openMobileNaverMap(primaryUrl, fallbackUrl) {
 }
 
 export function openNaverMapForCafe(cafe) {
+  // 저장된 place URL이 있으면 그것을 우선한다 -- 키워드 검색은 동명 지점(예: 대구
+  // 수평적관계 3곳)에서 엉뚱한 지점을 먼저 보여줄 수 있다. 없으면 기존 검색 폴백.
+  const savedUrl = String(cafe.naver_url || "").trim();
   const city = getCity(cafe.address || "");
   const keyword = `${cafe.name} ${city}`;
   const { webUrl, appUrl, intentUrl } = buildNaverMapUrls(keyword);
+  const targetWebUrl = savedUrl || webUrl;
   const isAndroid = /Android/i.test(navigator.userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (savedUrl) {
+    // place URL은 웹으로 바로 연다 (모바일에선 네이버가 자체적으로 앱 연결 처리).
+    if (isAndroid || isIOS) {
+      window.location.href = targetWebUrl;
+      return;
+    }
+    window.open(targetWebUrl, "_blank", "noopener");
+    return;
+  }
 
   if (isAndroid) {
     openMobileNaverMap(intentUrl, webUrl);

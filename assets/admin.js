@@ -8,7 +8,7 @@ import {
   roleLabel,
   statusLabel,
   storeCsrfFromPayload,
-} from "./common.js?v=20260426-1";
+} from "./common.js?v=20260721-1";
 
 const state = {
   me: null,
@@ -70,6 +70,7 @@ function fillCafeForm(cafe) {
   $("cafe-lng").value = cafe.lng || "";
   $("cafe-signature").value = (cafe.signature || []).join(", ");
   $("cafe-instagram").value = cafe.instagram || "";
+  $("cafe-naver").value = cafe.naver_url || "";
   $("cafe-bean").value = cafe.beanShop || "";
   [...document.querySelectorAll('input[name="cat"]')].forEach((box) => {
     box.checked = (cafe.category || []).includes(box.value);
@@ -181,6 +182,7 @@ function collectCafeForm() {
     lng: Number($("cafe-lng").value || 0),
     signature: signatures($("cafe-signature").value),
     instagram: $("cafe-instagram").value.trim(),
+    naver_url: $("cafe-naver").value.trim(),
     beanShop: $("cafe-bean").value.trim(),
     category: categories(),
     oakerman_pick: $("oakerman-pick").checked,
