@@ -154,6 +154,10 @@ h1 {
 .tab.active {
   background: var(--border) !important;
   color: white !important;
+  position: relative;
+  z-index: 1;
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow);
 }
 .divider {
   border-top: var(--thick) dashed var(--border);
@@ -546,13 +550,18 @@ footer {
 
 /* 탭 / 내주변 버튼 호버·누름 (mono) */
 .tab {
-  transition: background 0.05s ease;
+  transition:
+    background 0.05s ease,
+    transform 0.05s ease,
+    box-shadow 0.05s ease;
 }
 .tab:hover:not(.active) {
   background: rgba(26, 26, 26, 0.06);
 }
 .tab:active {
   background: rgba(26, 26, 26, 0.12);
+  transform: translate(1px, 1px);
+  box-shadow: none;
 }
 #nearby-btn {
   transition:
