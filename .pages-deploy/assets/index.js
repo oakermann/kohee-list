@@ -22,7 +22,7 @@ let favoriteIds = new Set();
 let openModalCafeId = "";
 
 const FAVORITE_SYNC_KEY = "kohee-favorites-sync";
-const GEO_HIGH_ACCURACY_TIMEOUT_MS = 7000;
+const GEO_HIGH_ACCURACY_TIMEOUT_MS = 15000;
 const GEO_FALLBACK_TIMEOUT_MS = 4000;
 const GEO_APPROX_THRESHOLD_M = 1200;
 const GEO_UNRELIABLE_ACCURACY_M = 5000;
