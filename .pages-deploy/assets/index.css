@@ -439,14 +439,14 @@ footer {
 .auth-menu button {
   border: var(--thin) solid var(--border);
   background: var(--card);
-  padding: 8px 13px;
+  padding: 6px 9px;
   font-size: var(--fs-xs);
   font-weight: 900;
   text-decoration: none;
   cursor: pointer;
   line-height: 1.2;
   text-align: center;
-  min-height: 40px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
