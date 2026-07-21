@@ -145,7 +145,7 @@ h1 {
   letter-spacing: -0.02rem;
 }
 .tab.active {
-  background: var(--bg) !important;
+  background: var(--soft) !important;
   color: var(--ink) !important;
   transform: translate(2px, 2px);
   box-shadow: none;
