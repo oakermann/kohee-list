@@ -70,8 +70,8 @@ body {
 .mini-btn:visited {
   border: var(--thin) solid var(--line);
   background: var(--card);
-  min-height: 40px;
-  padding: 7px 12px;
+  min-height: 34px;
+  padding: 6px 9px;
   font-size: var(--fs-xs);
   font-weight: 900;
   line-height: 1.14;
