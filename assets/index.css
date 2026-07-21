@@ -148,10 +148,10 @@ h1 {
   letter-spacing: -0.02rem;
 }
 .tab.active {
-  background: var(--soft) !important;
+  background: var(--bg) !important;
   color: var(--ink) !important;
   transform: translate(2px, 2px);
-  box-shadow: inset 0 calc(-1 * var(--thin) - 1px) 0 var(--point);
+  box-shadow: none;
 }
 .divider {
   border-top: var(--thick) dashed var(--border);
