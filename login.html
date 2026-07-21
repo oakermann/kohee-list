@@ -29,6 +29,14 @@
       <section id="signup-panel" class="panel">
         <input id="signup-id" placeholder="아이디 (영문/숫자/_ 4~20자)" />
         <input id="signup-pw" type="password" placeholder="비밀번호 (8~72자)" />
+        <label class="consent-row" for="signup-consent">
+          <input type="checkbox" id="signup-consent" />
+          <span class="consent-text">
+            <a href="privacy.html" target="_blank" rel="noopener"
+              >개인정보 처리방침</a
+            >에 동의합니다. (필수)
+          </span>
+        </label>
         <button id="btn-signup" class="primary" type="button">회원가입</button>
         <div class="sub">
           <button id="back-login" class="sub-btn" type="button">
@@ -39,10 +47,11 @@
 
       <div class="sub">
         <a href="index.html">메인으로</a>
+        <a href="privacy.html">개인정보 처리방침</a>
       </div>
       <p id="msg"></p>
     </main>
 
-    <script type="module" src="./assets/login.js?v=20260721-1"></script>
+    <script type="module" src="./assets/login.js?v=20260721-2"></script>
   </body>
 </html>

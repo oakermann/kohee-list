@@ -129,3 +129,28 @@ button.sub-btn:active,
   color: var(--muted);
   min-height: 18px;
 }
+
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 2px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.45;
+  cursor: pointer;
+  word-break: keep-all;
+}
+.consent-row input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--point);
+  cursor: pointer;
+}
+.consent-text a {
+  color: var(--point) !important;
+  font-weight: 900;
+  text-decoration: underline;
+}

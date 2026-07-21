@@ -154,6 +154,7 @@ export function apiErrorMessage(data = {}) {
       "최초 관리자 코드가 서버에 설정되지 않았습니다.",
     FIRST_ADMIN_CODE_REQUIRED: "최초 관리자 코드가 필요합니다.",
     FIRST_ADMIN_CODE_INVALID: "최초 관리자 코드가 올바르지 않습니다.",
+    CONSENT_REQUIRED: "개인정보 처리방침에 동의해야 회원가입할 수 있습니다.",
   };
 
   return messages[data.code] || data.error || "요청에 실패했습니다.";

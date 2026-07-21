@@ -45,7 +45,25 @@
           <div class="empty">오류 제보 내역을 불러오는 중입니다.</div>
         </div>
       </section>
+
+      <section class="section danger-section">
+        <h2 class="section-head">회원 탈퇴</h2>
+        <div class="section-rule"></div>
+        <div class="section-body">
+          <p class="danger-copy">
+            탈퇴 시 계정/로그인정보, 찜 목록, 내 제보 내역, 오류 제보 내역이
+            모두 삭제되며 복구할 수 없습니다.
+          </p>
+          <button id="delete-account-btn" class="mini-btn danger" type="button">
+            회원 탈퇴
+          </button>
+        </div>
+      </section>
     </main>
+
+    <footer class="page-legal-footer">
+      <a href="privacy.html">개인정보 처리방침</a>
+    </footer>
 
     <div id="modal-bg" class="overlay">
       <div class="modal">
@@ -79,6 +97,41 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/mypage.js?v=20260721-1"></script>
+    <div id="delete-modal-bg" class="overlay">
+      <div class="modal">
+        <h2 id="delete-modal-title" class="modal-title">회원 탈퇴</h2>
+        <div class="modal-copy">
+          <div class="modal-copy-text">
+            탈퇴 시 계정/로그인정보, 찜 목록, 내 제보 내역, 오류 제보 내역이
+            모두 삭제되며 복구할 수 없습니다. 단, 이미 승인되어 목록에 공개된
+            카페 정보는 작성자 표시만 삭제된 채 유지됩니다.
+          </div>
+          <label class="delete-field">
+            <span class="delete-field-label">비밀번호 확인</span>
+            <input
+              id="delete-password"
+              type="password"
+              placeholder="비밀번호를 입력하세요"
+              autocomplete="current-password"
+            />
+          </label>
+          <div id="delete-msg" class="delete-msg"></div>
+        </div>
+        <div class="modal-actions">
+          <button id="delete-cancel-btn" class="modal-btn" type="button">
+            취소
+          </button>
+          <button
+            id="delete-confirm-btn"
+            class="modal-btn danger"
+            type="button"
+          >
+            탈퇴하기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./assets/mypage.js?v=20260721-2"></script>
   </body>
 </html>

@@ -290,6 +290,18 @@ footer {
   line-height: 1.4;
   margin-top: 4px;
 }
+.footer-legal {
+  font-size: 0.72rem;
+  font-weight: 800;
+  opacity: 0.75;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+.footer-legal a {
+  color: inherit !important;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
 
 .overlay {
   display: none;

@@ -37,9 +37,14 @@ async function doLogin() {
 async function doSignup() {
   const username = $("signup-id").value.trim().toLowerCase();
   const password = $("signup-pw").value;
+  const consent = !!$("signup-consent")?.checked;
+
+  if (!consent) {
+    throw new Error("개인정보 처리방침에 동의해야 회원가입할 수 있습니다.");
+  }
 
   try {
-    await call("/signup", { username, password });
+    await call("/signup", { username, password, consent });
   } catch (error) {
     const needsFirstAdminCode = [
       "FIRST_ADMIN_CODE_REQUIRED",
@@ -58,7 +63,12 @@ async function doSignup() {
       throw new Error("최초 관리자 코드가 필요합니다.");
     }
 
-    await call("/signup", { username, password, admin_code: adminCode.trim() });
+    await call("/signup", {
+      username,
+      password,
+      consent,
+      admin_code: adminCode.trim(),
+    });
   }
 
   await call("/login", { username, password });

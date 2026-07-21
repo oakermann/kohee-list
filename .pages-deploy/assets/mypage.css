@@ -442,3 +442,71 @@ body {
   padding-bottom: 10px;
   margin-bottom: 15px;
 }
+
+.page-legal-footer {
+  width: 92%;
+  max-width: 500px;
+  margin: 16px auto 0;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  opacity: 0.72;
+}
+.page-legal-footer a {
+  color: var(--ink) !important;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Low-emphasis account-deletion section (권리행사 채널, PIPA 35-5/36/37). */
+.danger-section {
+  border-color: rgba(26, 26, 26, 0.55);
+  opacity: 0.92;
+}
+
+.danger-copy {
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.55;
+  opacity: 0.78;
+  word-break: keep-all;
+}
+
+.mini-btn.danger {
+  align-self: flex-start;
+  border-color: #b00020;
+  color: #b00020 !important;
+}
+
+.modal-btn.danger {
+  border-color: #b00020;
+  color: #b00020 !important;
+}
+
+.delete-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.delete-field-label {
+  font-size: 0.72rem;
+  font-weight: 900;
+  opacity: 0.8;
+}
+
+.delete-field input {
+  border: var(--thin) solid var(--line);
+  background: var(--bg);
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.delete-msg {
+  min-height: 1.1em;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.4;
+  color: #b00020 !important;
+}

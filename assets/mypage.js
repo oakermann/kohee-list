@@ -188,6 +188,74 @@ function setupModalOverlay() {
   });
 }
 
+function closeDeleteModal() {
+  const overlay = $("delete-modal-bg");
+  if (!overlay) return;
+  overlay.style.display = "none";
+  const pw = $("delete-password");
+  if (pw) pw.value = "";
+  $("delete-msg").textContent = "";
+}
+
+function openDeleteModal() {
+  const overlay = $("delete-modal-bg");
+  if (!overlay) return;
+  $("delete-msg").textContent = "";
+  const pw = $("delete-password");
+  if (pw) pw.value = "";
+  overlay.style.display = "flex";
+  if (pw) pw.focus();
+}
+
+async function confirmDeleteAccount() {
+  const password = $("delete-password")?.value || "";
+  if (!password) {
+    $("delete-msg").textContent = "비밀번호를 입력해 주세요.";
+    return;
+  }
+
+  const confirmBtn = $("delete-confirm-btn");
+  confirmBtn.disabled = true;
+  $("delete-msg").textContent = "탈퇴 처리 중...";
+
+  try {
+    await jsonApi("/delete-account", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    clearAuthToken();
+    location.href = "index.html";
+  } catch (error) {
+    confirmBtn.disabled = false;
+    if (error.code === "INVALID_CREDENTIALS") {
+      $("delete-msg").textContent = "비밀번호가 올바르지 않습니다.";
+    } else {
+      $("delete-msg").textContent = error.message;
+    }
+  }
+}
+
+function setupDeleteAccount() {
+  const overlay = $("delete-modal-bg");
+  const trigger = $("delete-account-btn");
+  if (!overlay || !trigger) return;
+
+  const modal = overlay.querySelector(".modal");
+  trigger.addEventListener("click", openDeleteModal);
+  overlay.addEventListener("click", closeDeleteModal);
+  modal?.addEventListener("click", (event) => event.stopPropagation());
+  $("delete-cancel-btn")?.addEventListener("click", closeDeleteModal);
+  $("delete-confirm-btn")?.addEventListener("click", () => {
+    confirmDeleteAccount().catch((error) => {
+      $("delete-msg").textContent = error.message;
+    });
+  });
+  $("delete-password")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") $("delete-confirm-btn").click();
+  });
+}
+
 function renderMenu(user) {
   const menu = $("menu");
   const mainLink = document.createElement("a");
@@ -454,3 +522,4 @@ document.addEventListener("visibilitychange", () => {
 });
 
 setupModalOverlay();
+setupDeleteAccount();
