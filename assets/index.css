@@ -137,7 +137,7 @@ h1 {
   font-weight: 900;
   font-size: var(--fs-xs);
   background: var(--card);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -145,9 +145,9 @@ h1 {
   letter-spacing: -0.02rem;
 }
 .tab.active {
-  background: var(--soft) !important;
-  color: var(--ink) !important;
-  transform: translate(2px, 2px);
+  background: var(--ink) !important;
+  color: #fff !important;
+  transform: translate(4px, 4px);
   box-shadow: none;
 }
 .divider {
@@ -545,15 +545,16 @@ footer {
 .tab {
   transition:
     background 0.05s ease,
+    color 0.05s ease,
     transform 0.05s ease,
     box-shadow 0.05s ease;
 }
 .tab:hover:not(.active) {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--border);
+  box-shadow: 6px 6px 0 var(--border);
 }
 .tab:active:not(.active) {
-  transform: translate(2px, 2px);
+  transform: translate(4px, 4px);
   box-shadow: none;
 }
 #nearby-btn {
