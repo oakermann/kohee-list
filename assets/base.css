@@ -1,7 +1,7 @@
 /* Shared foundation for all KOHEE pages. Load before each page's own CSS. */
 :root {
   --bg: #f2ede3;
-  --card: #fffdf8;
+  --card: #f2ede3;
   --ink: #1a1a1a;
   --line: #1a1a1a;
   --border: #1a1a1a;
