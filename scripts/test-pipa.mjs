@@ -36,10 +36,10 @@ for (const path of ["privacy.html", ".pages-deploy/privacy.html"]) {
   // Version + effective date must match #3's stored consent_version.
   assert.ok(html.includes("v1.0"), `${path} missing consent version v1.0`);
   assert.ok(html.includes("2026년 7월 7일"), `${path} missing effective date`);
-  // Owner-fill placeholder for the protection-officer contact.
+  // Protection-officer contact (owner-designated KOHEE mailbox, 2026-07-21).
   assert.ok(
-    html.includes("[연락처: 오커맨"),
-    `${path} missing owner-fill contact placeholder`,
+    html.includes("koheelist@gmail.com"),
+    `${path} missing protection-officer contact email`,
   );
 }
 
