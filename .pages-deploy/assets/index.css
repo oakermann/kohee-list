@@ -189,7 +189,7 @@ h1 {
   padding-bottom: 4px;
 }
 .cafe-desc {
-  font-size: var(--fs-md);
+  font-size: 0.9rem;
   font-weight: 700;
   margin-bottom: 10px;
   line-height: 1.5;
@@ -197,9 +197,9 @@ h1 {
   word-break: keep-all;
 }
 .address-full {
-  font-size: var(--fs-sm);
+  font-size: 0.7rem;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
   word-break: keep-all;
   border-top: 1px dashed var(--faint);
@@ -209,7 +209,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-xs);
+  font-size: 0.66rem;
   border: 1px solid var(--border);
   padding: 2px 6px;
   font-weight: 900;
@@ -228,7 +228,7 @@ h1 {
 .sig-inline {
   display: block;
   margin-top: 4px;
-  font-size: var(--fs-sm);
+  font-size: 0.75rem;
   font-weight: 600;
   font-style: normal;
   color: var(--muted);
@@ -293,6 +293,8 @@ footer {
   background: var(--bg);
   width: 88%;
   max-width: 380px;
+  max-height: 86vh;
+  overflow-y: auto;
   padding: 20px;
   border: var(--thick) solid var(--border);
 }
@@ -358,20 +360,19 @@ footer {
 }
 .fav-btn {
   flex: 0 0 auto;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  margin: -8px -8px 0 0;
+  width: auto;
+  min-width: 0;
+  height: auto;
   border: none;
   background: transparent;
-  font-size: 1.6rem;
+  font-size: 1.45rem;
   font-weight: 900;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 0;
+  padding: 0 2px;
   box-shadow: none;
 }
 .fav-btn.is-on {
@@ -390,11 +391,9 @@ footer {
 
 .modal-btn {
   width: 100%;
-  min-height: 46px;
   padding: 12px 10px;
   border: var(--thin) solid var(--border);
   background: var(--card);
-  font-size: var(--fs-sm);
   font-weight: 900;
   letter-spacing: -0.01rem;
   cursor: pointer;
@@ -412,12 +411,6 @@ footer {
 .modal-btn:active {
   transform: translate(1px, 1px);
   box-shadow: none;
-}
-.modal-actions .modal-btn:first-child {
-  grid-column: 1 / -1;
-  background: var(--ink);
-  color: var(--card);
-  box-shadow: var(--shadow);
 }
 .notice-inline {
   margin-top: 8px;
