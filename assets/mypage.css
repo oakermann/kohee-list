@@ -256,7 +256,7 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(24, 19, 12, 0.45);
+  background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   z-index: 1000;
   align-items: center;
