@@ -129,7 +129,7 @@ h1 {
   margin: 9px 0 12px;
 }
 .tab {
-  min-height: 44px;
+  min-height: 36px;
   padding: 5px 1px;
   border: var(--thin) solid var(--border);
   white-space: nowrap;
