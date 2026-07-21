@@ -25,6 +25,7 @@ const FAVORITE_SYNC_KEY = "kohee-favorites-sync";
 const GEO_HIGH_ACCURACY_TIMEOUT_MS = 7000;
 const GEO_FALLBACK_TIMEOUT_MS = 4000;
 const GEO_APPROX_THRESHOLD_M = 1200;
+const GEO_UNRELIABLE_ACCURACY_M = 5000;
 // Sentinel distance for cafes without usable coordinates (kept out of results).
 const GEO_DISTANCE_LIMIT_KM = 9999;
 // Actual "near me" radius. Cafes farther than this are not shown in nearby mode.
@@ -533,6 +534,12 @@ function applyUserPosition(pos) {
   }
 
   lastPositionAccuracyM = Number(pos?.coords?.accuracy || 0) || null;
+
+  if (lastPositionAccuracyM && lastPositionAccuracyM > GEO_UNRELIABLE_ACCURACY_M) {
+    const km = Math.round(lastPositionAccuracyM / 1000);
+    throw new Error(`브라우저가 대략적인 위치(오차 반경 ±${km}km)만 제공했습니다.\nWindows 설정에서 OS 위치 서비스를 켜시거나, 카페명 또는 주소로 검색해 주세요.`);
+  }
+
   setDistanceNote(lastPositionAccuracyM);
 
   data.forEach((cafe) => {
@@ -579,6 +586,9 @@ function geolocationErrorMessage(error) {
   }
   if (error?.code === timeout) {
     return "위치 확인 시간이 초과되었습니다.\n잠시 후 다시 시도하거나 카페명/주소로 검색해 주세요.";
+  }
+  if (error?.message && !error.code) {
+    return error.message;
   }
   return "위치 정보를 가져오지 못했습니다.\nChrome 위치 권한과 기기 위치 서비스를 확인해 주세요.";
 }
