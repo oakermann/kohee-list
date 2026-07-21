@@ -22,7 +22,8 @@ let favoriteIds = new Set();
 let openModalCafeId = "";
 
 const FAVORITE_SYNC_KEY = "kohee-favorites-sync";
-const GEO_HIGH_ACCURACY_TIMEOUT_MS = 7000;
+const GEO_HIGH_ACCURACY_TIMEOUT_MS = 15000;
+const GEO_UNRELIABLE_ACCURACY_M = 5000;
 const GEO_FALLBACK_TIMEOUT_MS = 4000;
 const GEO_APPROX_THRESHOLD_M = 1200;
 // Sentinel distance for cafes without usable coordinates (kept out of results).
@@ -532,7 +533,15 @@ function applyUserPosition(pos) {
     throw new Error("잘못된 위치 정보입니다.");
   }
 
-  lastPositionAccuracyM = Number(pos?.coords?.accuracy || 0) || null;
+  const accuracy = Number(pos?.coords?.accuracy || 0);
+  if (accuracy > GEO_UNRELIABLE_ACCURACY_M) {
+    const km = (accuracy / 1000).toFixed(1);
+    const err = new Error(`위치 정확도가 약 ±${km}km로 낮습니다.\nOS 위치 서비스를 켜거나 이름 또는 주소로 검색해 주세요.`);
+    err.isAccuracyError = true;
+    throw err;
+  }
+
+  lastPositionAccuracyM = accuracy || null;
   setDistanceNote(lastPositionAccuracyM);
 
   data.forEach((cafe) => {
@@ -565,6 +574,9 @@ function exitNearbyMode() {
 }
 
 function geolocationErrorMessage(error) {
+  if (error?.isAccuracyError) {
+    return error.message;
+  }
   const permissionDenied = 1;
   const positionUnavailable = 2;
   const timeout = 3;
