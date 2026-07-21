@@ -59,7 +59,12 @@ h1 {
 }
 
 /* ==================== 갤럭시 완전 최적화 ==================== */
+.search-row {
+  display: flex;
+  gap: 9px;
+}
 .input-wrapper {
+  flex: 1;
   display: flex;
   align-items: center;
   border: var(--thin) solid var(--border);
@@ -93,13 +98,20 @@ h1 {
   min-width: 44px;
   height: 44px;
   flex-shrink: 0;
-  border: none;
-  border-left: var(--thin) solid var(--border);
+  border: var(--thin) solid var(--border);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  border-radius: 0;
   cursor: pointer;
-  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+#nearby-btn.is-on {
+  background: var(--border);
+}
+#nearby-btn.is-on svg {
+  stroke: white;
 }
 #nearby-btn:disabled {
   opacity: 0.82;
@@ -568,4 +580,5 @@ footer {
 #nearby-btn:not(:disabled):active {
   background: rgba(26, 26, 26, 0.14);
   transform: translate(1px, 1px);
+  box-shadow: none;
 }
