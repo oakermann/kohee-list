@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS cafes (
   signature TEXT NOT NULL DEFAULT '[]',
   beanShop TEXT DEFAULT '',
   instagram TEXT DEFAULT '',
+  naver_url TEXT DEFAULT '',
   category TEXT NOT NULL DEFAULT '[]',
   oakerman_pick INTEGER NOT NULL DEFAULT 0,
   manager_pick INTEGER NOT NULL DEFAULT 0,
