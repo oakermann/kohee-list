@@ -97,3 +97,46 @@ export async function toggleFavorite(req, env) {
     return json({ ok: true, favored: !!exists }, 200, req, env);
   });
 }
+
+export async function getGeocode(req, env) {
+  return withGuard(req, env, async () => {
+    const url = new URL(req.url);
+    const q = cleanText(url.searchParams.get("q") || "", 100);
+
+    if (!q || q.length < 2 || q.length > 80) {
+      return json({ error: "Invalid query length", code: "VALIDATION_ERROR" }, 400, req, env);
+    }
+
+    try {
+      const fetchUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&q=${encodeURIComponent(q)}`;
+      const response = await fetch(fetchUrl, {
+        headers: {
+          "User-Agent": "kohee-list/1.0"
+        }
+      });
+
+      if (!response.ok) {
+        return json({ error: "NOT_FOUND" }, 404, req, env);
+      }
+
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const hit = data[0];
+        return json(
+          {
+            lat: parseFloat(hit.lat),
+            lng: parseFloat(hit.lon),
+            label: hit.display_name
+          },
+          200,
+          req,
+          env
+        );
+      }
+    } catch (err) {
+      console.error("Geocode error", err);
+    }
+
+    return json({ error: "NOT_FOUND" }, 404, req, env);
+  });
+}
