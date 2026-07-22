@@ -349,16 +349,29 @@ function render() {
   const query = $("search").value.toLowerCase().trim();
 
   if (nearbyMode) {
-    const located = data.filter(
+    // Composition rule: when nearbyMode is on AND selectedCategory is set,
+    // first filter cafes by that category then apply the distance sort and radius cap.
+    let located = data.filter(
       (cafe) => Number.isFinite(cafe.dis) && cafe.dis < GEO_DISTANCE_LIMIT_KM,
     );
 
+    if (selectedCategory) {
+      located = located.filter((cafe) => cafeCategories(cafe).includes(selectedCategory));
+    }
+
     // No cafe has usable coordinates -> the cause is missing cafe data, not GPS.
     if (!located.length) {
-      renderCenterMessage([
-        "주변 카페의 위치 정보가 아직 부족합니다.",
-        "카페명 또는 주소로 검색해 주세요.",
-      ]);
+      if (selectedCategory) {
+        renderCenterMessage([
+          "해당 카테고리의 주변 카페 위치 정보가 부족합니다.",
+          "카페명 또는 주소로 검색해 주세요.",
+        ]);
+      } else {
+        renderCenterMessage([
+          "주변 카페의 위치 정보가 아직 부족합니다.",
+          "카페명 또는 주소로 검색해 주세요.",
+        ]);
+      }
       return;
     }
 
@@ -368,10 +381,17 @@ function render() {
       .slice(0, 20);
 
     if (!nearbyCafes.length) {
-      renderCenterMessage([
-        `${GEO_NEARBY_RADIUS_KM}km 이내에 등록된 카페가 없습니다.`,
-        "카페명 또는 주소로 검색해 보세요.",
-      ]);
+      if (selectedCategory) {
+        renderCenterMessage([
+          `${GEO_NEARBY_RADIUS_KM}km 이내에 해당 카테고리로 등록된 카페가 없습니다.`,
+          "카페명 또는 주소로 검색해 보세요.",
+        ]);
+      } else {
+        renderCenterMessage([
+          `${GEO_NEARBY_RADIUS_KM}km 이내에 등록된 카페가 없습니다.`,
+          "카페명 또는 주소로 검색해 보세요.",
+        ]);
+      }
       return;
     }
 
@@ -413,7 +433,6 @@ function clearCategorySelection() {
 }
 
 function toggleFilter(categoryKey) {
-  if (nearbyMode) exitNearbyMode();
   if (selectedCategory !== categoryKey) $("search").value = "";
   selectedCategory = selectedCategory === categoryKey ? null : categoryKey;
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -582,7 +601,6 @@ function applyHomePosition(home) {
 
 function activateNearbyMode() {
   nearbyMode = true;
-  clearCategorySelection();
   setNearbyActive(true);
   $("search").value = "";
   render();
