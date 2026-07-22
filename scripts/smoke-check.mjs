@@ -25,6 +25,7 @@ const PUBLIC_CAFE_KEYS = new Set([
   "signature",
   "beanShop",
   "instagram",
+  "naver_url",
   "category",
   "oakerman_pick",
   "updated_at",
