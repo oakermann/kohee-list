@@ -37,7 +37,7 @@ import {
   resolveErrorReport,
   submitErrorReport,
 } from "./errorReports.js";
-import { getFavorites, toggleFavorite } from "./favorites.js";
+import { getFavorites, getGeocode, toggleFavorite } from "./favorites.js";
 import { getUsers, setRole } from "./users.js";
 import {
   exportApprovedReviewCsv,
@@ -109,6 +109,7 @@ export const PUBLIC_ROUTES = [
   ["GET", "/version", versionInfo],
   ["GET", "/data", getData],
   ["GET", "/notice", getNotice],
+  ["GET", "/geocode", getGeocode],
 ];
 
 export const USER_ROUTES = [
