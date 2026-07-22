@@ -470,21 +470,41 @@ function isValidUserCoord(lat, lng) {
   );
 }
 
-function setDistanceNote(accuracy) {
+function setDistanceNote(modeData) {
   const note = $("distance-note");
   if (!note) return;
 
-  if (!accuracy) {
+  if (!modeData) {
     note.style.display = "none";
-    note.textContent = "";
+    note.replaceChildren();
     return;
   }
 
-  note.textContent =
-    accuracy > GEO_APPROX_THRESHOLD_M
-      ? "브라우저 위치 정확도가 낮아 거리가 대략적으로 보일 수 있습니다."
-      : "현재 위치 기준 거리 표시 중";
   note.style.display = "block";
+  note.replaceChildren();
+
+  if (modeData.type === "home") {
+    note.append(`${modeData.label} 기준 거리`);
+  } else if (modeData.type === "gps") {
+    note.append(
+      modeData.accuracy > GEO_APPROX_THRESHOLD_M
+        ? "브라우저 위치 정확도가 낮아 거리가 대략적으로 보일 수 있습니다."
+        : "현재 위치 기준 거리 표시 중"
+    );
+  }
+
+  const link = document.createElement("a");
+  link.href = "#";
+  link.style.marginLeft = "8px";
+  link.style.textDecoration = "underline";
+  link.style.cursor = "pointer";
+  link.style.fontSize = "0.9em";
+  link.textContent = "내 동네 설정";
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    promptAndSaveNeighborhood();
+  });
+  note.appendChild(link);
 }
 
 function clearDistances() {
@@ -540,13 +560,70 @@ function applyUserPosition(pos) {
     throw new Error(`브라우저가 대략적인 위치(오차 반경 ±${km}km)만 제공했습니다.\nWindows 설정에서 OS 위치 서비스를 켜시거나, 카페명 또는 주소로 검색해 주세요.`);
   }
 
-  setDistanceNote(lastPositionAccuracyM);
+  setDistanceNote({ type: "gps", accuracy: lastPositionAccuracyM });
 
   data.forEach((cafe) => {
     cafe.dis = isValidCafeCoord(cafe)
       ? getDist(userLat, userLng, Number(cafe.lat), Number(cafe.lng))
       : GEO_DISTANCE_LIMIT_KM;
   });
+}
+
+function applyHomePosition(home) {
+  lastPositionAccuracyM = null;
+  setDistanceNote({ type: "home", label: home.label });
+
+  data.forEach((cafe) => {
+    cafe.dis = isValidCafeCoord(cafe)
+      ? getDist(Number(home.lat), Number(home.lng), Number(cafe.lat), Number(cafe.lng))
+      : GEO_DISTANCE_LIMIT_KM;
+  });
+}
+
+function activateNearbyMode() {
+  nearbyMode = true;
+  clearCategorySelection();
+  setNearbyActive(true);
+  $("search").value = "";
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function promptAndSaveNeighborhood() {
+  const q = prompt("동네 이름을 입력해 주세요 (예: 역삼동):");
+  if (!q || !q.trim()) return;
+  const label = q.trim();
+
+  try {
+    setNearbyLoading(true);
+    const res = await api("/geocode?q=" + encodeURIComponent(label));
+    if (!res.ok) throw new Error();
+    const payload = await res.json();
+
+    let lat = payload.lat;
+    let lng = payload.lng;
+    if (lat === undefined && payload.items && payload.items[0]) {
+      lat = payload.items[0].lat;
+      lng = payload.items[0].lng;
+    }
+
+    if (lat === undefined || lng === undefined) throw new Error();
+
+    const homeData = {
+      lat: Number(lat),
+      lng: Number(lng),
+      label: label,
+    };
+
+    setStorageValue("kohee-home", JSON.stringify(homeData));
+
+    applyHomePosition(homeData);
+    activateNearbyMode();
+  } catch (e) {
+    alert("동네를 찾을 수 없습니다.");
+  } finally {
+    setNearbyLoading(false);
+  }
 }
 
 function setNearbyLoading(isLoading) {
@@ -571,28 +648,6 @@ function exitNearbyMode() {
   setNearbyActive(false);
 }
 
-function geolocationErrorMessage(error) {
-  const permissionDenied = 1;
-  const positionUnavailable = 2;
-  const timeout = 3;
-  if (!navigator.geolocation) {
-    return "이 브라우저에서는 위치 기능을 사용할 수 없습니다.\n카페명 또는 주소로 검색해 주세요.";
-  }
-  if (error?.code === permissionDenied) {
-    return "브라우저 위치 권한이 차단되어 있습니다.\nChrome 사이트 설정에서 위치 권한을 허용해 주세요.";
-  }
-  if (error?.code === positionUnavailable) {
-    return "현재 위치를 확인할 수 없습니다.\n기기 또는 OS 위치 서비스가 켜져 있는지 확인해 주세요.";
-  }
-  if (error?.code === timeout) {
-    return "위치 확인 시간이 초과되었습니다.\n잠시 후 다시 시도하거나 카페명/주소로 검색해 주세요.";
-  }
-  if (error?.message && !error.code) {
-    return error.message;
-  }
-  return "위치 정보를 가져오지 못했습니다.\nChrome 위치 권한과 기기 위치 서비스를 확인해 주세요.";
-}
-
 async function handleNearbyClick() {
   // Toggle: pressing the button again while active returns to the default view.
   if (nearbyMode) {
@@ -601,26 +656,36 @@ async function handleNearbyClick() {
     return;
   }
 
+  setNearbyLoading(true);
+
+  let homeStr = getStorageValue("kohee-home");
+  if (homeStr) {
+    try {
+      const home = JSON.parse(homeStr);
+      if (home && isValidUserCoord(Number(home.lat), Number(home.lng)) && home.label) {
+        applyHomePosition(home);
+        activateNearbyMode();
+        setNearbyLoading(false);
+        return;
+      }
+    } catch (e) {
+      // ignore parse error
+    }
+  }
+
   if (!navigator.geolocation) {
-    alert(geolocationErrorMessage());
+    await promptAndSaveNeighborhood();
+    setNearbyLoading(false);
     return;
   }
 
-  setNearbyLoading(true);
   try {
     const pos = await requestUserPosition();
     applyUserPosition(pos);
-    nearbyMode = true;
-    clearCategorySelection();
-    setNearbyActive(true);
-    $("search").value = "";
-    render();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    activateNearbyMode();
   } catch (error) {
-    exitNearbyMode();
-    render();
-    alert(geolocationErrorMessage(error));
     console.error(error);
+    await promptAndSaveNeighborhood();
   } finally {
     setNearbyLoading(false);
   }
