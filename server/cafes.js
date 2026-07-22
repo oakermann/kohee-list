@@ -14,6 +14,7 @@ import {
   withGuard,
 } from "./shared.js";
 import { safeWriteAuditLog } from "./security.js";
+import { recordVisit } from "./stats.js";
 
 const ALLOWED_CAFE_CATEGORIES = new Set([
   "espresso",
@@ -80,6 +81,8 @@ export function toAdminCafeResponse(row) {
 
 export async function getData(req, env) {
   return withGuard(req, env, async () => {
+    // 방문 집계는 부가 기능 - 실패해도 공개 데이터 제공은 깨지 않는다.
+    await recordVisit(req, env).catch(() => {});
     const rows = await env.DB.prepare(
       `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
         oakerman_pick, updated_at

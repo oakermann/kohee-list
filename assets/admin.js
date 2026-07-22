@@ -190,6 +190,22 @@ function collectCafeForm() {
   };
 }
 
+async function loadVisitStats() {
+  try {
+    const stats = await jsonApi("/stats/visits");
+    $("visit-summary").textContent =
+      `오늘 방문자 ${stats.today.uniques}명 (${stats.today.hits}회) · ` +
+      `7일 ${stats.last7.uniques}명 · 30일 ${stats.last30.uniques}명`;
+    const lines = (stats.days || [])
+      .slice(0, 14)
+      .map((d) => `${d.day}  방문자 ${d.uniques}명 / 조회 ${d.hits}회`);
+    $("visit-days").textContent = lines.join("\n");
+    $("visit-days").style.whiteSpace = "pre-line";
+  } catch (error) {
+    $("visit-summary").textContent = `방문자 통계 로드 실패: ${error.message}`;
+  }
+}
+
 async function loadCafes() {
   try {
     const rows = await jsonApi(
@@ -1475,6 +1491,8 @@ async function init() {
   $("hello").textContent = `${state.me.username} (${roleLabel(state.me.role)})`;
 
   const admin = isAdmin();
+  $("visit-sec").classList.toggle("hidden", !admin);
+  if (admin) loadVisitStats().catch(() => {});
   $("notice-sec").classList.toggle("hidden", !admin);
   $("user-sec").classList.toggle("hidden", !admin);
   $("role-sec").classList.toggle("hidden", !admin);

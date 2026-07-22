@@ -38,6 +38,7 @@ import {
   submitErrorReport,
 } from "./errorReports.js";
 import { getFavorites, getGeocode, toggleFavorite } from "./favorites.js";
+import { getVisitStats } from "./stats.js";
 import { getUsers, setRole } from "./users.js";
 import {
   exportApprovedReviewCsv,
@@ -131,6 +132,7 @@ export const ADMIN_OPERATION_ROUTES = [
   ["POST", "/reject", adminOnly(rejectSubmission)],
   ["POST", "/update-submission", adminOnly(updateSubmission)],
   ["GET", "/cafes", adminOnly(listCafes)],
+  ["GET", "/stats/visits", adminOnly(getVisitStats)],
   ["POST", "/add", adminOnly(addCafe)],
   ["POST", "/edit", adminOnly(editCafe)],
   ["POST", "/delete", adminOnly(deleteCafe)],

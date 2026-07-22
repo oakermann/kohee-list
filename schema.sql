@@ -165,3 +165,11 @@ CREATE TABLE IF NOT EXISTS settings (
 
 INSERT OR IGNORE INTO settings(key, value, updated_at, updated_by)
 VALUES ('notice', '', datetime('now'), NULL);
+
+-- visit stats: day-scoped anonymous visit counters (see migrations/0009)
+CREATE TABLE IF NOT EXISTS visit_stats (
+  day TEXT NOT NULL,
+  ip_hash TEXT NOT NULL,
+  hits INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (day, ip_hash)
+);
