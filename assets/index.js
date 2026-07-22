@@ -590,9 +590,24 @@ function activateNearbyMode() {
 }
 
 async function promptAndSaveNeighborhood() {
-  const q = prompt("동네 이름을 입력해 주세요 (예: 역삼동):");
-  if (!q || !q.trim()) return;
+  const hasHome = !!getStorageValue("kohee-home");
+  const msg = hasHome
+    ? "동네 이름을 입력해 주세요 (예: 역삼동)\n(입력 없이 확인을 누르면 저장된 동네가 초기화됩니다):"
+    : "동네 이름을 입력해 주세요 (예: 역삼동):";
+
+  const q = prompt(msg);
+  if (q === null) return;
+
   const label = q.trim();
+  if (!label) {
+    if (hasHome) {
+      localStorage.removeItem("kohee-home");
+      alert("저장된 동네가 초기화되었습니다. 현재 위치를 다시 사용합니다.");
+      exitNearbyMode();
+      render();
+    }
+    return;
+  }
 
   try {
     setNearbyLoading(true);
