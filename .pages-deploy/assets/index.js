@@ -682,6 +682,24 @@ function exitNearbyMode() {
   setNearbyActive(false);
 }
 
+async function applySavedHomeOrPrompt() {
+  const homeStr = getStorageValue("kohee-home");
+  if (homeStr) {
+    try {
+      const home = JSON.parse(homeStr);
+      if (home && isValidUserCoord(Number(home.lat), Number(home.lng)) && home.label) {
+        applyHomePosition(home);
+        activateNearbyMode();
+        return;
+      }
+    } catch (e) {
+      // ignore parse error
+    }
+  }
+
+  await promptAndSaveNeighborhood();
+}
+
 async function handleNearbyClick() {
   // Toggle: pressing the button again while active returns to the default view.
   if (nearbyMode) {
@@ -692,23 +710,8 @@ async function handleNearbyClick() {
 
   setNearbyLoading(true);
 
-  let homeStr = getStorageValue("kohee-home");
-  if (homeStr) {
-    try {
-      const home = JSON.parse(homeStr);
-      if (home && isValidUserCoord(Number(home.lat), Number(home.lng)) && home.label) {
-        applyHomePosition(home);
-        activateNearbyMode();
-        setNearbyLoading(false);
-        return;
-      }
-    } catch (e) {
-      // ignore parse error
-    }
-  }
-
   if (!navigator.geolocation) {
-    await promptAndSaveNeighborhood();
+    await applySavedHomeOrPrompt();
     setNearbyLoading(false);
     return;
   }
@@ -719,7 +722,7 @@ async function handleNearbyClick() {
     activateNearbyMode();
   } catch (error) {
     console.error(error);
-    await promptAndSaveNeighborhood();
+    await applySavedHomeOrPrompt();
   } finally {
     setNearbyLoading(false);
   }
