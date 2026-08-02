@@ -412,7 +412,8 @@ function render() {
     .filter(
       (cafe) =>
         (safeText(cafe.name).toLowerCase().includes(query) ||
-          safeText(cafe.address).toLowerCase().includes(query)) &&
+          safeText(cafe.address).toLowerCase().includes(query) ||
+          safeText(cafe.desc).toLowerCase().includes(query)) &&
         (!selectedCategory || cafeCategories(cafe).includes(selectedCategory)),
     )
     .slice(0, 50);
