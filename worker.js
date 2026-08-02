@@ -27,6 +27,14 @@ export default {
       );
       if (route) return route[2](req, env);
 
+      // No API route matched. A browser asking for a page gets the site; anything else
+      // keeps the JSON 404 the API has always returned. The binding is absent in tests
+      // and in any deploy without static assets, so this path is inert there.
+      if (env.ASSETS && (req.method === "GET" || req.method === "HEAD")) {
+        const asset = await env.ASSETS.fetch(req);
+        if (asset.status !== 404) return asset;
+      }
+
       return json(
         { ok: false, error: "Not found", code: "NOT_FOUND" },
         404,
