@@ -31,6 +31,13 @@ jobs:
             npm install
           fi
 
+      # The deploy uploads .pages-deploy only, so a change to the root copy alone ships
+      # nothing and the pull request still goes green. This check also covers the
+      # cache-busting version, since a shipped asset that no page requests is invisible
+      # in the same silent way. It used to run only in the scheduled smoke, hours late.
+      - name: Deploy mirror and cache busting
+        run: npm run check:deploy-sync
+
       - name: Unit tests
         run: npm run test:unit
 

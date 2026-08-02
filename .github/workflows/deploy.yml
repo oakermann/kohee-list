@@ -126,6 +126,13 @@ jobs:
           )
           $summary | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
 
+      # Only .pages-deploy is uploaded below. If the mirror and the root copy have drifted,
+      # deploying ships the mirror and silently discards the change that was reviewed, so
+      # refuse before uploading rather than discovering it hours later.
+      - name: Deploy mirror and cache busting
+        if: steps.changes.outputs.shouldDeployPages == 'true' && steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
+        run: npm run check:deploy-sync
+
       - name: Deploy Cloudflare Pages
         id: pages_deploy
         if: steps.changes.outputs.shouldDeployPages == 'true' && steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
