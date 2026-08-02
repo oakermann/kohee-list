@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { checkAssetCacheBusting } from "./check-asset-cache-busting.mjs";
+import { runAssetCacheBustingTests } from "./test-asset-cache-busting.mjs";
 
 const files = [
   "index.html",
@@ -59,6 +61,24 @@ for (const file of files) {
   if (rootContent !== deployContent) {
     failures.push(`Mismatch: ${file} <-> .pages-deploy/${file}`);
   }
+}
+
+try {
+  runAssetCacheBustingTests();
+} catch (testErr) {
+  console.error("Asset cache-busting unit tests failed:", testErr);
+  failures.push(`Asset cache-busting test failure: ${testErr.message}`);
+}
+
+const cacheBustResult = checkAssetCacheBusting();
+if (cacheBustResult.skipped) {
+  console.log(`[check-asset-cache-busting] Skipped: ${cacheBustResult.reason}`);
+} else if (!cacheBustResult.ok) {
+  for (const failure of cacheBustResult.failures) {
+    failures.push(failure);
+  }
+} else {
+  console.log("Asset cache-busting check passed.");
 }
 
 if (failures.length) {
