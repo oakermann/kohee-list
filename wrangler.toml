@@ -8,6 +8,18 @@ binding = "DB"
 database_name = "kohee-list"
 database_id = "747da0d8-cd7b-4164-8cc2-82a4c23f1826"
 
+# Serve the site from the same origin as the API, so the session cookie is first-party.
+# Two hosts made it third-party, which Safari blocks outright -- a login that worked in
+# Chrome and silently failed on iPad.
+#
+# run_worker_first is not optional here: the API has routes named /login and /submit, and
+# the asset layer would otherwise answer those with login.html and submit.html before the
+# Worker ever saw them.
+[assets]
+directory = ".pages-deploy"
+binding = "ASSETS"
+run_worker_first = true
+
 [vars]
 SESSION_DAYS = "14"
 FRONTEND_ORIGIN = "https://kohee.pages.dev"
