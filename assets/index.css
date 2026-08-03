@@ -62,6 +62,10 @@ h1 {
 .search-row {
   display: flex;
   gap: 9px;
+  /* Both children have to end at the same height. The input wrapper grows with its
+     content while the button carried a fixed height, so the button stopped stretching
+     and sat against the top of the row whenever the input was even a pixel taller. */
+  align-items: stretch;
 }
 .input-wrapper {
   flex: 1;
@@ -96,7 +100,8 @@ h1 {
 #nearby-btn {
   width: 44px;
   min-width: 44px;
-  height: 44px;
+  min-height: 44px;
+  align-self: stretch;
   flex-shrink: 0;
   border: var(--thin) solid var(--border);
   background: var(--bg);
