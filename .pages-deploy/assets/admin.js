@@ -190,19 +190,88 @@ function collectCafeForm() {
   };
 }
 
+const VISIT_DAYS_SHOWN = 14;
+
+function visitTile(label, value, sub) {
+  const box = document.createElement("div");
+  box.className = "visit-tile";
+  const l = document.createElement("span");
+  l.className = "label";
+  l.textContent = label;
+  const v = document.createElement("span");
+  v.className = "value";
+  v.textContent = String(value);
+  box.append(l, v);
+  if (sub) {
+    const s = document.createElement("span");
+    s.className = "sub";
+    s.textContent = sub;
+    box.appendChild(s);
+  }
+  return box;
+}
+
+function visitRow(day, peak) {
+  const tr = document.createElement("tr");
+  const date = document.createElement("td");
+  date.className = "day";
+  date.textContent = day.day;
+  // The bar is the only decoration here and it carries the comparison: scaled
+  // against the busiest day on screen, so a quiet day reads as quiet at a glance.
+  const barCell = document.createElement("td");
+  barCell.className = "bar-cell";
+  const bar = document.createElement("div");
+  bar.className = "visit-bar";
+  const fill = document.createElement("span");
+  fill.style.width = `${peak > 0 ? Math.round((day.uniques / peak) * 100) : 0}%`;
+  bar.appendChild(fill);
+  barCell.appendChild(bar);
+  const uniques = document.createElement("td");
+  uniques.className = "num";
+  uniques.textContent = `${day.uniques}명`;
+  const hits = document.createElement("td");
+  hits.className = "hits";
+  hits.textContent = `${day.hits}회`;
+  tr.append(date, barCell, uniques, hits);
+  return tr;
+}
+
 async function loadVisitStats() {
+  const summary = $("visit-summary");
+  const list = $("visit-days");
   try {
     const stats = await jsonApi("/stats/visits");
-    $("visit-summary").textContent =
-      `오늘 방문자 ${stats.today.uniques}명 (${stats.today.hits}회) · ` +
-      `7일 ${stats.last7.uniques}명 · 30일 ${stats.last30.uniques}명`;
-    const lines = (stats.days || [])
-      .slice(0, 14)
-      .map((d) => `${d.day}  방문자 ${d.uniques}명 / 조회 ${d.hits}회`);
-    $("visit-days").textContent = lines.join("\n");
-    $("visit-days").style.whiteSpace = "pre-line";
+
+    summary.replaceChildren(
+      visitTile("오늘", `${stats.today.uniques}명`, `조회 ${stats.today.hits}회`),
+      visitTile("최근 7일", `${stats.last7.uniques}명`, null),
+      visitTile("최근 30일", `${stats.last30.uniques}명`, null),
+    );
+    summary.className = "visit-tiles";
+
+    const days = (stats.days || []).slice(0, VISIT_DAYS_SHOWN);
+    list.replaceChildren();
+    list.style.whiteSpace = "";
+    if (!days.length) {
+      const empty = document.createElement("div");
+      empty.className = "visit-empty";
+      empty.textContent = "기록된 방문이 없습니다.";
+      list.appendChild(empty);
+      return;
+    }
+    const range = document.createElement("div");
+    range.className = "visit-range";
+    range.textContent = `최근 ${days.length}일`;
+    const peak = days.reduce((max, d) => Math.max(max, Number(d.uniques) || 0), 0);
+    const table = document.createElement("table");
+    table.className = "visit-table";
+    const body = document.createElement("tbody");
+    for (const day of days) body.appendChild(visitRow(day, peak));
+    table.appendChild(body);
+    list.append(range, table);
   } catch (error) {
-    $("visit-summary").textContent = `방문자 통계 로드 실패: ${error.message}`;
+    summary.className = "meta";
+    summary.textContent = `방문자 통계 로드 실패: ${error.message}`;
   }
 }
 
