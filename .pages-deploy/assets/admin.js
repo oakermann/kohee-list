@@ -8,7 +8,7 @@ import {
   roleLabel,
   statusLabel,
   storeCsrfFromPayload,
-} from "./common.js?v=20260721-1";
+} from "./common.js?v=20260803-1";
 
 const state = {
   me: null,
