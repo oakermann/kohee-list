@@ -1,5 +1,5 @@
 export const API_BASE =
-  window.__API_BASE__ || "https://kohee-list.gabefinder.workers.dev";
+  window.__API_BASE__ || "/api";
 const CSRF_STORAGE_KEY = "kohee_csrf_token";
 let csrfTokenMemory = "";
 
