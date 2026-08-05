@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { getGeocode } from "../server/favorites.js";
+import { matchName } from "./check-cafe-candidates.mjs";
 
 // Mock global Request/Response if not present (Node < 18 doesn't have it natively without --experimental-fetch)
 // We assume it's available or we can just mock them minimally for this test.
@@ -11,7 +12,9 @@ let fetchCallCount = 0;
 let fetchLastUrl = null;
 let fetchLastOptions = null;
 let fetchResponseStatus = 200;
-let fetchResponseBody = [{ lat: "37.123", lon: "127.456", display_name: "Mock Place" }];
+let fetchResponseBody = [
+  { lat: "37.123", lon: "127.456", display_name: "Mock Place" },
+];
 
 global.fetch = async (url, options) => {
   fetchCallCount++;
@@ -31,7 +34,9 @@ async function run() {
   try {
     // 1. Valid request
     fetchResponseStatus = 200;
-    fetchResponseBody = [{ lat: "37.123", lon: "127.456", display_name: "Mock Place" }];
+    fetchResponseBody = [
+      { lat: "37.123", lon: "127.456", display_name: "Mock Place" },
+    ];
     const req1 = new Request("https://kohee.test/geocode?q=seoul");
     const res1 = await getGeocode(req1, createEnv());
     assert.equal(res1.status, 200);
@@ -66,6 +71,10 @@ async function run() {
     const req5 = new Request("https://kohee.test/geocode?q=empty");
     const res5 = await getGeocode(req5, createEnv());
     assert.equal(res5.status, 404);
+
+    // 6. Name matching helper
+    assert.equal(matchName("Pellucid coffee", "Pellucid  coffee"), true);
+    assert.equal(matchName("Pellucid coffee", "Starbucks"), false);
 
     console.log("[geocode-unit] ok");
   } finally {

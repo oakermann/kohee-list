@@ -1,0 +1,54 @@
+[
+  {
+    "name": "Pellucid coffee",
+    "region": "Seodaemun-gu Yeonhui-dong"
+  },
+  {
+    "name": "GSC",
+    "region": "Mapo-gu Hapjeong-dong Mangwon-dong"
+  },
+  {
+    "name": "Spin Off Coffee",
+    "region": "Dongjak-gu Sadang-dong"
+  },
+  {
+    "name": "Groovers Coffee",
+    "region": "Seongbuk-gu"
+  },
+  {
+    "name": "Linkage Coffee",
+    "region": "Yangcheon-gu Sinjeong-dong"
+  },
+  {
+    "name": "Gadello",
+    "region": "Pyeongtaek-si"
+  },
+  {
+    "name": "Mill Jejakso",
+    "region": "Busan"
+  },
+  {
+    "name": "Baeksan Baunoba",
+    "region": "Busan"
+  },
+  {
+    "name": "Multi Peach",
+    "region": "Cheongju-si"
+  },
+  {
+    "name": "Matisse Roastery",
+    "region": "Gwangju Suwan-dong"
+  },
+  {
+    "name": "Beatrice",
+    "region": "Donghae-si Mukho-dong"
+  },
+  {
+    "name": "Coffee Light",
+    "region": "Jeju-si"
+  },
+  {
+    "name": "Hotelliers Coffee",
+    "region": "Seogwipo-si"
+  }
+]
