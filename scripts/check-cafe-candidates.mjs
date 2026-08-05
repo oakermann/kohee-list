@@ -17,6 +17,9 @@ export function matchName(name1, name2) {
   const n1 = normalizeName(name1);
   const n2 = normalizeName(name2);
   if (!n1 || !n2) return false;
+  if (n1.length <= 3 || n2.length <= 3) {
+    return n1 === n2;
+  }
   return n1 === n2 || n1.includes(n2) || n2.includes(n1);
 }
 
@@ -104,7 +107,7 @@ async function queryNominatim(candidateName, region) {
 
     for (const item of data) {
       const itemName = item.name || item.display_name || "";
-      if (matchName(candidateName, itemName) || item.display_name) {
+      if (matchName(candidateName, itemName)) {
         return {
           matchedName: item.name || item.display_name,
           source: "Nominatim",

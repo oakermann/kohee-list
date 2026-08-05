@@ -75,6 +75,9 @@ async function run() {
     // 6. Name matching helper
     assert.equal(matchName("Pellucid coffee", "Pellucid  coffee"), true);
     assert.equal(matchName("Pellucid coffee", "Starbucks"), false);
+    assert.equal(matchName("GSC", "GSC Global Supply Chain Services"), false);
+    assert.equal(matchName("G S C", "GSC"), true);
+    assert.equal(matchName("Pellucid", "Pellucid Coffee Roasters"), true);
 
     console.log("[geocode-unit] ok");
   } finally {
