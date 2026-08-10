@@ -50,5 +50,11 @@
   {
     "name": "Hotelliers Coffee",
     "region": "Seogwipo-si"
+  },
+  {
+    "name": "Pass Roastery",
+    "name_ko": "패스로스터리",
+    "region": "Seoul Station Yongsan-gu Jung-gu",
+    "desc": "작지만 아늑한 소형 로스터리"
   }
 ]
