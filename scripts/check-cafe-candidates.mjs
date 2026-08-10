@@ -3,9 +3,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-const USER_AGENT = "kohee-list/1.0 (candidate-checker)";
-const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+const KAKAO_KEYWORD_SEARCH_URL =
+  "https://dapi.kakao.com/v2/local/search/keyword.json";
 
 export function normalizeName(name) {
   if (!name) return "";
@@ -22,6 +21,31 @@ export function matchName(name1, name2) {
   }
   return n1 === n2 || n1.includes(n2) || n2.includes(n1);
 }
+
+const REGION_ALIASES = {
+  seodaemun: "서대문",
+  yeonhui: "연희",
+  mapo: "마포",
+  hapjeong: "합정",
+  mangwon: "망원",
+  dongjak: "동작",
+  sadang: "사당",
+  seongbuk: "성북",
+  yangcheon: "양천",
+  sinjeong: "신정",
+  pyeongtaek: "평택",
+  busan: "부산",
+  cheongju: "청주",
+  gwangju: "광주",
+  suwan: "수완",
+  donghae: "동해",
+  mukho: "묵호",
+  jeju: "제주",
+  seogwipo: "서귀포",
+  seoul: "서울",
+  yongsan: "용산",
+  jung: "중",
+};
 
 export function checkRegionMatch(expectedRegion, addressData) {
   if (!expectedRegion) return true;
@@ -41,111 +65,78 @@ export function checkRegionMatch(expectedRegion, addressData) {
 
   if (words.length === 0) return true;
 
-  return words.some((word) => addressText.includes(word));
+  return words.some(
+    (word) =>
+      addressText.includes(word) ||
+      (REGION_ALIASES[word] && addressText.includes(REGION_ALIASES[word]))
+  );
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function queryOverpass(candidateName) {
-  const escapedName = candidateName.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-  const query = `[out:json][timeout:25];
-area["ISO3166-1"="KR"]->.searchArea;
-(
-  node["amenity"~"cafe|coffee_shop|restaurant"](area.searchArea)[~"^name(:.*)?$"~"${escapedName}", i];
-  way["amenity"~"cafe|coffee_shop|restaurant"](area.searchArea)[~"^name(:.*)?$"~"${escapedName}", i];
-  node(area.searchArea)[~"^name(:.*)?$"~"${escapedName}", i];
-);
-out center;`;
+export async function queryKakao(candidate, apiKey) {
+  if (!apiKey) return null;
 
-  try {
-    const res = await fetch(OVERPASS_URL, {
-      method: "POST",
-      headers: {
-        "User-Agent": USER_AGENT,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: `data=${encodeURIComponent(query)}`,
-    });
+  const candidateName = typeof candidate === "string" ? candidate : candidate.name;
+  const candidateKo = typeof candidate === "object" ? candidate.name_ko : null;
 
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.elements || !data.elements.length) return null;
+  const queriesToTry = [];
+  if (candidateKo && candidateKo !== candidateName) {
+    queriesToTry.push(candidateKo);
+  }
+  queriesToTry.push(candidateName);
 
-    for (const elem of data.elements) {
-      const tags = elem.tags || {};
-      const elemName = tags.name || tags["name:en"] || tags["name:ko"] || "";
-      if (matchName(candidateName, elemName)) {
-        return {
-          matchedName: elemName || candidateName,
-          source: "Overpass",
-          addressTags: tags,
-          lat: elem.lat ?? elem.center?.lat ?? null,
-          lon: elem.lon ?? elem.center?.lon ?? null,
-        };
+  for (const q of queriesToTry) {
+    const url = `${KAKAO_KEYWORD_SEARCH_URL}?query=${encodeURIComponent(q)}`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `KakaoAK ${apiKey}`,
+        },
+      });
+
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!data.documents || !Array.isArray(data.documents) || data.documents.length === 0) {
+        continue;
       }
-    }
-  } catch (_err) {
-    // Overpass failed, fall back to Nominatim
-  }
-  return null;
-}
 
-async function queryNominatim(candidateName, region) {
-  const q = `${candidateName} ${region}`.trim();
-  const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&addressdetails=1&countrycodes=kr&limit=5`;
+      for (const doc of data.documents) {
+        const placeName = doc.place_name || "";
+        const matchesMain = matchName(candidateName, placeName);
+        const matchesKo = candidateKo ? matchName(candidateKo, placeName) : false;
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": USER_AGENT,
-      },
-    });
-
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data) || !data.length) return null;
-
-    for (const item of data) {
-      const itemName = item.name || item.display_name || "";
-      if (matchName(candidateName, itemName)) {
-        return {
-          matchedName: item.name || item.display_name,
-          source: "Nominatim",
-          addressTags: item.address || item.display_name,
-          lat: item.lat ? parseFloat(item.lat) : null,
-          lon: item.lon ? parseFloat(item.lon) : null,
-        };
+        if (matchesMain || matchesKo) {
+          const roadAddr = doc.road_address_name || doc.address_name || "N/A";
+          return {
+            matchedName: placeName,
+            source: "Kakao",
+            roadAddress: roadAddr,
+            address: roadAddr,
+            lat: doc.y ? parseFloat(doc.y) : null,
+            lng: doc.x ? parseFloat(doc.x) : null,
+            lon: doc.x ? parseFloat(doc.x) : null,
+            placeUrl: doc.place_url || "",
+          };
+        }
       }
+    } catch (_err) {
+      // Continue to next query
     }
-  } catch (_err) {
-    // Nominatim failed
   }
+
   return null;
-}
-
-function formatAddress(addressTags) {
-  if (!addressTags) return "N/A";
-  if (typeof addressTags === "string") return addressTags;
-  if (typeof addressTags === "object") {
-    const parts = [];
-    if (addressTags.province) parts.push(addressTags.province);
-    if (addressTags.city) parts.push(addressTags.city);
-    if (addressTags.city_district) parts.push(addressTags.city_district);
-    if (addressTags.suburb) parts.push(addressTags.suburb);
-    if (addressTags.road) parts.push(addressTags.road);
-    if (addressTags["addr:city"]) parts.push(addressTags["addr:city"]);
-    if (addressTags["addr:district"]) parts.push(addressTags["addr:district"]);
-    if (addressTags["addr:street"]) parts.push(addressTags["addr:street"]);
-
-    if (parts.length > 0) return parts.join(" ");
-    return Object.entries(addressTags)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(", ");
-  }
-  return String(addressTags);
 }
 
 export async function runCandidateCheck() {
+  const apiKey = process.env.KAKAO_REST_API_KEY;
+  if (!apiKey) {
+    console.error("[ERROR] KAKAO_REST_API_KEY environment variable is missing.");
+    console.error("Please set KAKAO_REST_API_KEY environment variable to run cafe candidate check.");
+    process.exitCode = 1;
+    return;
+  }
+
   const rootDir = process.cwd();
   const inputPath = path.join(rootDir, "docs", "cafe-candidates.json");
   const outputPath = path.join(rootDir, "docs", "cafe-candidate-report.md");
@@ -158,29 +149,22 @@ export async function runCandidateCheck() {
   const notFound = [];
 
   for (const candidate of candidates) {
-    let hit = null;
-
-    // Try Overpass
-    await sleep(2000);
-    hit = await queryOverpass(candidate.name);
-
-    // Fall back to Nominatim if needed
-    if (!hit) {
-      await sleep(2000);
-      hit = await queryNominatim(candidate.name, candidate.region);
-    }
+    await sleep(100);
+    const hit = await queryKakao(candidate, apiKey);
 
     if (hit) {
-      const regionMatch = checkRegionMatch(candidate.region, hit.addressTags);
+      const regionMatch = checkRegionMatch(candidate.region, hit.roadAddress);
       const record = {
         name: candidate.name,
         expectedRegion: candidate.region,
         matchedName: hit.matchedName,
         source: hit.source,
-        addressTags: hit.addressTags,
-        formattedAddress: formatAddress(hit.addressTags),
+        roadAddress: hit.roadAddress,
+        address: hit.address,
         lat: hit.lat,
+        lng: hit.lng,
         lon: hit.lon,
+        placeUrl: hit.placeUrl,
         regionMatched: regionMatch,
       };
 
@@ -213,8 +197,9 @@ export async function runCandidateCheck() {
       report += `   - Expected Region: ${item.expectedRegion}\n`;
       report += `   - Matched Name: ${item.matchedName}\n`;
       report += `   - Source: ${item.source}\n`;
-      report += `   - Address: ${item.formattedAddress}\n`;
-      report += `   - Coordinates: ${item.lat}, ${item.lon}\n\n`;
+      report += `   - Road Address: ${item.roadAddress}\n`;
+      report += `   - Coordinates: ${item.lat}, ${item.lng}\n`;
+      report += `   - Place URL: ${item.placeUrl}\n\n`;
     });
   }
 
@@ -227,8 +212,9 @@ export async function runCandidateCheck() {
       report += `   - Expected Region: ${item.expectedRegion}\n`;
       report += `   - Matched Name: ${item.matchedName}\n`;
       report += `   - Source: ${item.source}\n`;
-      report += `   - Address: ${item.formattedAddress}\n`;
-      report += `   - Coordinates: ${item.lat}, ${item.lon}\n`;
+      report += `   - Road Address: ${item.roadAddress}\n`;
+      report += `   - Coordinates: ${item.lat}, ${item.lng}\n`;
+      report += `   - Place URL: ${item.placeUrl}\n`;
       report += `   - Reason: Address does not match expected region "${item.expectedRegion}"\n\n`;
     });
   }
