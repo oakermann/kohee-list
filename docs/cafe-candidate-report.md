@@ -1,10 +1,10 @@
 # Cafe Candidate Search Report
 
 ## Summary
-- Total Candidates: 13
+- Total Candidates: 14
 - Found: 0
 - Doubtful: 0
-- Not Found: 13
+- Not Found: 14
 
 ## Found
 None.
@@ -26,4 +26,4 @@ None.
 11. **Beatrice** (Region: Donghae-si Mukho-dong)
 12. **Coffee Light** (Region: Jeju-si)
 13. **Hotelliers Coffee** (Region: Seogwipo-si)
-
+14. **Pass Roastery** (Region: Seoul Station Yongsan-gu Jung-gu)
