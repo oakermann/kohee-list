@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { getGeocode } from "../server/favorites.js";
-import { matchName } from "./check-cafe-candidates.mjs";
+import {
+  matchName,
+  queryKakao,
+  runCandidateCheck,
+} from "./check-cafe-candidates.mjs";
 
 // Mock global Request/Response if not present (Node < 18 doesn't have it natively without --experimental-fetch)
 // We assume it's available or we can just mock them minimally for this test.
@@ -78,6 +82,70 @@ async function run() {
     assert.equal(matchName("GSC", "GSC Global Supply Chain Services"), false);
     assert.equal(matchName("G S C", "GSC"), true);
     assert.equal(matchName("Pellucid", "Pellucid Coffee Roasters"), true);
+
+    // 7. Kakao Local API query testing
+    // 7a. Missing API key returns null
+    const noKeyHit = await queryKakao({ name: "Pellucid coffee" }, null);
+    assert.equal(noKeyHit, null);
+
+    // 7b. Valid Kakao search response matching candidate
+    fetchResponseStatus = 200;
+    fetchResponseBody = {
+      documents: [
+        {
+          place_name: "펠루시드커피",
+          road_address_name: "서울 서대문구 연희로11가길 483",
+          address_name: "서울 서대문구 연희동 123-4",
+          x: "126.931234",
+          y: "37.567890",
+          place_url: "http://place.map.kakao.com/123456",
+        },
+      ],
+    };
+    const kakaoHit = await queryKakao(
+      { name: "Pellucid coffee", name_ko: "펠루시드커피" },
+      "test-kakao-key"
+    );
+    assert.ok(kakaoHit);
+    assert.equal(kakaoHit.matchedName, "펠루시드커피");
+    assert.equal(kakaoHit.source, "Kakao");
+    assert.equal(kakaoHit.roadAddress, "서울 서대문구 연희로11가길 483");
+    assert.equal(kakaoHit.lat, 37.56789);
+    assert.equal(kakaoHit.lng, 126.931234);
+    assert.equal(kakaoHit.placeUrl, "http://place.map.kakao.com/123456");
+    assert.equal(fetchLastOptions.headers.Authorization, "KakaoAK test-kakao-key");
+
+    // 7c. Kakao search response with non-matching name returns null
+    fetchResponseBody = {
+      documents: [
+        {
+          place_name: "스타벅스 연희점",
+          road_address_name: "서울 서대문구 연희로 100",
+          x: "126.900",
+          y: "37.500",
+          place_url: "http://place.map.kakao.com/9999",
+        },
+      ],
+    };
+    const kakaoNoMatch = await queryKakao(
+      { name: "Pellucid coffee" },
+      "test-kakao-key"
+    );
+    assert.equal(kakaoNoMatch, null);
+
+    // 8. runCandidateCheck missing API key handling
+    const savedApiKey = process.env.KAKAO_REST_API_KEY;
+    delete process.env.KAKAO_REST_API_KEY;
+    const initialExitCode = process.exitCode;
+    process.exitCode = 0;
+
+    await runCandidateCheck();
+    assert.equal(process.exitCode, 1);
+    process.exitCode = initialExitCode;
+
+    if (savedApiKey) {
+      process.env.KAKAO_REST_API_KEY = savedApiKey;
+    }
 
     console.log("[geocode-unit] ok");
   } finally {
