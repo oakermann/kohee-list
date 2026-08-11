@@ -2474,3 +2474,32 @@ assert.match(importAudit.bindings[6], /"actor_role":"admin"/);
 assert.doesNotMatch(importAudit.bindings[6], /password|session|secret/i);
 
 console.log("[unit] ok");
+
+// 소개에 박힌 거리 표기 제거: 거리는 지우고 문장은 살린다.
+{
+  const { stripDistance } = await import("./strip-desc-distance.mjs");
+  assert.equal(
+    stripDistance("군자역 466m 작지만 아늑한 소형 로스터리"),
+    "군자역 작지만 아늑한 소형 로스터리",
+  );
+  // 괄호구의 닫는 괄호는 거리의 것이 아니므로 살아남아야 한다.
+  assert.equal(
+    stripDistance("작지만 아늑한 소형 로스터리 (군자역 466m)"),
+    "작지만 아늑한 소형 로스터리 (군자역)",
+  );
+  // 괄호 안이 거리뿐이면 괄호까지 통째로 사라진다.
+  assert.equal(stripDistance("(466m) 조용한 카페"), "조용한 카페");
+  assert.equal(
+    stripDistance("서울역 1.2km, 조용한 공간"),
+    "서울역, 조용한 공간",
+  );
+  assert.equal(stripDistance("군자역에서 466미터"), "군자역에서");
+  // 다른 단위는 거리가 아니다.
+  assert.equal(stripDistance("원두 466ml 판매"), "원두 466ml 판매");
+  // 거리 표기가 없으면 원문 그대로.
+  assert.equal(
+    stripDistance("거리 표기 없는 평범한 소개"),
+    "거리 표기 없는 평범한 소개",
+  );
+  console.log("[strip-desc-distance] ok");
+}
