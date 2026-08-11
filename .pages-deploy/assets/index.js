@@ -205,15 +205,6 @@ async function toggleFavorite(cafeId) {
   touchFavoriteSync();
 }
 
-function formatDistance(distanceKm) {
-  if (!Number.isFinite(distanceKm) || distanceKm >= GEO_DISTANCE_LIMIT_KM)
-    return "";
-  const label = `${distanceKm.toFixed(1)}km`;
-  return lastPositionAccuracyM && lastPositionAccuracyM > GEO_APPROX_THRESHOLD_M
-    ? `약 ${label}`
-    : label;
-}
-
 function centerMessage(message, subMessage = "") {
   const box = document.createElement("div");
   box.className = "center-msg";
@@ -238,21 +229,6 @@ function createCafeCard(cafe) {
   appendTags(tagGroup, cafe);
   if (cafe.oakerman_pick) tagGroup.prepend(makePickBadge());
   meta.appendChild(tagGroup);
-
-  const metaRight = document.createElement("div");
-  metaRight.className = "meta-right";
-
-  if (cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM) {
-    const distance = formatDistance(cafe.dis);
-    if (distance) {
-      const badge = document.createElement("span");
-      badge.className = "distance-badge";
-      badge.textContent = distance;
-      metaRight.appendChild(badge);
-    }
-  }
-
-  if (metaRight.childElementCount) meta.appendChild(metaRight);
 
   const title = document.createElement("h4");
   title.textContent = safeText(cafe.name);
