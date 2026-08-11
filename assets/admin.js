@@ -72,6 +72,7 @@ function fillCafeForm(cafe) {
   $("cafe-instagram").value = cafe.instagram || "";
   $("cafe-naver").value = cafe.naver_url || "";
   $("cafe-region").value = cafe.region || "";
+  $("cafe-region-distance").value = cafe.region_distance_m || "";
   $("cafe-memo").value = cafe.memo || "";
   $("cafe-bean").value = cafe.beanShop || "";
   [...document.querySelectorAll('input[name="cat"]')].forEach((box) => {
@@ -186,6 +187,7 @@ function collectCafeForm() {
     instagram: $("cafe-instagram").value.trim(),
     naver_url: $("cafe-naver").value.trim(),
     region: $("cafe-region").value.trim(),
+    region_distance_m: Number($("cafe-region-distance").value.trim() || 0),
     memo: $("cafe-memo").value.trim(),
     beanShop: $("cafe-bean").value.trim(),
     category: categories(),

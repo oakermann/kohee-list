@@ -212,6 +212,7 @@ assert.deepEqual(
     instagram: "javascript:alert(1)",
     naver_url: "https://map.naver.com/p/entry/place/1449266862",
     region: "군자역",
+    region_distance_m: 466,
     memo: "사장님 통화 완료",
     category: '["espresso"]',
     oakerman_pick: 1,
@@ -237,6 +238,7 @@ assert.deepEqual(
     // region is back-data: stored and returned so search can use it, never rendered
     // on the card. memo is operator-only and must not appear here at all.
     region: "군자역",
+    region_distance_m: 466,
     category: ["espresso"],
     oakerman_pick: true,
     manager_pick: false,
@@ -299,6 +301,7 @@ assert.deepEqual(Object.keys(publicCafeBody[0]).sort(), [
   "naver_url",
   "oakerman_pick",
   "region",
+  "region_distance_m",
   "signature",
   "updated_at",
 ]);
@@ -594,14 +597,14 @@ const managerAddInsert = managerAdd.statements.find((statement) =>
 );
 assert.ok(managerAddInsert);
 assert.match(managerAddInsert.sql, /status/i);
-assert.equal(managerAddInsert.bindings[15], "candidate");
+assert.equal(managerAddInsert.bindings[16], "candidate");
 
 const adminAdd = await requestAddCafe("admin");
 assert.equal(adminAdd.response.status, 201);
 const adminAddInsert = adminAdd.statements.find((statement) =>
   /INSERT\s+INTO\s+cafes/i.test(statement.sql),
 );
-assert.equal(adminAddInsert.bindings[15], "candidate");
+assert.equal(adminAddInsert.bindings[16], "candidate");
 
 // naver_url: place URL은 저장되고, 위험 스킴은 cleanUrl이 비운다.
 const addWithNaver = await requestAddCafe("admin", {
@@ -2475,31 +2478,37 @@ assert.doesNotMatch(importAudit.bindings[6], /password|session|secret/i);
 
 console.log("[unit] ok");
 
-// 소개에 박힌 거리 표기 제거: 거리는 지우고 문장은 살린다.
+// 소개에 박힌 "<역> <거리>"는 버리는 게 아니라 백데이터 칸으로 옮긴다.
 {
-  const { stripDistance } = await import("./strip-desc-distance.mjs");
-  assert.equal(
-    stripDistance("군자역 466m 작지만 아늑한 소형 로스터리"),
-    "군자역 작지만 아늑한 소형 로스터리",
+  const { moveDistanceToBackdata } =
+    await import("./move-desc-distance-to-backdata.mjs");
+  assert.deepEqual(
+    moveDistanceToBackdata("군자역 466m 작지만 아늑한 소형 로스터리"),
+    {
+      region: "군자역",
+      region_distance_m: 466,
+      desc: "작지만 아늑한 소형 로스터리",
+    },
   );
-  // 괄호구의 닫는 괄호는 거리의 것이 아니므로 살아남아야 한다.
-  assert.equal(
-    stripDistance("작지만 아늑한 소형 로스터리 (군자역 466m)"),
-    "작지만 아늑한 소형 로스터리 (군자역)",
+  // 괄호와 연결어까지 한 덩어리로 들어내야 "(군자역에서)" 같은 찌꺼기가 안 남는다.
+  assert.deepEqual(
+    moveDistanceToBackdata("작지만 아늑한 소형 로스터리 (군자역에서 466m)"),
+    {
+      region: "군자역",
+      region_distance_m: 466,
+      desc: "작지만 아늑한 소형 로스터리",
+    },
   );
-  // 괄호 안이 거리뿐이면 괄호까지 통째로 사라진다.
-  assert.equal(stripDistance("(466m) 조용한 카페"), "조용한 카페");
-  assert.equal(
-    stripDistance("서울역 1.2km, 조용한 공간"),
-    "서울역, 조용한 공간",
-  );
-  assert.equal(stripDistance("군자역에서 466미터"), "군자역에서");
-  // 다른 단위는 거리가 아니다.
-  assert.equal(stripDistance("원두 466ml 판매"), "원두 466ml 판매");
-  // 거리 표기가 없으면 원문 그대로.
-  assert.equal(
-    stripDistance("거리 표기 없는 평범한 소개"),
-    "거리 표기 없는 평범한 소개",
-  );
-  console.log("[strip-desc-distance] ok");
+  // km는 미터로 환산해 저장한다.
+  assert.deepEqual(moveDistanceToBackdata("서울역 도보 1.2km, 조용한 공간"), {
+    region: "서울역",
+    region_distance_m: 1200,
+    desc: "조용한 공간",
+  });
+  // 옮긴 것만 지운다: 지역명이 없으면 소개를 한 글자도 건드리지 않는다.
+  // "천장고 5m"는 거리가 아니라 치수이므로 그대로 남아야 한다.
+  assert.equal(moveDistanceToBackdata("천장고 5m 넓은 공간"), null);
+  assert.equal(moveDistanceToBackdata("원두 466ml 판매"), null);
+  assert.equal(moveDistanceToBackdata("거리 없는 평범한 소개"), null);
+  console.log("[move-desc-distance-to-backdata] ok");
 }

@@ -27,6 +27,7 @@ const PUBLIC_CAFE_KEYS = new Set([
   "instagram",
   "naver_url",
   "region",
+  "region_distance_m",
   "category",
   "oakerman_pick",
   "updated_at",

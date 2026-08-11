@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS cafes (
   instagram TEXT DEFAULT '',
   naver_url TEXT DEFAULT '',
   region TEXT DEFAULT '',
+  region_distance_m INTEGER DEFAULT 0,
   memo TEXT DEFAULT '',
   category TEXT NOT NULL DEFAULT '[]',
   oakerman_pick INTEGER NOT NULL DEFAULT 0,
