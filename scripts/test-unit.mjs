@@ -211,6 +211,8 @@ assert.deepEqual(
     beanShop: "https://example.com",
     instagram: "javascript:alert(1)",
     naver_url: "https://map.naver.com/p/entry/place/1449266862",
+    region: "군자역",
+    memo: "사장님 통화 완료",
     category: '["espresso"]',
     oakerman_pick: 1,
     manager_pick: 0,
@@ -232,6 +234,9 @@ assert.deepEqual(
     beanShop: "https://example.com/",
     instagram: "",
     naver_url: "https://map.naver.com/p/entry/place/1449266862",
+    // region is back-data: stored and returned so search can use it, never rendered
+    // on the card. memo is operator-only and must not appear here at all.
+    region: "군자역",
     category: ["espresso"],
     oakerman_pick: true,
     manager_pick: false,
@@ -293,9 +298,12 @@ assert.deepEqual(Object.keys(publicCafeBody[0]).sort(), [
   "name",
   "naver_url",
   "oakerman_pick",
+  "region",
   "signature",
   "updated_at",
 ]);
+// memo is an operator note: it must never reach the public payload.
+assert.equal(publicCafeBody[0].memo, undefined);
 assert.equal(publicCafeBody[0].deleted_by, undefined);
 assert.equal(publicCafeBody[0].delete_reason, undefined);
 assert.equal(publicCafeBody[0].approved_by, undefined);
@@ -586,14 +594,14 @@ const managerAddInsert = managerAdd.statements.find((statement) =>
 );
 assert.ok(managerAddInsert);
 assert.match(managerAddInsert.sql, /status/i);
-assert.equal(managerAddInsert.bindings[13], "candidate");
+assert.equal(managerAddInsert.bindings[15], "candidate");
 
 const adminAdd = await requestAddCafe("admin");
 assert.equal(adminAdd.response.status, 201);
 const adminAddInsert = adminAdd.statements.find((statement) =>
   /INSERT\s+INTO\s+cafes/i.test(statement.sql),
 );
-assert.equal(adminAddInsert.bindings[13], "candidate");
+assert.equal(adminAddInsert.bindings[15], "candidate");
 
 // naver_url: place URL은 저장되고, 위험 스킴은 cleanUrl이 비운다.
 const addWithNaver = await requestAddCafe("admin", {

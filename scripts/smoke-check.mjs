@@ -26,12 +26,14 @@ const PUBLIC_CAFE_KEYS = new Set([
   "beanShop",
   "instagram",
   "naver_url",
+  "region",
   "category",
   "oakerman_pick",
   "updated_at",
 ]);
 
 const FORBIDDEN_PUBLIC_KEYS = new Set([
+  "memo",
   "approved_by",
   "created_by",
   "deleted_at",
