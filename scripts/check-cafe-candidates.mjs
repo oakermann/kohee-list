@@ -3,8 +3,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-const KAKAO_KEYWORD_SEARCH_URL =
-  "https://dapi.kakao.com/v2/local/search/keyword.json";
+const NAVER_LOCAL_SEARCH_URL =
+  "https://openapi.naver.com/v1/search/local.json";
 
 export function normalizeName(name) {
   if (!name) return "";
@@ -74,8 +74,8 @@ export function checkRegionMatch(expectedRegion, addressData) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function queryKakao(candidate, apiKey) {
-  if (!apiKey) return null;
+export async function queryNaver(candidate, clientId, clientSecret) {
+  if (!clientId || !clientSecret) return null;
 
   const candidateName = typeof candidate === "string" ? candidate : candidate.name;
   const candidateKo = typeof candidate === "object" ? candidate.name_ko : null;
@@ -87,36 +87,38 @@ export async function queryKakao(candidate, apiKey) {
   queriesToTry.push(candidateName);
 
   for (const q of queriesToTry) {
-    const url = `${KAKAO_KEYWORD_SEARCH_URL}?query=${encodeURIComponent(q)}`;
+    const url = `${NAVER_LOCAL_SEARCH_URL}?display=5&query=${encodeURIComponent(q)}`;
     try {
       const res = await fetch(url, {
         headers: {
-          Authorization: `KakaoAK ${apiKey}`,
+          "X-Naver-Client-Id": clientId,
+          "X-Naver-Client-Secret": clientSecret,
         },
       });
 
       if (!res.ok) continue;
       const data = await res.json();
-      if (!data.documents || !Array.isArray(data.documents) || data.documents.length === 0) {
+      if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
         continue;
       }
 
-      for (const doc of data.documents) {
-        const placeName = doc.place_name || "";
+      for (const item of data.items) {
+        const rawTitle = item.title || "";
+        const placeName = rawTitle.replace(/<[^>]*>/g, "");
         const matchesMain = matchName(candidateName, placeName);
         const matchesKo = candidateKo ? matchName(candidateKo, placeName) : false;
 
         if (matchesMain || matchesKo) {
-          const roadAddr = doc.road_address_name || doc.address_name || "N/A";
+          const roadAddr = item.roadAddress || item.address || "N/A";
           return {
             matchedName: placeName,
-            source: "Kakao",
+            source: "Naver",
             roadAddress: roadAddr,
             address: roadAddr,
-            lat: doc.y ? parseFloat(doc.y) : null,
-            lng: doc.x ? parseFloat(doc.x) : null,
-            lon: doc.x ? parseFloat(doc.x) : null,
-            placeUrl: doc.place_url || "",
+            lat: item.mapy ? parseFloat(item.mapy) / 1e7 : null,
+            lng: item.mapx ? parseFloat(item.mapx) / 1e7 : null,
+            lon: item.mapx ? parseFloat(item.mapx) / 1e7 : null,
+            placeUrl: item.link || "",
           };
         }
       }
@@ -129,10 +131,11 @@ export async function queryKakao(candidate, apiKey) {
 }
 
 export async function runCandidateCheck() {
-  const apiKey = process.env.KAKAO_REST_API_KEY;
-  if (!apiKey) {
-    console.error("[ERROR] KAKAO_REST_API_KEY environment variable is missing.");
-    console.error("Please set KAKAO_REST_API_KEY environment variable to run cafe candidate check.");
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    console.error("[ERROR] NAVER_CLIENT_ID or NAVER_CLIENT_SECRET environment variable is missing.");
+    console.error("Please set NAVER_CLIENT_ID and NAVER_CLIENT_SECRET environment variables to run cafe candidate check.");
     process.exitCode = 1;
     return;
   }
@@ -150,7 +153,7 @@ export async function runCandidateCheck() {
 
   for (const candidate of candidates) {
     await sleep(100);
-    const hit = await queryKakao(candidate, apiKey);
+    const hit = await queryNaver(candidate, clientId, clientSecret);
 
     if (hit) {
       const regionMatch = checkRegionMatch(candidate.region, hit.roadAddress);
