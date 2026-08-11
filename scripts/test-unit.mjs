@@ -1485,8 +1485,10 @@ for (const role of ["admin"]) {
   assert.ok(cafeInsert);
   assert.match(cafeInsert.sql, /status/i);
   assert.doesNotMatch(cafeInsert.sql, /approved_at|approved_by/i);
-  assert.equal(cafeInsert.bindings[11], "candidate");
-  assert.equal(cafeInsert.bindings[12], `${role}-user`);
+  assert.equal(cafeInsert.bindings[14], "candidate");
+  assert.equal(cafeInsert.bindings[15], `${role}-user`);
+  // 수정 후 승인에서 입력한 백데이터가 말없이 버려지면 안 된다.
+  assert.match(cafeInsert.sql, /region,\s*region_distance_m,\s*memo/i);
 
   const submissionUpdate = statements.find((statement) =>
     /UPDATE\s+submissions\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),

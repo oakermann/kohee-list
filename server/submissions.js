@@ -195,6 +195,11 @@ export async function approveSubmission(req, env) {
         signature: body.signature ?? parseJsonArray(sub.signature),
         beanShop: body.beanShop ?? sub.beanShop,
         instagram: body.instagram ?? sub.instagram,
+        // 수정 후 승인 화면도 백데이터 칸을 보여주므로 여기서 받아 넘기지 않으면 관리자가
+        // 입력한 값이 말없이 사라진다. 제보에는 이 칸이 없으므로 기본값은 빈 값이다.
+        region: body.region,
+        region_distance_m: body.region_distance_m,
+        memo: body.memo,
         category: body.category ?? parseJsonArray(sub.category),
         oakerman_pick: body.oakerman_pick,
       });
@@ -208,9 +213,9 @@ export async function approveSubmission(req, env) {
       const createdAt = nowIso();
       await env.DB.prepare(
         `INSERT INTO cafes(
-          id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
+          id, name, address, desc, lat, lng, signature, beanShop, instagram, region, region_distance_m, memo, category,
           oakerman_pick, status, created_by, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           linkedCafeId,
@@ -222,6 +227,9 @@ export async function approveSubmission(req, env) {
           merged.signature,
           merged.beanShop,
           merged.instagram,
+          merged.region,
+          merged.region_distance_m,
+          merged.memo,
           merged.category,
           merged.oakerman_pick,
           "candidate",
