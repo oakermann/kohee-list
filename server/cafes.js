@@ -57,6 +57,8 @@ export function toCafeResponse(row) {
     beanShop: cleanUrl(row.beanShop),
     instagram: cleanUrl(row.instagram),
     naver_url: cleanUrl(row.naver_url),
+    region: cleanText(row.region, 80),
+    region_distance_m: cleanNumber(row.region_distance_m, 0),
     category: parseJsonArray(row.category),
     oakerman_pick: !!row.oakerman_pick,
     updated_at: row.updated_at,
@@ -72,6 +74,7 @@ export function toCafeResponse(row) {
 export function toAdminCafeResponse(row) {
   return {
     ...toCafeResponse(row),
+    memo: cleanText(row.memo, 500),
     status: row.status || "approved",
     deleted_at: row.deleted_at || null,
     hidden_at: row.hidden_at || null,
@@ -84,7 +87,7 @@ export async function getData(req, env) {
     // 방문 집계는 부가 기능 - 실패해도 공개 데이터 제공은 깨지 않는다.
     await recordVisit(req, env).catch(() => {});
     const rows = await env.DB.prepare(
-      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
+      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, category,
         oakerman_pick, updated_at
        FROM cafes
        WHERE status = 'approved'
@@ -111,7 +114,7 @@ export async function listCafes(req, env) {
           : "WHERE deleted_at IS NULL";
 
     const rows = await env.DB.prepare(
-      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
+      `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, memo, category,
         oakerman_pick, updated_at, status, deleted_at, hidden_at, hidden_by
        FROM cafes
        ${where}
@@ -142,6 +145,9 @@ export function normalizeCafePayload(payload) {
     beanShop: cleanUrl(payload.beanShop),
     instagram: cleanUrl(payload.instagram),
     naver_url: cleanUrl(payload.naver_url),
+    region: cleanText(payload.region, 80),
+    region_distance_m: cleanNumber(payload.region_distance_m, 0),
+    memo: cleanText(payload.memo, 500),
     category: JSON.stringify(parseCafeCategories(payload.category)),
     oakerman_pick: normalizeBool(payload.oakerman_pick),
   };
@@ -187,9 +193,9 @@ export async function addCafe(req, env) {
     const status = "candidate";
     await env.DB.prepare(
       `INSERT INTO cafes(
-        id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
+        id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, memo, category,
         oakerman_pick, manager_pick, status, created_by, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -202,6 +208,9 @@ export async function addCafe(req, env) {
         payload.beanShop,
         payload.instagram,
         payload.naver_url,
+        payload.region,
+        payload.region_distance_m,
+        payload.memo,
         payload.category,
         payload.oakerman_pick,
         0,
@@ -251,7 +260,7 @@ export async function editCafe(req, env) {
     const updatedAt = nowIso();
     await env.DB.prepare(
       `UPDATE cafes SET
-        name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, naver_url = ?, category = ?,
+        name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, naver_url = ?, region = ?, region_distance_m = ?, memo = ?, category = ?,
         oakerman_pick = ?, manager_pick = 0, updated_at = ?
        WHERE id = ?`,
     )
@@ -265,6 +274,9 @@ export async function editCafe(req, env) {
         payload.beanShop,
         payload.instagram,
         payload.naver_url,
+        payload.region,
+        payload.region_distance_m,
+        payload.memo,
         payload.category,
         payload.oakerman_pick,
         updatedAt,

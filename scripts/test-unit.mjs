@@ -211,6 +211,9 @@ assert.deepEqual(
     beanShop: "https://example.com",
     instagram: "javascript:alert(1)",
     naver_url: "https://map.naver.com/p/entry/place/1449266862",
+    region: "군자역",
+    region_distance_m: 466,
+    memo: "사장님 통화 완료",
     category: '["espresso"]',
     oakerman_pick: 1,
     manager_pick: 0,
@@ -232,6 +235,10 @@ assert.deepEqual(
     beanShop: "https://example.com/",
     instagram: "",
     naver_url: "https://map.naver.com/p/entry/place/1449266862",
+    // region is back-data: stored and returned so search can use it, never rendered
+    // on the card. memo is operator-only and must not appear here at all.
+    region: "군자역",
+    region_distance_m: 466,
     category: ["espresso"],
     oakerman_pick: true,
     manager_pick: false,
@@ -293,9 +300,13 @@ assert.deepEqual(Object.keys(publicCafeBody[0]).sort(), [
   "name",
   "naver_url",
   "oakerman_pick",
+  "region",
+  "region_distance_m",
   "signature",
   "updated_at",
 ]);
+// memo is an operator note: it must never reach the public payload.
+assert.equal(publicCafeBody[0].memo, undefined);
 assert.equal(publicCafeBody[0].deleted_by, undefined);
 assert.equal(publicCafeBody[0].delete_reason, undefined);
 assert.equal(publicCafeBody[0].approved_by, undefined);
@@ -586,14 +597,14 @@ const managerAddInsert = managerAdd.statements.find((statement) =>
 );
 assert.ok(managerAddInsert);
 assert.match(managerAddInsert.sql, /status/i);
-assert.equal(managerAddInsert.bindings[13], "candidate");
+assert.equal(managerAddInsert.bindings[16], "candidate");
 
 const adminAdd = await requestAddCafe("admin");
 assert.equal(adminAdd.response.status, 201);
 const adminAddInsert = adminAdd.statements.find((statement) =>
   /INSERT\s+INTO\s+cafes/i.test(statement.sql),
 );
-assert.equal(adminAddInsert.bindings[13], "candidate");
+assert.equal(adminAddInsert.bindings[16], "candidate");
 
 // naver_url: place URL은 저장되고, 위험 스킴은 cleanUrl이 비운다.
 const addWithNaver = await requestAddCafe("admin", {
@@ -1474,8 +1485,10 @@ for (const role of ["admin"]) {
   assert.ok(cafeInsert);
   assert.match(cafeInsert.sql, /status/i);
   assert.doesNotMatch(cafeInsert.sql, /approved_at|approved_by/i);
-  assert.equal(cafeInsert.bindings[11], "candidate");
-  assert.equal(cafeInsert.bindings[12], `${role}-user`);
+  assert.equal(cafeInsert.bindings[14], "candidate");
+  assert.equal(cafeInsert.bindings[15], `${role}-user`);
+  // 수정 후 승인에서 입력한 백데이터가 말없이 버려지면 안 된다.
+  assert.match(cafeInsert.sql, /region,\s*region_distance_m,\s*memo/i);
 
   const submissionUpdate = statements.find((statement) =>
     /UPDATE\s+submissions\s+SET\s+status\s*=\s*'approved'/i.test(statement.sql),
@@ -2466,3 +2479,38 @@ assert.match(importAudit.bindings[6], /"actor_role":"admin"/);
 assert.doesNotMatch(importAudit.bindings[6], /password|session|secret/i);
 
 console.log("[unit] ok");
+
+// 소개에 박힌 "<역> <거리>"는 버리는 게 아니라 백데이터 칸으로 옮긴다.
+{
+  const { moveDistanceToBackdata } =
+    await import("./move-desc-distance-to-backdata.mjs");
+  assert.deepEqual(
+    moveDistanceToBackdata("군자역 466m 작지만 아늑한 소형 로스터리"),
+    {
+      region: "군자역",
+      region_distance_m: 466,
+      desc: "작지만 아늑한 소형 로스터리",
+    },
+  );
+  // 괄호와 연결어까지 한 덩어리로 들어내야 "(군자역에서)" 같은 찌꺼기가 안 남는다.
+  assert.deepEqual(
+    moveDistanceToBackdata("작지만 아늑한 소형 로스터리 (군자역에서 466m)"),
+    {
+      region: "군자역",
+      region_distance_m: 466,
+      desc: "작지만 아늑한 소형 로스터리",
+    },
+  );
+  // km는 미터로 환산해 저장한다.
+  assert.deepEqual(moveDistanceToBackdata("서울역 도보 1.2km, 조용한 공간"), {
+    region: "서울역",
+    region_distance_m: 1200,
+    desc: "조용한 공간",
+  });
+  // 옮긴 것만 지운다: 지역명이 없으면 소개를 한 글자도 건드리지 않는다.
+  // "천장고 5m"는 거리가 아니라 치수이므로 그대로 남아야 한다.
+  assert.equal(moveDistanceToBackdata("천장고 5m 넓은 공간"), null);
+  assert.equal(moveDistanceToBackdata("원두 466ml 판매"), null);
+  assert.equal(moveDistanceToBackdata("거리 없는 평범한 소개"), null);
+  console.log("[move-desc-distance-to-backdata] ok");
+}
