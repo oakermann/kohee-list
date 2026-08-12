@@ -1,0 +1,63 @@
+name: D1 Migrate
+
+# Applies pending D1 migrations to the production database, by hand, on request.
+#
+# The deploy job deliberately refuses to ship a change that carries a migration
+# ("D1 migration requires manual review") and skips Pages and Worker with it. That
+# gate is right, but there was no way to perform the review step without a
+# Cloudflare credential on someone's laptop, so a merged migration simply sat
+# there and production silently fell a day behind the repo.
+#
+# This runs the same command a laptop would, using the token the repo already
+# holds, and it never fires on its own: dispatch only, and only when the input
+# literally says apply.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "apply" to run pending migrations against production D1'
+        required: true
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Refuse unless confirmed
+        run: |
+          if [ "${{ inputs.confirm }}" != "apply" ]; then
+            echo "confirm input was not 'apply' - refusing"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check required secret
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "Missing GitHub Actions secret: CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+
+      # Printed before anything is applied, so the log records what this run was
+      # about to change even if the apply step then fails.
+      - name: List pending migrations
+        run: npx --yes wrangler@4 d1 migrations list kohee-list --remote
+
+      - name: Apply migrations
+        run: npx --yes wrangler@4 d1 migrations apply kohee-list --remote
