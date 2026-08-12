@@ -891,7 +891,8 @@ $("app-title").addEventListener("click", () => location.reload());
 $("modal-bg").addEventListener("click", (event) => {
   if (event.target === $("modal-bg")) $("modal-bg").style.display = "none";
 });
-$("guide-btn").addEventListener("click", () => {
+$("guide-btn").addEventListener("click", (event) => {
+  event.preventDefault();
   $("guide-bg").style.display = "flex";
 });
 $("guide-close").addEventListener("click", () => {
