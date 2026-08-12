@@ -15,9 +15,15 @@ name: D1 Migrate
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "inspect reads the schema and the ledger; apply runs pending migrations"
+        required: true
+        default: inspect
+        type: choice
+        options: [inspect, apply]
       confirm:
         description: 'Type "apply" to run pending migrations against production D1'
-        required: true
+        required: false
         default: ""
         type: string
 
@@ -33,6 +39,7 @@ jobs:
 
     steps:
       - name: Refuse unless confirmed
+        if: inputs.mode == 'apply'
         run: |
           if [ "${{ inputs.confirm }}" != "apply" ]; then
             echo "confirm input was not 'apply' - refusing"
@@ -59,5 +66,18 @@ jobs:
       - name: List pending migrations
         run: npx --yes wrangler@4 d1 migrations list kohee-list --remote
 
+      # Fixed read-only queries, not an SQL console. Production schema has drifted
+      # ahead of the ledger before -- 0006 failed with "duplicate column name"
+      # although the ledger called it pending -- and guessing at that state is how
+      # a migration run turns into an outage.
+      - name: Inspect schema and ledger
+        if: inputs.mode == 'inspect'
+        run: |
+          npx --yes wrangler@4 d1 execute kohee-list --remote \
+            --command "SELECT name FROM pragma_table_info('cafes') ORDER BY cid"
+          npx --yes wrangler@4 d1 execute kohee-list --remote \
+            --command "SELECT name, applied_at FROM d1_migrations ORDER BY id"
+
       - name: Apply migrations
+        if: inputs.mode == 'apply'
         run: npx --yes wrangler@4 d1 migrations apply kohee-list --remote
