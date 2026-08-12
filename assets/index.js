@@ -345,6 +345,27 @@ async function loadData() {
   }
 }
 
+// 검색은 걸러내기가 아니라 순위 매기기다.
+//
+// "서울"은 "서울역"의 앞부분이다. 단순 포함 검사로는 둘을 구분할 수 없고, 서울 카페의
+// 주소는 전부 "서울"로 시작하므로 "서울"을 치면 전체가 나오면서 서울역 카페가 그 사이에
+// 흩어진다. 주소에는 역 이름이 없으므로(패스로스터리는 "서울 중구 ...") 문자열만으로는
+// 어느 카페가 그 역 근처인지 알 방법이 없다. 그걸 아는 유일한 칸이 region 이다.
+//
+// 그래서 어디가 맞았는지에 따라 점수를 주고 높은 순으로 보여준다. "서울역"을 치면 region
+// 이 정확히 일치하는 카페가 맨 위에 모이고, "서울"을 치면 서울역 카페들이 나머지 서울
+// 카페보다 앞에 온다.
+function matchScore(cafe, query) {
+  const lower = (value) => safeText(value).toLowerCase();
+  const region = lower(cafe.region);
+  if (region && region === query) return 5; // 서울역 == 서울역
+  if (lower(cafe.name).includes(query)) return 4;
+  if (region.includes(query)) return 3; // 서울 -> 서울역 지역의 카페
+  if (lower(cafe.address).includes(query)) return 2;
+  if (lower(cafe.desc).includes(query)) return 1;
+  return 0;
+}
+
 function render() {
   const query = $("search").value.toLowerCase().trim();
 
@@ -411,11 +432,10 @@ function render() {
   const filtered = data
     .filter(
       (cafe) =>
-        (safeText(cafe.name).toLowerCase().includes(query) ||
-          safeText(cafe.address).toLowerCase().includes(query) ||
-          safeText(cafe.desc).toLowerCase().includes(query)) &&
+        matchScore(cafe, query) > 0 &&
         (!selectedCategory || cafeCategories(cafe).includes(selectedCategory)),
     )
+    .sort((left, right) => matchScore(right, query) - matchScore(left, query))
     .slice(0, 50);
 
   if (!filtered.length) {
