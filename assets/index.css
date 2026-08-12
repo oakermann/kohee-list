@@ -19,6 +19,7 @@ header {
   flex-shrink: 0;
 }
 .header-box {
+  position: relative;
   border: var(--thick) solid var(--border);
   background: var(--bg);
   padding: 18px 14px 14px;
@@ -138,6 +139,49 @@ h1 {
   }
 }
 /* ==================================================== */
+
+/* 탭 줄에 넣었더니 5개 탭에서 "에스프레소"가 잘렸다. 그 줄은 폭이 이미 꽉 차 있으므로
+   버튼은 여유가 있는 헤더 모서리로 뺀다. */
+.guide-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: var(--thin) solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border-radius: 0;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: var(--fs-sm);
+  line-height: 1;
+  color: var(--border);
+}
+.guide-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* dt는 카드에 쓰는 태그 그대로 두고, 뜻만 옆에 붙인다. 설명서와 실제 화면이 서로 다른
+   모양이면 설명서가 아니다. */
+.guide-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 8px 10px;
+  margin-bottom: 15px;
+}
+.guide-list dt {
+  justify-self: start;
+}
+.guide-list dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: keep-all;
+}
 
 .tab-container {
   display: grid;

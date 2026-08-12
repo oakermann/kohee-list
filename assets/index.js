@@ -891,6 +891,15 @@ $("app-title").addEventListener("click", () => location.reload());
 $("modal-bg").addEventListener("click", (event) => {
   if (event.target === $("modal-bg")) $("modal-bg").style.display = "none";
 });
+$("guide-btn").addEventListener("click", () => {
+  $("guide-bg").style.display = "flex";
+});
+$("guide-close").addEventListener("click", () => {
+  $("guide-bg").style.display = "none";
+});
+$("guide-bg").addEventListener("click", (event) => {
+  if (event.target === $("guide-bg")) $("guide-bg").style.display = "none";
+});
 $("list").addEventListener("click", (event) => {
   const card = event.target.closest(".cafe-card[data-cafe-id]");
   if (!card) return;
