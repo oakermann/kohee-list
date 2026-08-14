@@ -28,6 +28,53 @@ function sha256Hex(content) {
   return crypto.createHash("sha256").update(normalized, "utf8").digest("hex");
 }
 
+/**
+ * Pure comparison helper that compares live body against repo deploy mirror body.
+ * Returns { ok: true, ... } on match or { ok: false, error: ... } on mismatch or missing file.
+ */
+export function compareContent(relPath, liveContent, localContent) {
+  if (localContent === null || localContent === undefined) {
+    return {
+      ok: false,
+      relPath,
+      error: `File "${relPath}" does not exist in repository deploy mirror (.pages-deploy)`,
+    };
+  }
+
+  const normLive = normalizeNewlines(liveContent);
+  const normLocal = normalizeNewlines(localContent);
+
+  const liveHash = sha256Hex(normLive);
+  const localHash = sha256Hex(normLocal);
+
+  const liveLen = normLive.length;
+  const localLen = normLocal.length;
+
+  const liveShortHash = liveHash.slice(0, 8);
+  const localShortHash = localHash.slice(0, 8);
+
+  if (liveHash !== localHash) {
+    return {
+      ok: false,
+      relPath,
+      liveLen,
+      localLen,
+      liveShortHash,
+      localShortHash,
+      error: `Content mismatch for "${relPath}": live length ${liveLen} (${liveShortHash}) != repo length ${localLen} (${localShortHash})`,
+    };
+  }
+
+  return {
+    ok: true,
+    relPath,
+    liveLen,
+    localLen,
+    liveShortHash,
+    localShortHash,
+  };
+}
+
 async function fetchWithTimeout(url, options = {}) {
   const { timeoutMs = 10000, fetchFn = globalThis.fetch, ...fetchOpts } = options;
   const controller = new AbortController();
@@ -92,6 +139,7 @@ export async function verifyLiveAssets(options = {}) {
 
   const origin = rawOrigin.replace(/\/+$/, "");
   const rootDir = options.rootDir || process.cwd();
+  const deployDir = options.deployDir || path.join(rootDir, ".pages-deploy");
   const fetchFn = options.fetchFn || globalThis.fetch;
   const pages = options.pages || DEFAULT_PAGES;
   const timeoutMs = options.timeoutMs || 10000;
@@ -101,14 +149,35 @@ export async function verifyLiveAssets(options = {}) {
 
   const assetMap = new Map();
 
+  // Legitimate dynamic differences: None exist for static HTML pages (index.html, admin.html, etc.)
+  // or static assets (assets/*.js, assets/*.css) served via Cloudflare Pages.
+  // API routes (/api/*) are handled by Cloudflare Functions/Workers, but static assets and HTML pages
+  // under .pages-deploy are served as exact static files. Therefore, no dynamic content ignores
+  // or tolerances are added.
+
   for (const page of pages) {
-    const pageUrl = `${origin}/${page.replace(/^\//, "")}`;
+    const pageRelPath = page.replace(/^\//, "");
+    const pageUrl = `${origin}/${pageRelPath}`;
+    const localFilePath = path.join(deployDir, pageRelPath);
+
+    let localContent = null;
+    if (existsSync(localFilePath)) {
+      try {
+        localContent = await readFile(localFilePath, "utf8");
+      } catch (err) {
+        failures.push(
+          `Failed to read repository deploy mirror file "${pageRelPath}": ${err.message}`,
+        );
+        continue;
+      }
+    }
+
     let res;
     try {
       res = await fetchWithTimeout(pageUrl, { fetchFn, timeoutMs });
     } catch (error) {
       failures.push(
-        `Site unreachable when fetching live HTML page "${page}" (${pageUrl}): ${error.message}`,
+        `Site unreachable when fetching live page "${pageRelPath}" (${pageUrl}): ${error.message}`,
       );
       return {
         ok: false,
@@ -121,22 +190,33 @@ export async function verifyLiveAssets(options = {}) {
 
     if (!res.ok) {
       failures.push(
-        `Failed to fetch live HTML page "${page}" (${pageUrl}): HTTP ${res.status}`,
+        `Failed to fetch live page "${pageRelPath}" (${pageUrl}): HTTP ${res.status}`,
       );
       continue;
     }
 
-    const html = await res.text();
-    const refs = extractVersionedAssetRefs(html, pageUrl);
+    const liveContent = await res.text();
 
+    const pageCmp = compareContent(pageRelPath, liveContent, localContent);
+    if (!pageCmp.ok) {
+      failures.push(pageCmp.error);
+    } else {
+      checked.push({
+        relativePath: pageRelPath,
+        liveUrl: pageUrl,
+        hash: pageCmp.liveShortHash,
+      });
+    }
+
+    const refs = extractVersionedAssetRefs(liveContent, pageUrl);
     for (const ref of refs) {
       if (!assetMap.has(ref.liveUrl)) {
         assetMap.set(ref.liveUrl, {
           relativePath: ref.relativePath,
-          pages: new Set([page]),
+          pages: new Set([pageRelPath]),
         });
       } else {
-        assetMap.get(ref.liveUrl).pages.add(page);
+        assetMap.get(ref.liveUrl).pages.add(pageRelPath);
       }
     }
   }
@@ -144,26 +224,19 @@ export async function verifyLiveAssets(options = {}) {
   for (const [liveUrl, info] of assetMap.entries()) {
     const relativePath = info.relativePath;
     const pageList = Array.from(info.pages).join(", ");
-    const localFilePath = path.join(rootDir, relativePath);
+    const localFilePath = path.join(deployDir, relativePath);
 
-    if (!existsSync(localFilePath)) {
-      failures.push(
-        `Asset "${relativePath}" referenced in live HTML (${pageList}) does not exist in repository`,
-      );
-      continue;
+    let localContent = null;
+    if (existsSync(localFilePath)) {
+      try {
+        localContent = await readFile(localFilePath, "utf8");
+      } catch (err) {
+        failures.push(
+          `Failed to read repository deploy mirror file "${relativePath}": ${err.message}`,
+        );
+        continue;
+      }
     }
-
-    let localContent = "";
-    try {
-      localContent = await readFile(localFilePath, "utf8");
-    } catch (err) {
-      failures.push(
-        `Failed to read repository file "${relativePath}": ${err.message}`,
-      );
-      continue;
-    }
-
-    const localHash = sha256Hex(localContent);
 
     let assetRes;
     try {
@@ -183,18 +256,18 @@ export async function verifyLiveAssets(options = {}) {
     }
 
     const liveContent = await assetRes.text();
-    const liveHash = sha256Hex(liveContent);
+    const assetCmp = compareContent(relativePath, liveContent, localContent);
 
-    if (liveHash !== localHash) {
+    if (!assetCmp.ok) {
       failures.push(
-        `Content mismatch for asset "${relativePath}" (referenced in live ${pageList}): live URL "${liveUrl}" hash (${liveHash}) does not match repository file hash (${localHash})`,
+        `Asset (referenced in live ${pageList}): ${assetCmp.error}`,
       );
     } else {
       checked.push({
         relativePath,
         liveUrl,
         pages: Array.from(info.pages),
-        hash: localHash,
+        hash: assetCmp.liveShortHash,
       });
     }
   }
@@ -212,7 +285,7 @@ function printHelp() {
   console.log(`Usage: node scripts/check-live-assets.mjs [--url <origin>] [--origin <origin>] [<origin>]
 
 Options:
-  --url, --origin  Target site origin URL (default: https://kohee.pages.dev or PAGES_URL env var)
+  --url, --origin  Target site origin URL (default: PAGES_URL env var or https://kohee.pages.dev)
   --help           Show this help message.
 `);
 }
@@ -246,18 +319,12 @@ if (
   try {
     const result = await verifyLiveAssets({ origin });
     if (!result.ok) {
-      console.error(
-        `[check-live-assets] FAILED: ${result.failures.length} issue(s) detected for origin ${result.origin}:`,
-      );
       for (const failure of result.failures) {
-        console.error(`  - ${failure}`);
+        console.error(failure);
       }
       process.exitCode = 1;
-    } else {
-      console.log(
-        `[check-live-assets] PASSED: All ${result.checkedCount} versioned live asset reference(s) match repository files for ${result.origin}.`,
-      );
     }
+    // Silence on success per requirements
   } catch (error) {
     console.error(`[check-live-assets] ERROR: ${error.message}`);
     process.exitCode = 1;
