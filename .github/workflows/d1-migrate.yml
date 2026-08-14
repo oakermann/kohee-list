@@ -79,6 +79,13 @@ jobs:
             --command "SELECT name, applied_at FROM d1_migrations ORDER BY id"
           npx --yes wrangler@4 d1 execute kohee-list --remote \
             --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+          # The backdata move writes desc and region in one statement, so a cleaned
+          # description is good evidence the region landed. Evidence is not
+          # verification, and no export surfaces these columns.
+          npx --yes wrangler@4 d1 execute kohee-list --remote \
+            --command "SELECT count(*) AS with_region FROM cafes WHERE region <> ''"
+          npx --yes wrangler@4 d1 execute kohee-list --remote \
+            --command "SELECT name, region, region_distance_m FROM cafes WHERE region <> '' ORDER BY name LIMIT 5"
 
       # 0006 through 0009 are present in the database and absent from the ledger:
       # cafes has the column 0006 adds and the table 0009 creates exists, so they
