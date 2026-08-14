@@ -77,6 +77,8 @@ jobs:
             --command "SELECT name FROM pragma_table_info('cafes') ORDER BY cid"
           npx --yes wrangler@4 d1 execute kohee-list --remote \
             --command "SELECT name, applied_at FROM d1_migrations ORDER BY id"
+          npx --yes wrangler@4 d1 execute kohee-list --remote \
+            --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
 
       - name: Apply migrations
         if: inputs.mode == 'apply'
