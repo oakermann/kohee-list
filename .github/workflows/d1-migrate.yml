@@ -20,7 +20,7 @@ on:
         required: true
         default: inspect
         type: choice
-        options: [inspect, reconcile, apply]
+        options: [inspect, reconcile, apply, backdata-dry, backdata-apply]
       confirm:
         description: 'Type "apply" to run pending migrations against production D1'
         required: false
@@ -98,3 +98,13 @@ jobs:
       - name: Apply migrations
         if: inputs.mode == 'apply'
         run: npx --yes wrangler@4 d1 migrations apply kohee-list --remote
+      # The desc-to-backdata move runs here rather than on a laptop: the script
+      # shells out to npx, which Node refuses to execFile on Windows, and forcing
+      # a shell would put SQL through it.
+      - name: Move desc distance to backdata (dry run)
+        if: inputs.mode == 'backdata-dry'
+        run: node scripts/move-desc-distance-to-backdata.mjs
+
+      - name: Move desc distance to backdata (apply)
+        if: inputs.mode == 'backdata-apply'
+        run: node scripts/move-desc-distance-to-backdata.mjs --apply
