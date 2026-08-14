@@ -20,7 +20,7 @@ on:
         required: true
         default: inspect
         type: choice
-        options: [inspect, apply]
+        options: [inspect, reconcile, apply]
       confirm:
         description: 'Type "apply" to run pending migrations against production D1'
         required: false
@@ -79,6 +79,21 @@ jobs:
             --command "SELECT name, applied_at FROM d1_migrations ORDER BY id"
           npx --yes wrangler@4 d1 execute kohee-list --remote \
             --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+
+      # 0006 through 0009 are present in the database and absent from the ledger:
+      # cafes has the column 0006 adds and the table 0009 creates exists, so they
+      # ran and were never recorded. Applying without this first fails on 0006 with
+      # a duplicate column, which is exactly what happened on the first attempt.
+      # Fixed statements, one per known migration, and idempotent.
+      - name: Reconcile the ledger
+        if: inputs.mode == 'reconcile'
+        run: |
+          for m in 0006_cafe_naver_url 0007_consent 0008_scrub_audit_history 0009_visit_stats; do
+            npx --yes wrangler@4 d1 execute kohee-list --remote \
+              --command "INSERT OR IGNORE INTO d1_migrations (name) VALUES ('${m}.sql')"
+          done
+          npx --yes wrangler@4 d1 execute kohee-list --remote \
+            --command "SELECT name, applied_at FROM d1_migrations ORDER BY id"
 
       - name: Apply migrations
         if: inputs.mode == 'apply'
