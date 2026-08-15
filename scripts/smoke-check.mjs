@@ -54,14 +54,16 @@ function hasArg(name) {
 }
 
 function printHelp() {
-  console.log(`Usage: node scripts/smoke-check.mjs [--pages] [--worker]
+  console.log(`Usage: node scripts/smoke-check.mjs [--public] [--admin] [--worker] [--pages]
 
 Options:
-  --pages   Check public and admin Pages URLs.
+  --public  Check public page and public data URLs.
+  --admin   Check admin page URL.
   --worker  Check Worker health, DB health, version, and public data URLs.
+  --pages   Check public and admin groups (--public plus --admin).
   --help    Show this help.
 
-If no target is provided, both Pages and Worker checks are run.`);
+If no target is provided, public, admin, and worker checks are all run.`);
 }
 
 async function retry(name, task, attempts = 3) {
@@ -82,7 +84,7 @@ async function retry(name, task, attempts = 3) {
   throw lastError;
 }
 
-async function checkPages() {
+async function checkPublicPage() {
   await retry("Pages", async () => {
     const response = await fetch(PAGES_URL, { redirect: "follow" });
     if (!response.ok) {
@@ -94,7 +96,9 @@ async function checkPages() {
     }
     console.log(`[smoke] Pages ok: ${PAGES_URL}`);
   });
+}
 
+async function checkAdminPage() {
   await retry("Pages admin", async () => {
     const response = await fetch(PAGES_ADMIN_URL, { redirect: "follow" });
     if (!response.ok) {
@@ -108,7 +112,7 @@ async function checkPages() {
   });
 }
 
-async function checkWorker() {
+async function checkWorkerHealth() {
   await retry("Worker health", async () => {
     const response = await fetch(WORKER_HEALTH_URL, { redirect: "follow" });
     if (!response.ok) {
@@ -120,7 +124,9 @@ async function checkWorker() {
     }
     console.log(`[smoke] Worker health ok: ${WORKER_HEALTH_URL}`);
   });
+}
 
+async function checkWorkerDb() {
   await retry("Worker DB health", async () => {
     const response = await fetch(WORKER_HEALTH_DB_URL, { redirect: "follow" });
     const payload = await response.json().catch(() => ({}));
@@ -136,7 +142,9 @@ async function checkWorker() {
     }
     console.log(`[smoke] Worker DB health safe: ${WORKER_HEALTH_DB_URL}`);
   });
+}
 
+async function checkWorkerVersion() {
   await retry("Worker version", async () => {
     const response = await fetch(WORKER_VERSION_URL, { redirect: "follow" });
     if (!response.ok) {
@@ -153,7 +161,9 @@ async function checkWorker() {
     }
     console.log(`[smoke] Worker version ok: ${WORKER_VERSION_URL}`);
   });
+}
 
+async function checkPublicData() {
   await retry("Worker public data", async () => {
     const response = await fetch(WORKER_DATA_URL, { redirect: "follow" });
     if (!response.ok) {
@@ -175,20 +185,55 @@ async function checkWorker() {
   });
 }
 
+async function checkPublic() {
+  await checkPublicPage();
+  await checkPublicData();
+}
+
+async function checkAdmin() {
+  await checkAdminPage();
+}
+
+async function checkWorker() {
+  await checkWorkerHealth();
+  await checkWorkerDb();
+  await checkWorkerVersion();
+  await checkPublicData();
+}
+
 if (hasArg("--help")) {
   printHelp();
   process.exit(0);
 }
 
-const shouldCheckPages = hasArg("--pages");
-const shouldCheckWorker = hasArg("--worker");
-const checkBoth = !shouldCheckPages && !shouldCheckWorker;
+const hasPublicArg = hasArg("--public");
+const hasAdminArg = hasArg("--admin");
+const hasWorkerArg = hasArg("--worker");
+const hasPagesArg = hasArg("--pages");
+
+const noTarget = !hasPublicArg && !hasAdminArg && !hasWorkerArg && !hasPagesArg;
+
+const shouldCheckPublic = hasPublicArg || hasPagesArg || noTarget;
+const shouldCheckAdmin = hasAdminArg || hasPagesArg || noTarget;
+const shouldCheckWorker = hasWorkerArg || noTarget;
+
+let activeGroup = "";
 
 try {
-  if (checkBoth || shouldCheckPages) await checkPages();
-  if (checkBoth || shouldCheckWorker) await checkWorker();
+  if (shouldCheckPublic) {
+    activeGroup = "public";
+    await checkPublic();
+  }
+  if (shouldCheckAdmin) {
+    activeGroup = "admin";
+    await checkAdmin();
+  }
+  if (shouldCheckWorker) {
+    activeGroup = "worker";
+    await checkWorker();
+  }
   console.log("[smoke] checks passed");
 } catch (error) {
-  console.error(`[smoke] failed: ${error.message}`);
+  console.error(`[smoke] ${activeGroup || "check"} failed: ${error.message}`);
   process.exitCode = 1;
 }

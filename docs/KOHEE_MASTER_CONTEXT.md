@@ -118,7 +118,7 @@ Current product candidates:
 
 1. KOHEE admin review console Phase 2/3.
 2. KOHEE submissions review CSV Phase 2 design/audit.
-3. Safer smoke-check split for destructive/admin assumptions.
+3. Safer smoke-check split into --public, --admin, and --worker target groups (with --pages compatibility).
 4. Legacy manager compatibility cleanup planning.
 
 HOLD/HIGH candidates:
