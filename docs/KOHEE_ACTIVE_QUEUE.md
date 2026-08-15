@@ -38,7 +38,7 @@ Risk: LOW/MEDIUM depending on files
 
 Scope:
 
-- Separate read-only public smoke checks from destructive/admin assumptions.
+- Separate smoke check targets into --public (public page and public data checks), --admin (admin page check), and --worker (Worker health, DB health, version, and public data checks), while preserving --pages (--public plus --admin) and default full-run behavior.
 - Preserve existing deploy and product behavior.
 
 ## HOLD
