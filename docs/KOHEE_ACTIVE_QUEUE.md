@@ -18,9 +18,9 @@ Risk: MEDIUM
 
 Scope:
 
-- Phase 2 (tab state & data routing) and Phase 3 (contextual CSV exports) have landed in `assets/admin.js` (`state.reviewConsoleTab`, `renderReviewConsoleTabCounts`, `renderReviewConsole`, `renderReviewConsoleExportAction`).
+- Phase 2 (tab state & data routing) and Phase 3 (contextual CSV exports) have landed in `assets/admin.js` (`state.reviewConsoleTab` from line 23; `renderReviewConsoleTabCounts` and `renderReviewConsole` from line 679 routing loaded submissions and cafes into compact rows; `renderReviewConsoleExportAction` giving tabs contextual export actions).
 - Phase 4 (row detail expansion / drawer) is the next open step.
-- Phase 5 (cleanup of old scattered boxes) is **BLOCKED and UNSAFE**: removing section `#legacy-review-panel` in `admin.html` (starting line 157) is blocked until the compact console directly owns the CSV and cafe list elements rather than hiding the fallback panel that owns them. `#legacy-review-panel` still contains live implementations for 11 elements bound in `assets/admin.js` (including CSV file input referenced 8 times, cafe list, cafe search, cafe count, CSV download, dry run, upload, and reset). Deleting `#legacy-review-panel` would orphan CSV import and reset workflows, which repository safety rules forbid changing.
+- Phase 5 (cleanup of old scattered boxes) is **BLOCKED and UNSAFE**: removing section `#legacy-review-panel` in `admin.html` (starting line 157, marked as fallback) is blocked until the compact console directly owns the CSV and cafe list elements rather than hiding the panel that owns them. `#legacy-review-panel` still contains live implementations for 11 elements bound in `assets/admin.js` (including CSV file input referenced 8 times, cafe list, cafe search, cafe count, CSV download, dry run, upload, and reset). Deleting `#legacy-review-panel` would orphan CSV import and reset workflows, which repository safety rules forbid changing.
 - Improve review-console UX.
 - Do not change API behavior unless separately approved.
 - Do not change D1/schema/auth/CSV/public `/data` behavior.

@@ -116,7 +116,7 @@ description, duplicate status, public leak risk, and confidence note.
 
 Current product candidates:
 
-1. KOHEE admin review console Phase 4 (Phase 2/3 landed; Phase 5 blocked by `#legacy-review-panel` element dependencies in `admin.html`).
+1. KOHEE admin review console Phase 4 (Phase 2/3 landed in `assets/admin.js`; Phase 4 is next open step; Phase 5 cleanup is BLOCKED because `#legacy-review-panel` in `admin.html` starting line 157 holds 11 live element bindings in `assets/admin.js` for CSV file input, CSV download/dry run/upload/reset, cafe search/count/list, which repository hold rules forbid changing or orphaning).
 2. KOHEE submissions review CSV Phase 2 design/audit.
 3. Safer smoke-check split into --public, --admin, and --worker target groups (with --pages compatibility).
 4. Legacy manager compatibility cleanup planning.
