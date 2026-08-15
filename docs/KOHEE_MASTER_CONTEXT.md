@@ -116,7 +116,7 @@ description, duplicate status, public leak risk, and confidence note.
 
 Current product candidates:
 
-1. KOHEE admin review console Phase 2/3.
+1. KOHEE admin review console Phase 4 (Phase 2/3 landed; Phase 5 blocked by `#legacy-review-panel` element dependencies in `admin.html`).
 2. KOHEE submissions review CSV Phase 2 design/audit.
 3. Safer smoke-check split into --public, --admin, and --worker target groups (with --pages compatibility).
 4. Legacy manager compatibility cleanup planning.
