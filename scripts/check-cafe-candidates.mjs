@@ -86,6 +86,8 @@ export async function queryNaver(candidate, clientId, clientSecret) {
   }
   queriesToTry.push(candidateName);
 
+  let lastError = null;
+
   for (const q of queriesToTry) {
     const url = `${NAVER_LOCAL_SEARCH_URL}?display=5&query=${encodeURIComponent(q)}`;
     try {
@@ -96,7 +98,10 @@ export async function queryNaver(candidate, clientId, clientSecret) {
         },
       });
 
-      if (!res.ok) continue;
+      if (!res.ok) {
+        lastError = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+        continue;
+      }
       const data = await res.json();
       if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
         continue;
@@ -122,73 +127,30 @@ export async function queryNaver(candidate, clientId, clientSecret) {
           };
         }
       }
-    } catch (_err) {
-      // Continue to next query
+    } catch (err) {
+      lastError = err?.message || String(err);
     }
+  }
+
+  if (lastError) {
+    return { error: lastError };
   }
 
   return null;
 }
 
-export async function runCandidateCheck() {
-  const clientId = process.env.NAVER_CLIENT_ID;
-  const clientSecret = process.env.NAVER_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    console.error("[ERROR] NAVER_CLIENT_ID or NAVER_CLIENT_SECRET environment variable is missing.");
-    console.error("Please set NAVER_CLIENT_ID and NAVER_CLIENT_SECRET environment variables to run cafe candidate check.");
-    process.exitCode = 1;
-    return;
-  }
-
-  const rootDir = process.cwd();
-  const inputPath = path.join(rootDir, "docs", "cafe-candidates.json");
-  const outputPath = path.join(rootDir, "docs", "cafe-candidate-report.md");
-
-  const raw = await readFile(inputPath, "utf8");
-  const candidates = JSON.parse(raw);
-
-  const found = [];
-  const doubtful = [];
-  const notFound = [];
-
-  for (const candidate of candidates) {
-    await sleep(100);
-    const hit = await queryNaver(candidate, clientId, clientSecret);
-
-    if (hit) {
-      const regionMatch = checkRegionMatch(candidate.region, hit.roadAddress);
-      const record = {
-        name: candidate.name,
-        expectedRegion: candidate.region,
-        matchedName: hit.matchedName,
-        source: hit.source,
-        roadAddress: hit.roadAddress,
-        address: hit.address,
-        lat: hit.lat,
-        lng: hit.lng,
-        lon: hit.lon,
-        placeUrl: hit.placeUrl,
-        regionMatched: regionMatch,
-      };
-
-      if (regionMatch) {
-        found.push(record);
-      } else {
-        doubtful.push(record);
-      }
-    } else {
-      notFound.push({
-        name: candidate.name,
-        expectedRegion: candidate.region,
-      });
-    }
-  }
-
+export function buildReport({ candidatesCount, found, doubtful, couldNotCheck, notFound }) {
   let report = `# Cafe Candidate Search Report\n\n`;
+
+  if (couldNotCheck.length > 0) {
+    report += `> **Warning:** This run is incomplete because one or more lookups failed and must not be read as a verdict on those candidates.\n\n`;
+  }
+
   report += `## Summary\n`;
-  report += `- Total Candidates: ${candidates.length}\n`;
+  report += `- Total Candidates: ${candidatesCount}\n`;
   report += `- Found: ${found.length}\n`;
   report += `- Doubtful: ${doubtful.length}\n`;
+  report += `- Could Not Check: ${couldNotCheck.length}\n`;
   report += `- Not Found: ${notFound.length}\n\n`;
 
   report += `## Found\n`;
@@ -222,6 +184,16 @@ export async function runCandidateCheck() {
     });
   }
 
+  report += `## Could Not Check\n`;
+  if (couldNotCheck.length === 0) {
+    report += `None.\n\n`;
+  } else {
+    couldNotCheck.forEach((item, idx) => {
+      report += `${idx + 1}. **${item.name}** (Region: ${item.expectedRegion}) - Error: ${item.error}\n`;
+    });
+    report += `\n`;
+  }
+
   report += `## Not Found\n`;
   if (notFound.length === 0) {
     report += `None.\n\n`;
@@ -232,12 +204,85 @@ export async function runCandidateCheck() {
     report += `\n`;
   }
 
+  return report;
+}
+
+export async function runCandidateCheck() {
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    console.error("[ERROR] NAVER_CLIENT_ID or NAVER_CLIENT_SECRET environment variable is missing.");
+    console.error("Please set NAVER_CLIENT_ID and NAVER_CLIENT_SECRET environment variables to run cafe candidate check.");
+    process.exitCode = 1;
+    return;
+  }
+
+  const rootDir = process.cwd();
+  const inputPath = path.join(rootDir, "docs", "cafe-candidates.json");
+  const outputPath = path.join(rootDir, "docs", "cafe-candidate-report.md");
+
+  const raw = await readFile(inputPath, "utf8");
+  const candidates = JSON.parse(raw);
+
+  const found = [];
+  const doubtful = [];
+  const couldNotCheck = [];
+  const notFound = [];
+
+  for (const candidate of candidates) {
+    await sleep(100);
+    const hit = await queryNaver(candidate, clientId, clientSecret);
+
+    if (hit && hit.error) {
+      couldNotCheck.push({
+        name: candidate.name,
+        expectedRegion: candidate.region,
+        error: hit.error,
+      });
+    } else if (hit) {
+      const regionMatch = checkRegionMatch(candidate.region, hit.roadAddress);
+      const record = {
+        name: candidate.name,
+        expectedRegion: candidate.region,
+        matchedName: hit.matchedName,
+        source: hit.source,
+        roadAddress: hit.roadAddress,
+        address: hit.address,
+        lat: hit.lat,
+        lng: hit.lng,
+        lon: hit.lon,
+        placeUrl: hit.placeUrl,
+        regionMatched: regionMatch,
+      };
+
+      if (regionMatch) {
+        found.push(record);
+      } else {
+        doubtful.push(record);
+      }
+    } else {
+      notFound.push({
+        name: candidate.name,
+        expectedRegion: candidate.region,
+      });
+    }
+  }
+
+  const report = buildReport({
+    candidatesCount: candidates.length,
+    found,
+    doubtful,
+    couldNotCheck,
+    notFound,
+  });
+
   await writeFile(outputPath, report, "utf8");
 
   console.log("Candidate Search Summary:");
   console.log(`Total Candidates: ${candidates.length}`);
   console.log(`Found: ${found.length}`);
   console.log(`Doubtful: ${doubtful.length}`);
+  console.log(`Could Not Check: ${couldNotCheck.length}`);
   console.log(`Not Found: ${notFound.length}`);
 }
 

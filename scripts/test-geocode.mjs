@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { getGeocode } from "../server/favorites.js";
 import {
+  buildReport,
   matchName,
   queryNaver,
   runCandidateCheck,
@@ -136,6 +139,69 @@ async function run() {
     );
     assert.equal(naverNoMatch, null);
 
+    // 7d. Non-ok response puts candidate under Could Not Check
+    fetchResponseStatus = 500;
+    const naverServerError = await queryNaver(
+      { name: "Pellucid coffee" },
+      "test-client-id",
+      "test-client-secret"
+    );
+    assert.ok(naverServerError);
+    assert.equal(typeof naverServerError.error, "string");
+    assert.ok(naverServerError.error.includes("500"));
+
+    // 7e. Completed empty response still reads Not Found
+    fetchResponseStatus = 200;
+    fetchResponseBody = { items: [] };
+    const naverEmptyResult = await queryNaver(
+      { name: "Pellucid coffee" },
+      "test-client-id",
+      "test-client-secret"
+    );
+    assert.equal(naverEmptyResult, null);
+
+    // 7f. Report generation: non-ok response puts candidate under could-not-check heading
+    const failedReport = buildReport({
+      candidatesCount: 1,
+      found: [],
+      doubtful: [],
+      couldNotCheck: [
+        {
+          name: "Pellucid coffee",
+          expectedRegion: "Seodaemun-gu Yeonhui-dong",
+          error: "HTTP 500 Internal Server Error",
+        },
+      ],
+      notFound: [],
+    });
+    assert.ok(failedReport.includes("## Could Not Check"));
+    assert.ok(failedReport.includes("- Could Not Check: 1"));
+    assert.ok(failedReport.includes("- Not Found: 0"));
+    assert.ok(failedReport.includes("Pellucid coffee"));
+    assert.ok(failedReport.includes("incomplete"));
+    assert.ok(failedReport.includes("must not be read as a verdict"));
+    assert.equal(failedReport.includes("## Not Found\nNone."), true);
+
+    // 7g. Report generation: completed empty response still reads Not Found
+    const emptyReport = buildReport({
+      candidatesCount: 1,
+      found: [],
+      doubtful: [],
+      couldNotCheck: [],
+      notFound: [
+        {
+          name: "Pellucid coffee",
+          expectedRegion: "Seodaemun-gu Yeonhui-dong",
+        },
+      ],
+    });
+    assert.ok(emptyReport.includes("## Not Found"));
+    assert.ok(emptyReport.includes("- Not Found: 1"));
+    assert.ok(emptyReport.includes("- Could Not Check: 0"));
+    assert.ok(emptyReport.includes("Pellucid coffee"));
+    assert.equal(emptyReport.includes("incomplete"), false);
+    assert.equal(emptyReport.includes("## Could Not Check\nNone."), true);
+
     // 8. runCandidateCheck missing API key handling
     const savedId = process.env.NAVER_CLIENT_ID;
     const savedSecret = process.env.NAVER_CLIENT_SECRET;
@@ -148,8 +214,27 @@ async function run() {
     assert.equal(process.exitCode, 1);
     process.exitCode = initialExitCode;
 
-    if (savedId) process.env.NAVER_CLIENT_ID = savedId;
-    if (savedSecret) process.env.NAVER_CLIENT_SECRET = savedSecret;
+    // 8b. runCandidateCheck with non-ok response writes Could Not Check report
+    const reportPath = path.join(process.cwd(), "docs", "cafe-candidate-report.md");
+    const originalReportContent = await fs.readFile(reportPath, "utf8");
+
+    try {
+      process.env.NAVER_CLIENT_ID = "test-client-id";
+      process.env.NAVER_CLIENT_SECRET = "test-client-secret";
+      fetchResponseStatus = 500;
+
+      await runCandidateCheck();
+
+      const generatedReport = await fs.readFile(reportPath, "utf8");
+      assert.ok(generatedReport.includes("## Could Not Check"));
+      assert.ok(generatedReport.includes("- Could Not Check: 14"));
+      assert.ok(generatedReport.includes("- Not Found: 0"));
+      assert.ok(generatedReport.includes("must not be read as a verdict"));
+    } finally {
+      await fs.writeFile(reportPath, originalReportContent, "utf8");
+      if (savedId) process.env.NAVER_CLIENT_ID = savedId; else delete process.env.NAVER_CLIENT_ID;
+      if (savedSecret) process.env.NAVER_CLIENT_SECRET = savedSecret; else delete process.env.NAVER_CLIENT_SECRET;
+    }
 
     console.log("[geocode-unit] ok");
   } finally {
