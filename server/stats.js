@@ -8,6 +8,7 @@
 import { json } from "./shared.js";
 
 const RETENTION_DAYS = 90;
+let lastPurgedDay = null;
 
 function kstDay(now = new Date()) {
   // KST(UTC+9) 기준 날짜 문자열 - 운영자 체감 하루와 일치시킨다.
@@ -31,12 +32,15 @@ export async function recordVisit(req, env) {
   )
     .bind(day, ipHash)
     .run();
-  // 순환 삭제: 하루 첫 기록 언저리에서만 실효가 있지만 멱등이라 매번 돌려도 싸다.
-  await env.DB.prepare(
-    "DELETE FROM visit_stats WHERE day < date('now', ?)",
-  )
-    .bind(`-${RETENTION_DAYS} days`)
-    .run();
+  // 순환 삭제: retention cutoff는 하루 단위로 이동하므로 날짜(day)가 바뀔 때만 DELETE를 수행하여 매 요청마다 불필요한 DB 쓰기를 방지한다.
+  if (lastPurgedDay !== day) {
+    await env.DB.prepare(
+      "DELETE FROM visit_stats WHERE day < date('now', ?)",
+    )
+      .bind(`-${RETENTION_DAYS} days`)
+      .run();
+    lastPurgedDay = day;
+  }
 }
 
 // adminOnly() 로 등록된다 - 가드/인증/권한은 라우터 래퍼가 담당하는 평면 핸들러.
