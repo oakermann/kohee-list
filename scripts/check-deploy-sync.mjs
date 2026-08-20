@@ -1,8 +1,16 @@
+import { execSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { checkAssetCacheBusting } from "./check-asset-cache-busting.mjs";
 import { runAssetCacheBustingTests } from "./test-asset-cache-busting.mjs";
+
+try {
+  execSync("node scripts/build-pages.mjs", { stdio: "inherit" });
+} catch (buildError) {
+  console.error("build-pages failed during deploy sync check.");
+  process.exit(1);
+}
 
 const files = [
   "index.html",
