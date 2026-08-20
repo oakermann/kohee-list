@@ -10,7 +10,7 @@ function Test-JavaScriptModule {
   )
 
   Write-Host "[check-js] $Path"
-  & node --experimental-vm-modules (Join-Path $Workspace "scripts\check-js-module.mjs") $Path
+  & node --check $Path
   if ($LASTEXITCODE -ne 0) {
     throw "JavaScript syntax check failed: $Path"
   }
