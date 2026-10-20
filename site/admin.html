@@ -9,259 +9,152 @@
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
     />
     <link rel="stylesheet" href="./assets/base.css?v=20260721-7" />
-    <link rel="stylesheet" href="./assets/admin.css?v=20261020-1" />
+    <link rel="stylesheet" href="./assets/admin.css?v=20261021-2" />
   </head>
   <body>
     <main class="wrap">
-      <section class="panel top">
-        <div>
-          <h1>코히 리스트 운영 콘솔</h1>
-          <div id="hello" class="meta">권한 확인 중...</div>
-        </div>
+      <header class="panel top">
+        <h1>운영 콘솔</h1>
+        <div id="hello" class="meta">권한 확인 중...</div>
         <div class="btns">
           <a class="btn" href="index.html">메인</a>
-          <a class="btn" href="mypage.html">마이페이지</a>
           <button id="logout-btn" type="button">로그아웃</button>
         </div>
-      </section>
+      </header>
 
-      <section id="visit-sec" class="panel hidden">
-        <h2>방문자 통계 (admin)</h2>
-        <div id="visit-summary" class="meta">불러오는 중...</div>
-        <div id="visit-days" class="mini"></div>
-      </section>
-
-      <section id="notice-sec" class="panel hidden">
-        <h2>1) 공지 등록 (admin)</h2>
-        <textarea
-          id="notice-input"
-          placeholder="메인에 보여줄 공지를 입력"
-        ></textarea>
-        <button id="notice-save" class="primary" type="button">
-          공지 저장
+      <nav id="tabs" class="tabs">
+        <button type="button" data-tab="queue" class="active">
+          대기 <span data-count="queue"></span>
         </button>
-      </section>
+        <button type="button" data-tab="public">
+          공개 <span data-count="public"></span>
+        </button>
+        <button type="button" data-tab="hidden">
+          숨김 <span data-count="hidden"></span>
+        </button>
+        <button type="button" data-tab="errors">
+          오류 <span data-count="errors"></span>
+        </button>
+        <button type="button" data-tab="ops">운영</button>
+      </nav>
 
-      <section class="panel">
-        <h2>2) 카페 검수 관리</h2>
-        <div id="review-console-tabs" class="mini-tabs review-console-tabs">
-          <button type="button" data-tab="submissions" class="active">
-            <span class="tab-label">제보</span>
-            <span class="tab-count" data-count="submissions"></span>
-          </button>
-          <button type="button" data-tab="candidates">
-            <span class="tab-label">후보</span>
-            <span class="tab-count" data-count="candidates"></span>
-          </button>
-          <button type="button" data-tab="hold">
-            <span class="tab-label">보류</span>
-            <span class="tab-count" data-count="hold"></span>
-          </button>
-          <button type="button" data-tab="approved">
-            <span class="tab-label">공개</span>
-            <span class="tab-count" data-count="approved"></span>
-          </button>
-        </div>
-        <div id="review-console-note" class="meta admin-section-label">
-          기존 제보/카페 데이터를 한곳에서 확인합니다.
-        </div>
-        <div class="btns admin-legacy-toggle-wrap">
-          <button id="legacy-review-toggle" type="button">
-            기존 검수/CSV 패널 보기
-          </button>
-        </div>
-        <div id="review-console-list" class="list"></div>
-        <div class="btns admin-actions">
+      <section id="pane-list" class="panel">
+        <div class="list-tools">
+          <input id="search" placeholder="카페명·주소 검색" />
           <button id="new-cafe-btn" class="primary" type="button">
             신규 등록
           </button>
         </div>
-        <div id="cafe-form-wrap" class="hidden">
-          <hr class="admin-form-separator" />
-          <div id="review-mode" class="item hidden admin-review-mode"></div>
-          <input id="cafe-id" placeholder="id (수정시 자동 채움)" disabled />
-          <input id="cafe-name" placeholder="카페명 *" />
-          <input id="cafe-address" placeholder="주소 *" />
-          <textarea id="cafe-desc" placeholder="설명 *"></textarea>
-          <div class="row2">
-            <input id="cafe-lat" placeholder="위도" />
-            <input id="cafe-lng" placeholder="경도" />
+        <div id="list" class="list"></div>
+      </section>
+
+      <section id="pane-errors" class="panel hidden">
+        <div id="error-list" class="list"></div>
+      </section>
+
+      <section id="pane-ops" class="ops hidden">
+        <div class="panel">
+          <h2>방문자</h2>
+          <div id="visit-summary" class="meta">불러오는 중...</div>
+          <div id="visit-days"></div>
+        </div>
+
+        <div class="panel">
+          <h2>공지</h2>
+          <textarea
+            id="notice-input"
+            placeholder="메인에 보여줄 공지 (비우면 공지 없음)"
+          ></textarea>
+          <button id="notice-save" class="primary" type="button">
+            공지 저장
+          </button>
+        </div>
+
+        <div class="panel">
+          <h2>CSV</h2>
+          <div class="meta">
+            올린 행은 모두 후보로 들어갑니다. 공개는 대기 탭에서 따로 합니다.
           </div>
-          <input id="cafe-signature" placeholder="시그니처 (쉼표 구분)" />
-          <input id="cafe-instagram" placeholder="인스타 링크" />
-          <input id="cafe-naver" placeholder="네이버 지도 링크 (place URL)" />
-          <input
-            id="cafe-region"
-            placeholder="지역 / 가까운 역 (예: 군자역) - 카드에 안 보임"
-          />
+          <label class="btn file-pick"
+            ><input id="csv-file" type="file" accept=".csv,text/csv" /><span
+              id="csv-file-name"
+              >CSV 파일 고르기</span
+            ></label
+          >
+          <div class="row2">
+            <button id="csv-dry-run" type="button">검증</button>
+            <button id="csv-upload" class="primary" type="button">
+              올리기
+            </button>
+          </div>
+          <div id="csv-msg" class="meta"></div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="cafe-dialog">
+      <form id="cafe-form" method="dialog">
+        <h2 id="form-title">카페</h2>
+        <div id="form-note" class="meta"></div>
+        <input id="cafe-name" placeholder="카페명 *" required />
+        <input id="cafe-address" placeholder="주소 *" required />
+        <div class="geo">
+          <input id="cafe-lat" placeholder="위도" inputmode="decimal" />
+          <input id="cafe-lng" placeholder="경도" inputmode="decimal" />
+          <button id="geocode-btn" type="button">주소로 찾기</button>
+        </div>
+        <div id="geo-msg" class="meta"></div>
+        <textarea id="cafe-desc" placeholder="설명 *" required></textarea>
+        <input id="cafe-signature" placeholder="시그니처 (쉼표 구분)" />
+        <input id="cafe-instagram" placeholder="인스타 링크" />
+        <input id="cafe-naver" placeholder="네이버 지도 링크 (place URL)" />
+        <input id="cafe-bean" placeholder="원두 구매 링크" />
+        <div class="row2">
+          <input id="cafe-region" placeholder="가까운 역 (카드에 안 보임)" />
           <input
             id="cafe-region-distance"
             type="number"
             min="0"
-            placeholder="그 역까지 거리 (m, 숫자만) - 카드에 안 보임"
+            placeholder="역까지 m"
           />
-          <input
-            id="cafe-memo"
-            placeholder="운영 메모 (관리자만 봄, 공개 안 됨)"
-          />
-          <input id="cafe-bean" placeholder="원두 구매 링크" />
-          <div class="row5">
-            <label class="chip"
-              ><input
-                type="checkbox"
-                name="cat"
-                value="espresso"
-              />에스프레소</label
-            >
-            <label class="chip"
-              ><input type="checkbox" name="cat" value="drip" />드립</label
-            >
-            <label class="chip"
-              ><input type="checkbox" name="cat" value="decaf" />디카페인</label
-            >
-            <label class="chip"
-              ><input
-                type="checkbox"
-                name="cat"
-                value="instagram"
-              />인스타</label
-            >
-            <label class="chip"
-              ><input type="checkbox" name="cat" value="dessert" />디저트</label
-            >
-          </div>
-          <div class="row2">
-            <label class="chip"
-              ><input type="checkbox" id="oakerman-pick" />오커맨픽</label
-            >
-          </div>
-          <input
-            type="checkbox"
-            id="manager-pick"
-            class="hidden"
-            aria-hidden="true"
-            tabindex="-1"
-          />
-          <div class="row2 form-actions">
-            <button id="save-cafe-btn" class="primary" type="button">
-              저장
-            </button>
-            <button id="delete-btn" class="warn" type="button">닫기</button>
-          </div>
         </div>
-      </section>
-
-      <section id="legacy-review-panel" class="panel hidden">
-        <h2>기존 검수/CSV 패널 (fallback)</h2>
-        <div class="meta admin-section-label">
-          필요 시 기존 검수/CSV 흐름을 그대로 사용할 수 있습니다.
-        </div>
-
-        <h3 class="legacy-heading">제보 검토 / 카페 관리</h3>
-        <div class="meta admin-section-label">검토 대기 제보</div>
-        <div id="sub-list" class="list"></div>
-
-        <hr class="admin-separator" />
-        <div class="meta admin-section-label">
-          카페 관리 (검색/수정/신규/수정 후 승인)
-        </div>
-        <select id="cafe-lifecycle" aria-label="카페 표시 범위">
-          <option value="active">활성</option>
-          <option value="deleted">삭제됨</option>
-          <option value="all">전체</option>
-        </select>
-        <input id="cafe-search" placeholder="카페명/주소 검색" />
-        <div id="cafe-count" class="meta admin-count">
-          카페 데이터 확인 중...
-        </div>
-        <div id="cafe-list" class="list"></div>
-
-        <h3 class="legacy-heading">CSV 운영 (보조)</h3>
-        <div class="file-pick">
-          <label for="csv-file" class="btn file-trigger">파일 선택</label>
-          <div id="csv-file-name" class="file-name">선택된 파일 없음</div>
-        </div>
-        <input
-          id="csv-file"
-          class="file-input"
-          type="file"
-          accept=".csv,text/csv"
-        />
-        <div class="row2 csv-actions">
-          <button id="csv-dry-run" type="button">CSV 검증</button>
-          <button id="csv-upload" class="primary" type="button">
-            CSV 업로드
-          </button>
-        </div>
-        <div id="csv-msg" class="meta admin-status-msg"></div>
-      </section>
-
-      <section class="panel">
-        <h2>3) 오류 제보 내역</h2>
-        <div id="error-tabs" class="mini-tabs">
-          <button type="button" data-status="open" class="active">
-            확인 대기
-          </button>
-          <button type="button" data-status="resolved">처리 완료</button>
-        </div>
-        <div id="error-list" class="list"></div>
-      </section>
-
-      <section class="panel">
-        <h2>4) 승인/반려 내역</h2>
-        <div id="reviewed-note" class="meta admin-section-label"></div>
-        <div id="reviewed-tabs" class="mini-tabs">
-          <button type="button" data-status="approved" class="active">
-            승인됨
-          </button>
-          <button type="button" data-status="rejected">반려됨</button>
-        </div>
-        <div id="reviewed-list" class="list"></div>
-      </section>
-
-      <section id="user-sec" class="panel hidden">
-        <div class="admin-accordion-head">
-          <h2 id="user-sec-title">5) 회원 목록 (admin)</h2>
-          <button
-            id="user-toggle"
-            class="admin-accordion-toggle"
-            type="button"
-            aria-expanded="false"
-            aria-controls="user-body"
+        <input id="cafe-memo" placeholder="운영 메모 (공개 안 됨)" />
+        <div class="chips">
+          <label class="chip"
+            ><input
+              type="checkbox"
+              name="cat"
+              value="espresso"
+            />에스프레소</label
           >
-            회원 목록 펼치기
-          </button>
+          <label class="chip"
+            ><input type="checkbox" name="cat" value="drip" />드립</label
+          >
+          <label class="chip"
+            ><input type="checkbox" name="cat" value="decaf" />디카페인</label
+          >
+          <label class="chip"
+            ><input type="checkbox" name="cat" value="instagram" />인스타</label
+          >
+          <label class="chip"
+            ><input type="checkbox" name="cat" value="dessert" />디저트</label
+          >
+          <label class="chip"
+            ><input type="checkbox" id="oakerman-pick" />오커맨픽</label
+          >
         </div>
-        <div
-          id="user-body"
-          class="admin-accordion-body hidden"
-          role="region"
-          aria-labelledby="user-sec-title"
-        >
-          <input id="user-search" placeholder="아이디 검색" />
-          <div id="user-count" class="meta admin-count">
-            회원 목록 확인 중...
-          </div>
-          <div id="user-list" class="list"></div>
+        <div class="form-actions">
+          <button id="form-delete" type="button">삭제</button>
+          <button value="cancel" formnovalidate type="submit">닫기</button>
+          <button id="form-save" class="primary" type="button">저장</button>
         </div>
-      </section>
-
-      <section id="role-sec" class="panel hidden">
-        <h2>6) 권한 관리 (admin)</h2>
-        <div class="row2">
-          <input id="role-username" placeholder="username" />
-          <select id="role-value">
-            <option value="user">user</option>
-          </select>
-        </div>
-        <button id="role-set" class="primary" type="button">권한 반영</button>
-      </section>
-    </main>
+      </form>
+    </dialog>
 
     <footer class="page-legal-footer">
       <a href="privacy.html">개인정보 처리방침</a>
     </footer>
 
-    <script type="module" src="./assets/admin.js?v=20261020-1"></script>
+    <script type="module" src="./assets/admin.js?v=20261021-2"></script>
   </body>
 </html>
