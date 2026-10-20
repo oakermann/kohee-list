@@ -133,7 +133,6 @@ HOLD/HIGH candidates:
 For product-safe repository work, run:
 
 ```text
-npm run check:deploy-sync
 npm run test:unit
 npm run verify:release
 git diff --check

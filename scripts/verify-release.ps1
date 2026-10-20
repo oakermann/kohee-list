@@ -20,7 +20,6 @@ function Invoke-VerifyStep {
 
 Push-Location $Workspace
 try {
-  Invoke-VerifyStep "deploy source sync" { npm run check:deploy-sync }
   Invoke-VerifyStep "unit tests" { npm run test:unit }
   Invoke-VerifyStep "syntax checks" {
     powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1

@@ -101,7 +101,7 @@ export function checkAssetCacheBusting(options = {}) {
   const changedAssetMap = new Map();
   for (const file of changedFiles) {
     const norm = file.replace(/\\/g, "/");
-    if (norm.startsWith("assets/") || norm.startsWith(".pages-deploy/assets/")) {
+    if (norm.startsWith("site/assets/")) {
       const fileName = path.basename(norm);
       if (!changedAssetMap.has(fileName)) {
         changedAssetMap.set(fileName, `assets/${fileName}`);
@@ -128,10 +128,7 @@ export function checkAssetCacheBusting(options = {}) {
       "privacy.html",
       "submit.html",
     ];
-    htmlFiles = [
-      ...standardHtmlNames,
-      ...standardHtmlNames.map((name) => `.pages-deploy/${name}`),
-    ];
+    htmlFiles = standardHtmlNames.map((name) => `site/${name}`);
   }
 
   const failures = [];

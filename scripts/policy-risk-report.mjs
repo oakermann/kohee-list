@@ -49,7 +49,7 @@ const HIGH_HOLD_RULES = [
       /(^|\/)\.env(\.|$)/i.test(file) ||
       /(^|\/).*(secret|credential|token|private[-_]?key).*/i.test(file) ||
       /\.(pem|key|p12|pfx)$/i.test(file) ||
-      /^scripts\/(deploy|release|sync-pages)/i.test(file),
+      /^scripts\/(deploy|release)/i.test(file),
   },
 ];
 

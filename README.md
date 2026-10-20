@@ -22,24 +22,19 @@ product validation, deploy safety, and D1/CSV/public-data guardrails.
   - `users.js`: user list and role changes
   - `csv.js`: CSV import logic
   - `routes.js`: route table
-- `.pages-deploy/`
-  - Cloudflare Pages deployment source of truth
-- `.pages-deploy/assets/`
-  - Frontend shared modules
+- `site/`
+  - The only frontend copy: HTML pages, `_headers`, `assets/`. Served by the Worker
+    (`[assets]` in `wrangler.toml`) and by Pages (`wrangler pages deploy site`)
+- `site/assets/`
   - `common.js`: API/auth/share/map/date/common UI helpers
   - `index.js`, `login.js`, `submit.js`, `mypage.js`, `admin.js`
-- `assets/`
-  - Repository mirror of `.pages-deploy/assets/` for sync verification
-- Root HTML files (`index.html`, `login.html`, `submit.html`, `mypage.html`, `admin.html`)
-  - Repository mirrors of `.pages-deploy/*.html` for sync verification
+- `functions/`
+  - Pages Functions (`/api` proxy)
 - `scripts/`
   - Validation, deployment, smoke-test, and CSV backup scripts
 - `schema.sql`
   - Base D1 schema
-- `sync-pages.ps1`
-  - Sync `.pages-deploy` HTML/assets into local mirrors
 
-There is currently no separate `public/` directory in this repository.
-For Pages deploys, treat `.pages-deploy/` as the authoritative frontend source.
-Root HTML/assets are synced mirrors for repository validation only, not a separate
-operating surface.
+When a `site/assets/*` file changes, bump its `?v=` in every HTML page that loads it
+(`/assets/*` is cached immutable). If `common.js` changes, also bump the entry scripts
+that import it.

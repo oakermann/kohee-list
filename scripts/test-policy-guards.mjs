@@ -8,10 +8,8 @@ function read(path) {
 const routes = read("server/routes.js");
 const auth = read("server/auth.js");
 const users = read("server/users.js");
-const common = read("assets/common.js");
-const deployCommon = read(".pages-deploy/assets/common.js");
-const adminHtml = read("admin.html");
-const deployAdminHtml = read(".pages-deploy/admin.html");
+const common = read("site/assets/common.js");
+const adminHtml = read("site/admin.html");
 
 assert.equal(routes.includes("MANAGER_ROUTES"), false);
 assert.ok(routes.includes("ADMIN_OPERATION_ROUTES"));
@@ -29,28 +27,14 @@ assert.ok(users.includes('return role === "admin" ? "admin" : "user"'));
 assert.ok(users.includes('role !== "user"'));
 assert.equal(users.includes('body.role !== "manager"'), false);
 
-for (const [path, content] of [
-  ["assets/common.js", common],
-  [".pages-deploy/assets/common.js", deployCommon],
-]) {
-  assert.equal(
-    /\bmanager\s*:/.test(content),
-    false,
-    `${path} should not expose any legacy manager role key`,
-  );
-  assert.ok(content.includes('admin: "관리자"'));
-  assert.ok(content.includes('|| "일반 유저"'));
-}
+assert.equal(/\bmanager\s*:/.test(common), false, "common.js should not expose any legacy manager role key");
+assert.ok(common.includes('admin: "관리자"'));
+assert.ok(common.includes('|| "일반 유저"'));
 
-for (const [path, content] of [
-  ["admin.html", adminHtml],
-  [".pages-deploy/admin.html", deployAdminHtml],
-]) {
-  assert.equal(
-    content.includes('<option value="manager"'),
-    false,
-    `${path} should not allow assigning manager from the role dropdown`,
-  );
-}
+assert.equal(
+  adminHtml.includes('<option value="manager"'),
+  false,
+  "admin.html should not allow assigning manager from the role dropdown",
+);
 
 console.log("[policy-guards] ok");

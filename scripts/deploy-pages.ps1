@@ -2,7 +2,7 @@ param(
   [string]$Workspace = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
   [string]$ProjectName = "kohee",
   [string]$Branch = "main",
-  [string]$SourceDir = ".pages-deploy"
+  [string]$SourceDir = "site"
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,12 +13,6 @@ $backupConfig = Join-Path $Workspace "wrangler.worker.backup.toml"
 
 Push-Location $Workspace
 try {
-  Write-Host "[deploy-pages] building pages output directory"
-  npm run build:pages
-  if ($LASTEXITCODE -ne 0) {
-    throw "Build failed"
-  }
-
   Copy-Item -LiteralPath $workerConfig -Destination $backupConfig -Force
   Copy-Item -LiteralPath $pagesConfig -Destination $workerConfig -Force
 

@@ -29,7 +29,7 @@ function sha256Hex(content) {
 }
 
 /**
- * Pure comparison helper that compares live body against repo deploy mirror body.
+ * Pure comparison helper that compares live body against repo site/ body.
  * Returns { ok: true, ... } on match or { ok: false, error: ... } on mismatch or missing file.
  */
 export function compareContent(relPath, liveContent, localContent) {
@@ -37,7 +37,7 @@ export function compareContent(relPath, liveContent, localContent) {
     return {
       ok: false,
       relPath,
-      error: `File "${relPath}" does not exist in repository deploy mirror (.pages-deploy)`,
+      error: `File "${relPath}" does not exist in site/`,
     };
   }
 
@@ -139,7 +139,7 @@ export async function verifyLiveAssets(options = {}) {
 
   const origin = rawOrigin.replace(/\/+$/, "");
   const rootDir = options.rootDir || process.cwd();
-  const deployDir = options.deployDir || path.join(rootDir, ".pages-deploy");
+  const deployDir = options.deployDir || path.join(rootDir, "site");
   const fetchFn = options.fetchFn || globalThis.fetch;
   const pages = options.pages || DEFAULT_PAGES;
   const timeoutMs = options.timeoutMs || 10000;
@@ -152,7 +152,7 @@ export async function verifyLiveAssets(options = {}) {
   // Legitimate dynamic differences: None exist for static HTML pages (index.html, admin.html, etc.)
   // or static assets (assets/*.js, assets/*.css) served via Cloudflare Pages.
   // API routes (/api/*) are handled by Cloudflare Functions/Workers, but static assets and HTML pages
-  // under .pages-deploy are served as exact static files. Therefore, no dynamic content ignores
+  // under site/ are served as exact static files. Therefore, no dynamic content ignores
   // or tolerances are added.
 
   for (const page of pages) {
@@ -166,7 +166,7 @@ export async function verifyLiveAssets(options = {}) {
         localContent = await readFile(localFilePath, "utf8");
       } catch (err) {
         failures.push(
-          `Failed to read repository deploy mirror file "${pageRelPath}": ${err.message}`,
+          `Failed to read site/ file "${pageRelPath}": ${err.message}`,
         );
         continue;
       }
@@ -232,7 +232,7 @@ export async function verifyLiveAssets(options = {}) {
         localContent = await readFile(localFilePath, "utf8");
       } catch (err) {
         failures.push(
-          `Failed to read repository deploy mirror file "${relativePath}": ${err.message}`,
+          `Failed to read site/ file "${relativePath}": ${err.message}`,
         );
         continue;
       }

@@ -19,7 +19,6 @@ LOW / MEDIUM / HIGH / HOLD
 
 ## Tests
 
-- [ ] `npm run check:deploy-sync`
 - [ ] `npm run test:unit`
 - [ ] `npm run verify:release`
 - [ ] `git diff --check`
