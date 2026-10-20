@@ -2,1249 +2,548 @@ import {
   $,
   api,
   clearAuthToken,
-  errorStatusLabel,
   formatDate,
   jsonApi,
   roleLabel,
-  statusLabel,
-  storeCsrfFromPayload,
 } from "./common.js?v=20260803-1";
 
 const state = {
-  me: null,
+  tab: "queue",
   cafes: [],
-  cafeKeyCounts: {},
-  cafeLifecycle: "active",
   submissions: [],
-  editApproveId: "",
-  editApproveName: "",
-  errorReports: [],
-  errorStatus: "open",
-  reviewConsoleTab: "submissions",
-  reviewedSubmissions: [],
-  reviewedStatus: "approved",
-  users: [],
-  userSearchTimer: null,
+  errors: [],
+  form: null,
+  opsLoaded: false,
 };
 
-function categories() {
-  return [...document.querySelectorAll('input[name="cat"]:checked')].map(
-    (input) => input.value,
-  );
+const LIST_TABS = ["queue", "public", "hidden"];
+
+const STATE_LABEL = {
+  candidate: "후보",
+  approved: "공개",
+  hold: "보류",
+  imported: "숨김(가져옴)",
+  rejected: "반려",
+  deleted: "삭제됨",
+};
+
+const FORM_FIELDS = {
+  name: "cafe-name",
+  address: "cafe-address",
+  desc: "cafe-desc",
+  lat: "cafe-lat",
+  lng: "cafe-lng",
+  instagram: "cafe-instagram",
+  naver_url: "cafe-naver",
+  beanShop: "cafe-bean",
+  region: "cafe-region",
+  region_distance_m: "cafe-region-distance",
+  memo: "cafe-memo",
+};
+
+// ---- 작은 도구 ----
+
+function el(tag, className = "", text = "") {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
 }
 
-function signatures(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+function guarded(fn) {
+  return () =>
+    Promise.resolve()
+      .then(fn)
+      .catch((error) => alert(error.message));
 }
 
-function cafeKey(cafe) {
-  return `${String(cafe.name || "")
-    .trim()
-    .toLowerCase()}||${String(cafe.address || "")
-    .trim()
-    .toLowerCase()}`;
+function button(label, onClick, className = "") {
+  const node = el("button", className, label);
+  node.type = "button";
+  node.addEventListener("click", guarded(onClick));
+  return node;
 }
 
-function isDuplicateCafe(cafe) {
-  const key = cafeKey(cafe);
-  return key !== "||" && Number(state.cafeKeyCounts[key] || 0) > 1;
-}
-
-function isAdmin() {
-  return state.me?.role === "admin";
-}
-
-function formatDateTime(value) {
-  return formatDate(value, true);
-}
-
-function fillCafeForm(cafe) {
-  $("cafe-id").value = cafe.id || "";
-  $("cafe-name").value = cafe.name || "";
-  $("cafe-address").value = cafe.address || "";
-  $("cafe-desc").value = cafe.desc || "";
-  $("cafe-lat").value = cafe.lat || "";
-  $("cafe-lng").value = cafe.lng || "";
-  $("cafe-signature").value = (cafe.signature || []).join(", ");
-  $("cafe-instagram").value = cafe.instagram || "";
-  $("cafe-naver").value = cafe.naver_url || "";
-  $("cafe-region").value = cafe.region || "";
-  $("cafe-region-distance").value = cafe.region_distance_m || "";
-  $("cafe-memo").value = cafe.memo || "";
-  $("cafe-bean").value = cafe.beanShop || "";
-  [...document.querySelectorAll('input[name="cat"]')].forEach((box) => {
-    box.checked = (cafe.category || []).includes(box.value);
-  });
-  $("oakerman-pick").checked = !!cafe.oakerman_pick;
-  $("manager-pick").checked = !!cafe.manager_pick;
-}
-
-function openCafeForm(scroll = true) {
-  $("cafe-form-wrap").classList.remove("hidden");
-  if (scroll) {
-    setTimeout(
-      () =>
-        $("cafe-form-wrap").scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        }),
-      0,
-    );
-  }
-}
-
-function closeCafeForm(resetForm = true) {
-  state.editApproveId = "";
-  state.editApproveName = "";
-  $("review-mode").classList.add("hidden");
-  $("review-mode").innerHTML = "";
-  if (resetForm) fillCafeForm({});
-  $("save-cafe-btn").textContent = "저장";
-  $("delete-btn").textContent = "닫기";
-  $("cafe-form-wrap").classList.add("hidden");
-}
-
-function prepareNewCafe() {
-  state.editApproveId = "";
-  state.editApproveName = "";
-  $("review-mode").classList.add("hidden");
-  $("review-mode").innerHTML = "";
-  fillCafeForm({});
-  $("save-cafe-btn").textContent = "저장";
-  $("delete-btn").textContent = "닫기";
-  openCafeForm();
-  setTimeout(() => $("cafe-name").focus(), 0);
-}
-
-function fillCafeFormFromSubmission(submission) {
-  fillCafeForm({
-    id: "",
-    name: submission.name || "",
-    address: submission.address || "",
-    desc: submission.desc || "",
-    lat: 0,
-    lng: 0,
-    signature: submission.signature || [],
-    instagram: submission.instagram || "",
-    beanShop: submission.beanShop || "",
-    category: submission.category || [],
-    oakerman_pick: !!submission.oakerman_pick,
-    manager_pick: !!submission.manager_pick,
-  });
-}
-
-function setEditApproveMode(submission) {
-  state.editApproveId = submission.id;
-  state.editApproveName = submission.name || "";
-  openCafeForm(false);
-  const reviewMode = $("review-mode");
-  const title = document.createElement("h3");
-  title.textContent = "수정 후 승인 준비 중";
-
-  const target = document.createElement("div");
-  target.className = "mini";
-  target.textContent = `대상 제보: ${state.editApproveName}`;
-
-  const guide = document.createElement("div");
-  guide.className = "mini";
-  const saveLabel = document.createElement("b");
-  saveLabel.textContent = "수정 후 승인 저장";
-  guide.append(
-    "아래 입력칸을 보완한 뒤 ",
-    saveLabel,
-    "을 누르면 카페로 등록됩니다.",
-  );
-
-  reviewMode.classList.remove("hidden");
-  reviewMode.replaceChildren(title, target, guide);
-  $("save-cafe-btn").textContent = "수정 후 승인 저장";
-  $("delete-btn").textContent = "취소";
-}
-
-function clearEditApproveMode(resetForm = false) {
-  state.editApproveId = "";
-  state.editApproveName = "";
-  $("review-mode").classList.add("hidden");
-  $("review-mode").innerHTML = "";
-  $("save-cafe-btn").textContent = "저장";
-  if (resetForm) fillCafeForm({});
-  $("delete-btn").textContent =
-    $("cafe-id").value.trim() && isAdmin() ? "삭제" : "닫기";
-}
-
-function collectCafeForm() {
-  return {
-    id: $("cafe-id").value.trim(),
-    name: $("cafe-name").value.trim(),
-    address: $("cafe-address").value.trim(),
-    desc: $("cafe-desc").value.trim(),
-    lat: Number($("cafe-lat").value || 0),
-    lng: Number($("cafe-lng").value || 0),
-    signature: signatures($("cafe-signature").value),
-    instagram: $("cafe-instagram").value.trim(),
-    naver_url: $("cafe-naver").value.trim(),
-    region: $("cafe-region").value.trim(),
-    region_distance_m: Number($("cafe-region-distance").value.trim() || 0),
-    memo: $("cafe-memo").value.trim(),
-    beanShop: $("cafe-bean").value.trim(),
-    category: categories(),
-    oakerman_pick: $("oakerman-pick").checked,
-    manager_pick: $("manager-pick").checked,
-  };
-}
-
-const VISIT_DAYS_SHOWN = 14;
-
-function visitTile(label, value, sub) {
-  const box = document.createElement("div");
-  box.className = "visit-tile";
-  const l = document.createElement("span");
-  l.className = "label";
-  l.textContent = label;
-  const v = document.createElement("span");
-  v.className = "value";
-  v.textContent = String(value);
-  box.append(l, v);
-  if (sub) {
-    const s = document.createElement("span");
-    s.className = "sub";
-    s.textContent = sub;
-    box.appendChild(s);
-  }
-  return box;
-}
-
-function visitRow(day, peak) {
-  const tr = document.createElement("tr");
-  const date = document.createElement("td");
-  date.className = "day";
-  date.textContent = day.day;
-  // The bar is the only decoration here and it carries the comparison: scaled
-  // against the busiest day on screen, so a quiet day reads as quiet at a glance.
-  const barCell = document.createElement("td");
-  barCell.className = "bar-cell";
-  const bar = document.createElement("div");
-  bar.className = "visit-bar";
-  const fill = document.createElement("span");
-  fill.style.width = `${peak > 0 ? Math.round((day.uniques / peak) * 100) : 0}%`;
-  bar.appendChild(fill);
-  barCell.appendChild(bar);
-  const uniques = document.createElement("td");
-  uniques.className = "num";
-  uniques.textContent = `${day.uniques}명`;
-  const hits = document.createElement("td");
-  hits.className = "hits";
-  hits.textContent = `${day.hits}회`;
-  tr.append(date, barCell, uniques, hits);
-  return tr;
-}
-
-async function loadVisitStats() {
-  const summary = $("visit-summary");
-  const list = $("visit-days");
-  try {
-    const stats = await jsonApi("/stats/visits");
-
-    summary.replaceChildren(
-      visitTile("오늘", `${stats.today.uniques}명`, `조회 ${stats.today.hits}회`),
-      visitTile("최근 7일", `${stats.last7.uniques}명`, null),
-      visitTile("최근 30일", `${stats.last30.uniques}명`, null),
-    );
-    summary.className = "visit-tiles";
-
-    const days = (stats.days || []).slice(0, VISIT_DAYS_SHOWN);
-    list.replaceChildren();
-    list.style.whiteSpace = "";
-    if (!days.length) {
-      const empty = document.createElement("div");
-      empty.className = "visit-empty";
-      empty.textContent = "기록된 방문이 없습니다.";
-      list.appendChild(empty);
-      return;
-    }
-    const range = document.createElement("div");
-    range.className = "visit-range";
-    range.textContent = `최근 ${days.length}일`;
-    const peak = days.reduce((max, d) => Math.max(max, Number(d.uniques) || 0), 0);
-    const table = document.createElement("table");
-    table.className = "visit-table";
-    const body = document.createElement("tbody");
-    for (const day of days) body.appendChild(visitRow(day, peak));
-    table.appendChild(body);
-    list.append(range, table);
-  } catch (error) {
-    summary.className = "meta";
-    summary.textContent = `방문자 통계 로드 실패: ${error.message}`;
-  }
-}
-
-async function loadCafes() {
-  try {
-    const rows = await jsonApi(
-      `/cafes?lifecycle=${encodeURIComponent(state.cafeLifecycle)}`,
-    );
-    state.cafes = Array.isArray(rows) ? rows : [];
-    state.cafeKeyCounts = state.cafes.reduce((acc, cafe) => {
-      const key = cafeKey(cafe);
-      if (key !== "||") acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
-    $("cafe-count").textContent = `로드된 카페 ${state.cafes.length}개`;
-    renderCafeList();
-    renderReviewConsole();
-  } catch (error) {
-    state.cafes = [];
-    state.cafeKeyCounts = {};
-    $("cafe-count").textContent = "카페 데이터를 불러오지 못했습니다.";
-    const empty = document.createElement("div");
-    empty.className = "item empty-state";
-    empty.textContent = `카페 데이터 로드 실패: ${error.message}`;
-    $("cafe-list").replaceChildren(empty);
-    renderReviewConsole();
-  }
-}
-
-function renderCafeList() {
-  const list = $("cafe-list");
-  const query = $("cafe-search").value.trim().toLowerCase();
-  if (!state.cafes.length) {
-    const empty = document.createElement("div");
-    empty.className = "item empty-state";
-    empty.textContent =
-      "등록된 카페 데이터가 없습니다. 기존 데이터는 CSV 업로드로 먼저 넣어 주세요.";
-    list.replaceChildren(empty);
-    return;
-  }
-  if (!query) {
-    const empty = document.createElement("div");
-    empty.className = "item empty-state";
-    empty.textContent = "카페명을 검색하면 기존 카페 카드가 표시됩니다.";
-    list.replaceChildren(empty);
-    return;
-  }
-
-  const rows = state.cafes
-    .filter((cafe) =>
-      `${cafe.name} ${cafe.address}`.toLowerCase().includes(query),
-    )
-    .slice(0, 120);
-
-  if (!rows.length) {
-    const empty = document.createElement("div");
-    empty.className = "item empty-state";
-    empty.textContent = "검색 결과가 없습니다.";
-    list.replaceChildren(empty);
-    return;
-  }
-
-  const cards = rows.map((cafe) => {
-    const item = document.createElement("div");
-    item.className = "item";
-
-    const name = document.createElement("h3");
-    name.textContent = cafe.name || "";
-
-    const id = document.createElement("div");
-    id.className = "mini";
-    id.textContent = `ID: ${cafe.id}${isDuplicateCafe(cafe) ? " (중복)" : ""}`;
-
-    const status = document.createElement("div");
-    status.className = "mini";
-    status.textContent = `상태: ${statusLabel(cafe.status)}`;
-
-    item.append(name, id, status);
-
-    if (cafe.deleted_at) {
-      const deleted = document.createElement("div");
-      deleted.className = "mini";
-      deleted.textContent = `삭제됨: ${formatDateTime(cafe.deleted_at)}`;
-      item.append(deleted);
-    }
-
-    const address = document.createElement("div");
-    address.className = "mini";
-    address.textContent = cafe.address || "";
-
-    const actions = document.createElement("div");
-    actions.className = "btns admin-actions";
-
-    const pick = document.createElement("button");
-    pick.type = "button";
-    pick.className = "pick-cafe";
-    pick.dataset.id = cafe.id;
-    pick.textContent = "선택";
-    pick.addEventListener("click", () => {
-      const selectedCafe = state.cafes.find(
-        (item) => item.id === pick.dataset.id,
-      );
-      if (!selectedCafe) return;
-      clearEditApproveMode(false);
-      fillCafeForm(selectedCafe);
-      $("save-cafe-btn").textContent = "저장";
-      $("delete-btn").textContent = isAdmin() ? "삭제" : "닫기";
-      openCafeForm();
-    });
-
-    actions.append(pick);
-
-    if (!cafe.deleted_at && cafe.status === "candidate" && isAdmin()) {
-      const approve = document.createElement("button");
-      approve.type = "button";
-      approve.className = "approve-cafe";
-      approve.dataset.id = cafe.id;
-      approve.textContent = "승인";
-      approve.addEventListener("click", () =>
-        approveCafe(approve.dataset.id).catch((error) => alert(error.message)),
-      );
-      actions.append(approve);
-    }
-
-    if (cafe.deleted_at && isAdmin()) {
-      const restore = document.createElement("button");
-      restore.type = "button";
-      restore.className = "restore-cafe";
-      restore.dataset.id = cafe.id;
-      restore.textContent = "복구";
-      restore.addEventListener("click", () =>
-        restoreCafe(restore.dataset.id).catch((error) => alert(error.message)),
-      );
-      actions.append(restore);
-    }
-
-    item.append(address, actions);
-    return item;
-  });
-
-  list.replaceChildren(...cards);
-}
-
-async function loadSubmissions() {
-  const data = await jsonApi("/submissions?status=pending");
-  state.submissions = data.items || [];
-  renderSubmissions();
-  renderReviewConsole();
-}
-
-function renderSubmissions() {
-  const list = $("sub-list");
-  if (!state.submissions.length) {
-    const empty = document.createElement("div");
-    empty.className = "item empty-state";
-    empty.textContent = "해당 상태의 제보가 없습니다.";
-    list.replaceChildren(empty);
-    return;
-  }
-
-  const items = state.submissions.map((submission) => {
-    const item = document.createElement("div");
-    item.className = "item";
-
-    const title = document.createElement("h3");
-    title.append(document.createTextNode(submission.name || ""));
-    const user = document.createElement("small");
-    user.className = "admin-small";
-    user.textContent = `(${submission.username || ""})`;
-    title.append(document.createTextNode(" "), user);
-
-    const address = document.createElement("div");
-    address.className = "mini";
-    address.textContent = submission.address || "";
-
-    const desc = document.createElement("div");
-    desc.className = "mini";
-    desc.textContent = submission.desc || "";
-
-    const reason = document.createElement("div");
-    reason.className = "mini";
-    reason.textContent = `추천 이유: ${submission.reason || "-"}`;
-
-    const status = document.createElement("div");
-    status.className = "mini";
-    status.textContent = `상태: ${statusLabel(submission.status)}${
-      submission.reject_reason
-        ? ` / 반려 사유: ${submission.reject_reason}`
-        : ""
-    }`;
-
-    const actions = document.createElement("div");
-    actions.className = "btns admin-actions";
-
-    const approveBtn = document.createElement("button");
-    approveBtn.type = "button";
-    approveBtn.className = "s-approve";
-    approveBtn.dataset.id = submission.id;
-    approveBtn.textContent = "승인";
-    approveBtn.addEventListener("click", () =>
-      approve(approveBtn.dataset.id, false).catch((error) =>
-        alert(error.message),
-      ),
-    );
-
-    const editApproveBtn = document.createElement("button");
-    editApproveBtn.type = "button";
-    editApproveBtn.className = "s-edit-approve";
-    editApproveBtn.dataset.id = submission.id;
-    editApproveBtn.textContent = "수정 후 승인";
-    editApproveBtn.addEventListener("click", () =>
-      approve(editApproveBtn.dataset.id, true).catch((error) =>
-        alert(error.message),
-      ),
-    );
-
-    const rejectBtn = document.createElement("button");
-    rejectBtn.type = "button";
-    rejectBtn.className = "s-reject warn";
-    rejectBtn.dataset.id = submission.id;
-    rejectBtn.textContent = "반려";
-    rejectBtn.addEventListener("click", () =>
-      reject(rejectBtn.dataset.id).catch((error) => alert(error.message)),
-    );
-
-    const duplicateBtn = document.createElement("button");
-    duplicateBtn.type = "button";
-    duplicateBtn.className = "s-dup";
-    duplicateBtn.dataset.id = submission.id;
-    duplicateBtn.textContent = "중복 처리";
-    duplicateBtn.addEventListener("click", () =>
-      markDuplicate(duplicateBtn.dataset.id).catch((error) =>
-        alert(error.message),
-      ),
-    );
-
-    actions.append(approveBtn, editApproveBtn, rejectBtn, duplicateBtn);
-    item.append(title, address, desc, reason, status, actions);
-    return item;
-  });
-
-  list.replaceChildren(...items);
-}
-
-async function loadReviewedSubmissions() {
-  const data = await jsonApi(`/submissions?status=${state.reviewedStatus}`);
-  state.reviewedSubmissions = data.items || [];
-  renderReviewedSubmissions();
-}
-
-function renderReviewedSubmissions() {
-  const list = $("reviewed-list");
-  if (!state.reviewedSubmissions.length) {
-    const empty = document.createElement("div");
-    empty.className = "item empty-state";
-    empty.textContent = "해당 상태의 처리 내역이 없습니다.";
-    list.replaceChildren(empty);
-    return;
-  }
-
-  const items = state.reviewedSubmissions.map((submission) => {
-    const item = document.createElement("div");
-    item.className = "item";
-
-    const title = document.createElement("h3");
-    title.append(document.createTextNode(submission.name || ""));
-    const user = document.createElement("small");
-    user.className = "admin-small";
-    user.textContent = `(${submission.username || ""})`;
-    title.append(document.createTextNode(" "), user);
-
-    const address = document.createElement("div");
-    address.className = "mini";
-    address.textContent = submission.address || "";
-
-    const status = document.createElement("div");
-    status.className = "mini";
-    const statusParts = [`처리: ${statusLabel(submission.status)}`];
-    if (submission.reviewed_by_username) {
-      statusParts.push(`담당: ${submission.reviewed_by_username}`);
-    }
-    status.textContent = statusParts.join(" / ");
-
-    item.append(title, address, status);
-
-    if (submission.linked_cafe_id) {
-      const linkedCafe = document.createElement("div");
-      linkedCafe.className = "mini";
-      linkedCafe.textContent = `연결 cafe id: ${submission.linked_cafe_id}`;
-      item.append(linkedCafe);
-    }
-
-    if (submission.reject_reason) {
-      const rejectReason = document.createElement("div");
-      rejectReason.className = "mini";
-      rejectReason.textContent = `반려 사유: ${submission.reject_reason}`;
-      item.append(rejectReason);
-    }
-
-    return item;
-  });
-
-  list.replaceChildren(...items);
-}
-
-function reviewConsoleEmpty(message) {
-  const empty = document.createElement("div");
-  empty.className = "item empty-state";
-  empty.textContent = message;
-  return empty;
-}
-
-function btn(p, t, c, f) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = c;
-  b.textContent = t;
-  b.addEventListener("click", () => {
-    const res = f();
-    if (res && typeof res.catch === "function") {
-      res.catch((e) => alert(e.message));
-    }
-  });
-  p.append(b);
-}
-function addMini(p, t) {
-  const d = document.createElement("div");
-  d.className = "mini";
-  d.textContent = t;
-  p.append(d);
-}
-
-function reviewConsoleSubmissionItem(s) {
-  const item = document.createElement("div");
-  item.className = "item";
-  const h = document.createElement("h3");
-  h.append(document.createTextNode(s.name || ""));
-  const u = document.createElement("small");
-  u.className = "admin-small";
-  u.textContent = ` (${s.username || ""})`;
-  h.append(u);
-  item.append(h);
-  if (s.address) addMini(item, s.address);
-  if (s.desc) addMini(item, s.desc);
-  if (s.reason) addMini(item, `추천 이유: ${s.reason}`);
-  addMini(item, `상태: ${statusLabel(s.status)}`);
-  if (isAdmin()) {
-    const acts = document.createElement("div");
-    acts.className = "btns admin-actions";
-    btn(acts, "승인", "s-approve", () => approve(s.id, false));
-    btn(acts, "수정 후 승인", "s-edit-approve", () => approve(s.id, true));
-    btn(acts, "반려", "s-reject warn", () => reject(s.id));
-    btn(acts, "중복 처리", "s-dup", () => markDuplicate(s.id));
-    item.append(acts);
+function card(title, lines, actions = []) {
+  const item = el("div", "item");
+  item.append(el("h3", "", title || ""));
+  for (const line of lines.filter(Boolean))
+    item.append(el("div", "mini", line));
+  if (actions.length) {
+    const row = el("div", "btns");
+    for (const [label, onClick, className] of actions)
+      row.append(button(label, onClick, className));
+    item.append(row);
   }
   return item;
 }
 
-function reviewConsoleCafeItem(c) {
-  const item = document.createElement("div");
-  item.className = "item";
-  const h = document.createElement("h3");
-  h.textContent = c.name || "";
-  item.append(h);
-  if (c.address) addMini(item, c.address);
-  addMini(item, `상태: ${statusLabel(c.status)}`);
-  if (isAdmin()) {
-    const acts = document.createElement("div");
-    acts.className = "btns admin-actions";
-    btn(acts, "선택", "pick-cafe", () => {
-      clearEditApproveMode(false);
-      fillCafeForm(c);
-      $("save-cafe-btn").textContent = "저장";
-      $("delete-btn").textContent = isAdmin() ? "삭제" : "닫기";
-      openCafeForm();
-    });
-    if (c.status === "candidate") {
-      btn(acts, "승인", "approve-cafe", () => approveCafe(c.id));
-      btn(acts, "보류", "hold-cafe", () => holdCafe(c.id));
-    } else if (c.status === "hidden" && c.hidden_at) {
-      btn(acts, "후보로 복귀", "unhold-cafe", () => unholdCafe(c.id));
-    }
-    if (acts.children.length) item.append(acts);
-  }
-  return item;
+function post(path, body) {
+  return jsonApi(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
-function toggleLegacyReviewPanel() {
-  const panel = $("legacy-review-panel");
-  const button = $("legacy-review-toggle");
-  if (!panel || !button) return;
-  const nextHidden = !panel.classList.contains("hidden");
-  panel.classList.toggle("hidden", nextHidden);
-  button.textContent = nextHidden
-    ? "기존 검수/CSV 패널 보기"
-    : "기존 검수/CSV 패널 숨기기";
+function postText(path, body) {
+  return jsonApi(path, {
+    method: "POST",
+    headers: { "content-type": "text/plain; charset=utf-8" },
+    body,
+  });
 }
 
-function reviewConsoleTabCounts() {
-  const active = state.cafes.filter((cafe) => !cafe.deleted_at);
-  return {
-    submissions: state.submissions.length,
-    candidates: active.filter((cafe) => cafe.status === "candidate").length,
-    hold: active.filter(
-      (cafe) => cafe.status === "hidden" && cafe.hidden_at,
-    ).length,
-    approved: active.filter((cafe) => cafe.status === "approved").length,
-  };
-}
-function renderReviewConsoleTabCounts() {
-  const counts = reviewConsoleTabCounts();
-  document
-    .querySelectorAll("#review-console-tabs [data-count]")
-    .forEach((el) => {
-      const value = counts[el.dataset.count];
-      el.textContent = Number.isFinite(value) ? `(${value})` : "";
-    });
+// ---- 카페 분류: 대기(제보+후보) · 공개 · 숨김(나머지 카페 전부) ----
+
+function cafeState(cafe) {
+  if (cafe.deleted_at) return "deleted";
+  if (cafe.status === "hidden") return cafe.hidden_at ? "hold" : "imported";
+  return cafe.status;
 }
 
-function renderReviewConsole() {
-  const list = $("review-console-list");
-  const note = $("review-console-note");
-  if (!list || !note) return;
-  renderReviewConsoleTabCounts();
-
-  if (state.reviewConsoleTab === "submissions") {
-    note.textContent = "검토 대기 제보를 기존 제보 목록과 함께 확인합니다.";
-    const items = state.submissions.map(reviewConsoleSubmissionItem);
-    list.replaceChildren(
-      ...(items.length
-        ? items
-        : [reviewConsoleEmpty("검토 대기 제보가 없습니다.")]),
-    );
-    return;
-  }
-
-  const targetStatus =
-    state.reviewConsoleTab === "approved"
-      ? "approved"
-      : state.reviewConsoleTab === "hold"
-        ? "hidden"
-        : "candidate";
-  note.textContent =
-    targetStatus === "approved"
-      ? "공개 중인 카페를 기존 카페 관리 데이터에서 확인합니다."
-      : targetStatus === "hidden"
-        ? "보류 중인 후보 카페를 기존 카페 관리 데이터에서 확인합니다."
-        : "공개 전 후보 카페를 기존 카페 관리 데이터에서 확인합니다.";
-  const cafes = state.cafes
-    .filter(
-      (cafe) =>
-        !cafe.deleted_at &&
-        cafe.status === targetStatus &&
-        (targetStatus !== "hidden" || cafe.hidden_at),
-    )
-    .map(reviewConsoleCafeItem);
-  list.replaceChildren(
-    ...(cafes.length ? cafes : [reviewConsoleEmpty("해당 카페가 없습니다.")]),
-  );
+function tabItems(tab) {
+  const cafes = (states) =>
+    state.cafes
+      .filter((cafe) => states.includes(cafeState(cafe)))
+      .map((data) => ({ kind: "cafe", data }));
+  if (tab === "queue")
+    return [
+      ...state.submissions.map((data) => ({ kind: "sub", data })),
+      ...cafes(["candidate"]),
+    ];
+  if (tab === "public") return cafes(["approved"]);
+  return cafes(["hold", "imported", "rejected", "deleted"]);
 }
 
-async function loadErrorReports() {
-  const data = await jsonApi(`/error-reports?status=${state.errorStatus}`);
-  state.errorReports = data.items || [];
-  renderErrorReports();
+function hasCoords(item) {
+  return Boolean(Number(item.lat) && Number(item.lng));
 }
 
-function getReplyInput(id) {
+// 이름은 표기가 갈려 같은 곳을 놓친다 — 주소(공백 제거)로 비교한다.
+function sameAddressCafe(item) {
+  const key = String(item.address || "").replace(/\s+/g, "");
+  if (!key) return null;
   return (
-    [...document.querySelectorAll(".error-reply-input")].find(
-      (input) => input.dataset.id === String(id),
+    state.cafes.find(
+      (cafe) =>
+        cafe.id !== item.id &&
+        !cafe.deleted_at &&
+        String(cafe.address || "").replace(/\s+/g, "") === key,
     ) || null
   );
 }
 
-function renderErrorReports() {
-  const list = $("error-list");
-  if (!state.errorReports.length) {
-    const empty = document.createElement("div");
-    empty.className = "item empty-state";
-    empty.textContent = "해당 상태의 오류 제보가 없습니다.";
-    list.replaceChildren(empty);
-    return;
-  }
+// ---- 목록 ----
 
-  const items = state.errorReports.map((report) => {
-    const item = document.createElement("div");
-    item.className = "item";
-
-    const title = document.createElement("h3");
-    title.append(document.createTextNode(report.title || ""));
-    const user = document.createElement("small");
-    user.className = "admin-small";
-    user.textContent = `(${report.username || ""})`;
-    title.append(document.createTextNode(" "), user);
-
-    const page = document.createElement("div");
-    page.className = "mini";
-    page.textContent = `관련: ${report.page || "-"}`;
-
-    const content = document.createElement("div");
-    content.className = "mini";
-    content.textContent = report.content || "";
-
-    const status = document.createElement("div");
-    status.className = "mini";
-    const statusParts = [`상태: ${errorStatusLabel(report.status)}`];
-    if (report.resolved_by_username) {
-      statusParts.push(`처리: ${report.resolved_by_username}`);
-    }
-    if (report.resolved_at) {
-      statusParts.push(formatDateTime(report.resolved_at));
-    }
-    status.textContent = statusParts.join(" / ");
-
-    const replyBlock = document.createElement("div");
-    replyBlock.className = "reply-block";
-
-    const replyMeta = document.createElement("div");
-    replyMeta.className = "reply-meta";
-    if (report.reply_message) {
-      const replyParts = ["운영진 답변 등록됨"];
-      if (report.replied_by_username)
-        replyParts.push(report.replied_by_username);
-      if (report.replied_at) replyParts.push(formatDateTime(report.replied_at));
-      replyMeta.textContent = replyParts.join(" / ");
-    } else {
-      replyMeta.textContent = "운영진 답변이 아직 없습니다.";
-    }
-
-    const input = document.createElement("textarea");
-    input.className = "error-reply-input";
-    input.dataset.id = report.id;
-    input.placeholder = "이 오류 제보에 대한 답변을 입력해 주세요.";
-    input.value = report.reply_message || "";
-
-    const actions = document.createElement("div");
-    actions.className = "reply-actions";
-
-    const replyBtn = document.createElement("button");
-    replyBtn.type = "button";
-    replyBtn.className = "e-reply primary";
-    replyBtn.dataset.id = report.id;
-    replyBtn.textContent = report.reply_message ? "답변 수정" : "답변 저장";
-    replyBtn.addEventListener("click", () =>
-      saveErrorReply(replyBtn.dataset.id),
-    );
-    actions.append(replyBtn);
-
-    if (report.status === "open") {
-      const resolveBtn = document.createElement("button");
-      resolveBtn.type = "button";
-      resolveBtn.className = "e-resolve";
-      resolveBtn.dataset.id = report.id;
-      resolveBtn.textContent = "처리 완료";
-      resolveBtn.addEventListener("click", () =>
-        resolveErrorReport(resolveBtn.dataset.id),
-      );
-      actions.append(resolveBtn);
-    }
-
-    replyBlock.append(replyMeta, input, actions);
-    item.append(title, page, content, status, replyBlock);
-    return item;
-  });
-
-  list.replaceChildren(...items);
-}
-
-async function saveErrorReply(id) {
-  const input = getReplyInput(id);
-  if (!input) return;
-  const message = input.value.trim();
-  if (!message) {
-    alert("답변 내용을 입력해 주세요.");
-    return;
-  }
-  await jsonApi("/reply-error-report", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id, message }),
-  });
-  await loadErrorReports();
-  alert("답변 저장 완료");
-}
-
-async function resolveErrorReport(id) {
-  if (!confirm("이 오류 제보를 처리 완료로 변경할까요?")) return;
-  await jsonApi("/resolve-error-report", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id }),
-  });
-  await loadErrorReports();
-}
-
-async function approve(id, withEdit) {
-  const submission = state.submissions.find((item) => item.id === id);
-  if (!submission) return;
-  if (withEdit) {
-    fillCafeFormFromSubmission(submission);
-    setEditApproveMode(submission);
-    $("cafe-form-wrap").scrollIntoView({ behavior: "smooth", block: "center" });
-    return;
-  }
-
-  try {
-    await jsonApi("/approve", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ submissionId: id }),
-    });
-  } catch (error) {
-    // New cafes now require coordinates. Rather than fail, drop the admin into
-    // the edit-approve form so they can enter lat/lng before approving.
-    if (error.code === "COORDS_REQUIRED") {
-      alert(
-        "승인하려면 위도/경도가 필요합니다. 좌표를 입력한 뒤 '수정 후 승인 저장'을 눌러 주세요.",
-      );
-      fillCafeFormFromSubmission(submission);
-      setEditApproveMode(submission);
-      $("cafe-form-wrap").scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-      return;
-    }
-    throw error;
-  }
-  await Promise.all([
-    loadSubmissions(),
-    loadCafes(),
-    loadReviewedSubmissions(),
+function submissionCard(sub) {
+  const dup = sameAddressCafe(sub);
+  const lines = [
+    ["제보", sub.username, formatDate(sub.created_at)]
+      .filter(Boolean)
+      .join(" · "),
+    sub.address,
+    sub.desc,
+    sub.reason && `추천 이유: ${sub.reason}`,
+    dup && `같은 주소: ${dup.name} (${STATE_LABEL[cafeState(dup)]})`,
+  ];
+  return card(sub.name, lines, [
+    ["검토", () => openForm("approve", sub), "primary"],
+    ["중복", () => markDuplicate(sub, dup)],
+    ["반려", () => rejectSubmission(sub)],
   ]);
 }
 
-async function approveEditedSubmission() {
-  if (!state.editApproveId) return;
-  const payload = collectCafeForm();
-  payload.submissionId = state.editApproveId;
-  await jsonApi("/approve", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
+function cafeActions(cafe) {
+  const edit = ["수정", () => openForm("edit", cafe)];
+  switch (cafeState(cafe)) {
+    case "candidate":
+      return [
+        edit,
+        [
+          "공개",
+          () => cafeAction("/approve-cafe", cafe, "공개할까요?"),
+          "primary",
+        ],
+        ["보류", () => cafeAction("/hold-cafe", cafe, "보류할까요?")],
+      ];
+    case "hold":
+      return [
+        edit,
+        [
+          "후보로",
+          () => cafeAction("/unhold-cafe", cafe, "후보로 되돌릴까요?"),
+        ],
+      ];
+    case "deleted":
+      return [["복구", () => cafeAction("/restore", cafe, "복구할까요?")]];
+    default:
+      return [edit];
+  }
+}
+
+function cafeCard(cafe) {
+  const dup = sameAddressCafe(cafe);
+  return card(
+    cafe.name,
+    [
+      `${STATE_LABEL[cafeState(cafe)]}${cafe.oakerman_pick ? " · 오커맨픽" : ""}`,
+      cafe.address,
+      !hasCoords(cafe) && "좌표 없음 — 지도에 안 나옴",
+      dup && `같은 주소: ${dup.name} (${STATE_LABEL[cafeState(dup)]})`,
+      cafe.deleted_at && `삭제: ${formatDate(cafe.deleted_at, true)}`,
+    ],
+    cafeActions(cafe),
+  );
+}
+
+function renderCounts() {
+  const counts = {
+    queue: tabItems("queue").length,
+    public: tabItems("public").length,
+    hidden: tabItems("hidden").length,
+    errors: state.errors.length,
+  };
+  document.querySelectorAll("#tabs [data-count]").forEach((node) => {
+    node.textContent = String(counts[node.dataset.count] ?? "");
   });
-  alert("수정 후 승인 완료");
-  closeCafeForm(true);
-  await Promise.all([
-    loadSubmissions(),
-    loadCafes(),
-    loadReviewedSubmissions(),
+}
+
+function renderList() {
+  renderCounts();
+  if (!LIST_TABS.includes(state.tab)) return;
+  const query = $("search").value.trim().toLowerCase();
+  const items = tabItems(state.tab).filter(({ data }) =>
+    `${data.name} ${data.address}`.toLowerCase().includes(query),
+  );
+  $("list").replaceChildren(
+    ...(items.length
+      ? items.map(({ kind, data }) =>
+          kind === "sub" ? submissionCard(data) : cafeCard(data),
+        )
+      : [el("div", "item empty-state", "없습니다.")]),
+  );
+}
+
+async function reload() {
+  const [cafes, pending] = await Promise.all([
+    jsonApi("/cafes?lifecycle=all"),
+    jsonApi("/submissions?status=pending"),
   ]);
+  state.cafes = Array.isArray(cafes) ? cafes : [];
+  state.submissions = pending.items || [];
+  renderList();
 }
 
-async function reject(id) {
-  const reason = prompt("반려 사유를 입력해 주세요. (선택)", "") || "";
-  await jsonApi("/reject", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ submissionId: id, reject_reason: reason }),
+// ---- 처리 ----
+
+async function cafeAction(path, cafe, question) {
+  if (!confirm(`'${cafe.name}' ${question}`)) return;
+  await post(path, { id: cafe.id });
+  await reload();
+}
+
+async function rejectSubmission(sub) {
+  const reason = prompt(`'${sub.name}' 반려 사유 (선택)`, "");
+  if (reason === null) return;
+  await post("/reject", { submissionId: sub.id, reject_reason: reason });
+  await reload();
+}
+
+function findCafe(name) {
+  const query = name.trim().toLowerCase();
+  const matches = state.cafes.filter(
+    (cafe) =>
+      !cafe.deleted_at && String(cafe.name).toLowerCase().includes(query),
+  );
+  return matches.length === 1 ? matches[0] : null;
+}
+
+async function markDuplicate(sub, suggested) {
+  const text = prompt("이미 있는 카페 이름", suggested ? suggested.name : "");
+  if (!text?.trim()) return;
+  const cafe = findCafe(text);
+  if (!cafe) throw new Error("그 이름의 카페가 하나로 좁혀지지 않습니다.");
+  if (
+    !confirm(`'${sub.name}' 제보를 '${cafe.name}' 와 같은 곳으로 처리할까요?`)
+  )
+    return;
+  await post("/approve", {
+    submissionId: sub.id,
+    duplicate: true,
+    linkedCafeId: cafe.id,
   });
-  await Promise.all([loadSubmissions(), loadReviewedSubmissions()]);
+  await reload();
 }
 
-async function markDuplicate(id) {
-  const linkedCafeId =
-    prompt("중복 처리할 기존 cafe id를 입력해 주세요.", "") || "";
-  if (!linkedCafeId.trim()) {
-    alert("기존 cafe id를 입력해야 중복 처리할 수 있습니다.");
+// ---- 카페 양식 (신규 · 수정 · 제보 검토) ----
+
+function fillForm(data) {
+  for (const [key, id] of Object.entries(FORM_FIELDS))
+    $(id).value = data[key] || "";
+  $("cafe-signature").value = (data.signature || []).join(", ");
+  document.querySelectorAll('input[name="cat"]').forEach((box) => {
+    box.checked = (data.category || []).includes(box.value);
+  });
+  $("oakerman-pick").checked = !!data.oakerman_pick;
+  $("geo-msg").textContent = "";
+}
+
+function openForm(mode, data = {}) {
+  state.form = { mode, id: data.id || "" };
+  fillForm(data);
+  $("form-title").textContent = {
+    add: "신규 등록",
+    edit: data.name,
+    approve: "제보 검토",
+  }[mode];
+  $("form-note").textContent =
+    mode === "edit"
+      ? `지금 상태: ${STATE_LABEL[cafeState(data)]}`
+      : "저장하면 후보로 들어갑니다. 공개는 대기 탭에서 따로 누릅니다.";
+  $("form-save").textContent = mode === "approve" ? "후보로 받기" : "저장";
+  $("form-delete").classList.toggle(
+    "hidden",
+    mode !== "edit" || !!data.deleted_at,
+  );
+  $("cafe-dialog").showModal();
+  if (!hasCoords(data) && data.address) guarded(geocode)();
+}
+
+function collectForm() {
+  const value = (id) => $(id).value.trim();
+  const form = {};
+  for (const [key, id] of Object.entries(FORM_FIELDS)) form[key] = value(id);
+  return {
+    ...form,
+    lat: Number(form.lat) || 0,
+    lng: Number(form.lng) || 0,
+    region_distance_m: Number(form.region_distance_m) || 0,
+    signature: value("cafe-signature")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    category: [...document.querySelectorAll('input[name="cat"]:checked')].map(
+      (box) => box.value,
+    ),
+    oakerman_pick: $("oakerman-pick").checked,
+  };
+}
+
+async function saveForm() {
+  if (!$("cafe-form").reportValidity()) return;
+  const payload = collectForm();
+  const { mode, id } = state.form;
+  if (mode === "approve")
+    await post("/approve", { ...payload, submissionId: id });
+  else if (mode === "edit") await post("/edit", { ...payload, id });
+  else await post("/add", payload);
+  $("cafe-dialog").close();
+  await reload();
+}
+
+async function deleteFromForm() {
+  const cafe = state.cafes.find((item) => item.id === state.form.id);
+  if (!cafe) return;
+  $("cafe-dialog").close();
+  await cafeAction("/delete", cafe, "삭제할까요? (숨김 탭에서 복구 가능)");
+}
+
+async function geocode() {
+  const address = $("cafe-address").value.trim().slice(0, 80);
+  if (address.length < 2) return;
+  $("geo-msg").textContent = "좌표 찾는 중...";
+  const res = await api(`/geocode?q=${encodeURIComponent(address)}`);
+  const hit = await res.json().catch(() => ({}));
+  if (!res.ok || !Number.isFinite(hit.lat)) {
+    $("geo-msg").textContent =
+      "주소로 좌표를 못 찾았습니다. 주소를 줄이거나 지도에서 직접 넣어 주세요.";
     return;
   }
-  await jsonApi("/approve", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ submissionId: id, duplicate: true, linkedCafeId }),
-  });
-  await Promise.all([loadSubmissions(), loadReviewedSubmissions()]);
+  $("cafe-lat").value = hit.lat.toFixed(6);
+  $("cafe-lng").value = hit.lng.toFixed(6);
+  $("geo-msg").textContent = `찾은 곳: ${hit.label} — 구·동이 맞는지 확인`;
+}
+
+// ---- 오류 제보 ----
+
+function errorCard(report) {
+  const item = card(report.title, [
+    `${report.username || "-"} · ${report.page || "-"} · ${formatDate(report.created_at, true)}`,
+    report.content,
+  ]);
+  const input = el("textarea");
+  input.placeholder = "답변 (제보한 사람 마이페이지에 보임)";
+  input.value = report.reply_message || "";
+  const row = el("div", "btns");
+  row.append(
+    button(
+      report.reply_message ? "답변 고치기" : "답변 저장",
+      () => replyError(report, input.value),
+      "primary",
+    ),
+  );
+  row.append(button("처리 완료", () => resolveError(report)));
+  item.append(input, row);
+  return item;
+}
+
+async function loadErrors() {
+  const data = await jsonApi("/error-reports?status=open");
+  state.errors = data.items || [];
+  $("error-list").replaceChildren(
+    ...(state.errors.length
+      ? state.errors.map(errorCard)
+      : [el("div", "item empty-state", "없습니다.")]),
+  );
+  renderCounts();
+}
+
+async function replyError(report, message) {
+  if (!message.trim()) throw new Error("답변을 적어 주세요.");
+  await post("/reply-error-report", { id: report.id, message: message.trim() });
+  await loadErrors();
+}
+
+async function resolveError(report) {
+  if (!confirm(`'${report.title}' 처리 완료로 바꿀까요?`)) return;
+  await post("/resolve-error-report", { id: report.id });
+  await loadErrors();
+}
+
+// ---- 운영: 방문자 · 공지 · CSV ----
+
+function visitTile(label, value, sub) {
+  const box = el("div", "visit-tile");
+  box.append(el("span", "label", label), el("span", "value", value));
+  if (sub) box.append(el("span", "sub", sub));
+  return box;
+}
+
+function visitRow(day, peak) {
+  const row = el("tr");
+  const bar = el("div", "visit-bar");
+  const fill = el("span");
+  fill.style.width = `${peak > 0 ? Math.round((day.uniques / peak) * 100) : 0}%`;
+  bar.append(fill);
+  const barCell = el("td", "bar-cell");
+  barCell.append(bar);
+  row.append(
+    el("td", "day", day.day),
+    barCell,
+    el("td", "num", `${day.uniques}명`),
+    el("td", "hits", `${day.hits}회`),
+  );
+  return row;
+}
+
+async function loadVisits() {
+  const stats = await jsonApi("/stats/visits");
+  const summary = $("visit-summary");
+  summary.className = "visit-tiles";
+  summary.replaceChildren(
+    visitTile("오늘", `${stats.today.uniques}명`, `조회 ${stats.today.hits}회`),
+    visitTile("최근 7일", `${stats.last7.uniques}명`),
+    visitTile("최근 30일", `${stats.last30.uniques}명`),
+  );
+  const days = (stats.days || []).slice(0, 14);
+  const peak = Math.max(0, ...days.map((day) => Number(day.uniques) || 0));
+  const table = el("table", "visit-table");
+  const body = el("tbody");
+  body.append(...days.map((day) => visitRow(day, peak)));
+  table.append(body);
+  $("visit-days").replaceChildren(
+    days.length ? table : el("div", "visit-empty", "기록된 방문이 없습니다."),
+  );
+}
+
+async function loadNotice() {
+  const res = await api("/notice");
+  if (res.ok) $("notice-input").value = await res.text();
 }
 
 async function saveNotice() {
-  const res = await api("/notice", {
-    method: "POST",
-    headers: { "content-type": "text/plain; charset=utf-8" },
-    body: $("notice-input").value.trim(),
-  });
-  const data = await res.json().catch(() => ({}));
-  storeCsrfFromPayload(data);
-  if (!res.ok || !data.ok)
-    throw new Error(data.error || "공지 저장에 실패했습니다.");
+  await postText("/notice", $("notice-input").value.trim());
   alert("공지 저장 완료");
 }
 
-async function addCafe() {
-  await jsonApi("/add", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(collectCafeForm()),
-  });
-  await loadCafes();
-  closeCafeForm(true);
-  alert("카페 등록 완료");
+function csvMsg(text) {
+  $("csv-msg").textContent = text;
 }
 
-async function editCafe() {
-  const id = $("cafe-id").value.trim();
-  if (!id) {
-    alert("먼저 수정할 카페를 선택해 주세요.");
-    return;
-  }
-  const payload = collectCafeForm();
-  payload.id = id;
-  await jsonApi("/edit", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  await loadCafes();
-  closeCafeForm(true);
-  alert("수정 완료");
-}
-
-async function saveCafe() {
-  if (state.editApproveId) {
-    await approveEditedSubmission();
-    return;
-  }
-  if ($("cafe-id").value.trim()) {
-    await editCafe();
-  } else {
-    await addCafe();
-  }
-}
-
-async function deleteCafe() {
-  if (state.editApproveId) {
-    closeCafeForm(true);
-    return;
-  }
-  const id = $("cafe-id").value.trim();
-  if (!id) {
-    closeCafeForm(true);
-    return;
-  }
-  if (!isAdmin()) {
-    closeCafeForm(true);
-    return;
-  }
-  if (!confirm("정말 삭제할까요?")) return;
-  await jsonApi("/delete", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id }),
-  });
-  await loadCafes();
-  closeCafeForm(true);
-}
-
-async function restoreCafe(id) {
-  if (!id) return;
-  if (!confirm("이 카페를 복구할까요?")) return;
-  await jsonApi("/restore", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id }),
-  });
-  await loadCafes();
-  closeCafeForm(true);
-}
-
-async function approveCafe(id) {
-  if (!id) return;
-  if (!confirm("이 카페를 공개할까요?")) return;
-  await jsonApi("/approve-cafe", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id }),
-  });
-  await loadCafes();
-  closeCafeForm(true);
-}
-
-async function holdCafe(id) {
-  if (!id) return;
-  if (!confirm("이 후보 카페를 보류할까요?")) return;
-  await jsonApi("/hold-cafe", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id }),
-  });
-  await loadCafes();
-  closeCafeForm(true);
-}
-
-async function unholdCafe(id) {
-  if (!id) return;
-  if (!confirm("이 보류 카페를 후보로 되돌릴까요?")) return;
-  await jsonApi("/unhold-cafe", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id }),
-  });
-  await loadCafes();
-  closeCafeForm(true);
-}
-
-function updateCsvFileName() {
+function csvFile() {
   const file = $("csv-file").files[0];
-  $("csv-file-name").textContent = file ? file.name : "선택된 파일 없음";
+  if (!file) throw new Error("CSV 파일을 먼저 고르세요.");
+  return file;
 }
 
-async function uploadCsv() {
-  try {
-    const file = $("csv-file").files[0];
-    if (!file) {
-      alert("CSV 파일을 선택해 주세요.");
-      return;
-    }
-    $("csv-msg").textContent = "CSV 업로드 중...";
-
-    const text = await file.text();
-    const res = await api("/import-csv", {
-      method: "POST",
-      headers: { "content-type": "text/plain; charset=utf-8" },
-      body: text,
-    });
-    const payload = await res.json().catch(() => ({}));
-    storeCsrfFromPayload(payload);
-    if (!res.ok || !payload.ok)
-      throw new Error(payload.error || "CSV 업로드에 실패했습니다.");
-
-    const added = Number(payload.added || 0);
-    const updated = Number(payload.updated || 0);
-    const duplicated = Number(payload.duplicated || 0);
-    const failed = Number(payload.failed || 0);
-    const uploaded = added + updated;
-    const duplicateIds = (payload.duplicateRows || [])
-      .slice(0, 5)
-      .map((row) => `${row.id} 중복`)
-      .join(", ");
-
-    const duplicateText = duplicated
-      ? ` / 중복 ${duplicated}${duplicateIds ? ` (${duplicateIds}${duplicated > 5 ? " 외" : ""})` : ""}`
-      : "";
-
-    const message = `CSV 업로드 완료: 카페 ${uploaded}개 반영 (신규 ${added} / 수정 ${updated}${duplicateText} / 실패 ${failed})`;
-
-    $("csv-file").value = "";
-    updateCsvFileName();
-    $("csv-msg").textContent = message;
-    await loadCafes();
-    $("csv-msg").textContent = message;
-  } catch (error) {
-    $("csv-msg").textContent = `CSV 업로드 실패: ${error.message}`;
-    alert(error.message);
-  }
+function clearCsvFile() {
+  $("csv-file").value = "";
+  $("csv-file-name").textContent = "CSV 파일 고르기";
 }
 
-async function dryRunCsv() {
-  try {
-    const file = $("csv-file").files[0];
-    if (!file) {
-      alert("CSV 파일을 선택해 주세요.");
-      return;
-    }
-    $("csv-msg").textContent = "CSV 검증 중...";
-
-    const text = await file.text();
-    const res = await api("/import-csv?dryRun=1", {
-      method: "POST",
-      headers: { "content-type": "text/plain; charset=utf-8" },
-      body: text,
-    });
-    const payload = await res.json().catch(() => ({}));
-    storeCsrfFromPayload(payload);
-    if (!res.ok || !payload.ok)
-      throw new Error(payload.error || "CSV 검증에 실패했습니다.");
-
-    const message =
-      `CSV 검증 완료: 신규 ${payload.wouldAdd || 0} / 수정 ${payload.wouldUpdate || 0}` +
-      ` / 중복 ${payload.wouldDuplicate || 0} / 실패 ${payload.failed || 0}`;
-    $("csv-msg").textContent = message;
-  } catch (error) {
-    $("csv-msg").textContent = `CSV 검증 실패: ${error.message}`;
-    alert(error.message);
-  }
-}
-
-async function setRole() {
-  const username = $("role-username").value.trim().toLowerCase();
-  const role = $("role-value").value;
-  await jsonApi("/set-role", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ username, role }),
-  });
-  alert("권한 반영 완료");
-  await loadUsers();
-}
-
-async function loadUsers() {
-  const query = encodeURIComponent($("user-search").value.trim().toLowerCase());
-  const data = await jsonApi(`/users?q=${query}`);
-  state.users = data.items || [];
-  renderUsers();
-}
-
-function renderUsers() {
-  const list = $("user-list");
-  $("user-count").textContent = `검색 결과 ${state.users.length}명`;
-  if (!state.users.length) {
-    const empty = document.createElement("div");
-    empty.className = "item empty-state";
-    empty.textContent = "해당 아이디의 회원이 없습니다.";
-    list.replaceChildren(empty);
+async function importCsv(dryRun) {
+  const body = await csvFile().text();
+  csvMsg(dryRun ? "검증 중..." : "올리는 중...");
+  const r = await postText(`/import-csv${dryRun ? "?dryRun=1" : ""}`, body);
+  if (dryRun) {
+    csvMsg(
+      `검증: 신규 ${r.wouldAdd || 0} · 수정 ${r.wouldUpdate || 0} · 중복 ${r.wouldDuplicate || 0} · 실패 ${r.failed || 0}`,
+    );
     return;
   }
+  csvMsg(
+    `올림: 신규 ${r.added || 0} · 수정 ${r.updated || 0} · 중복 ${r.duplicated || 0} · 실패 ${r.failed || 0}`,
+  );
+  clearCsvFile();
+  await reload();
+}
 
-  const items = state.users.map((user) => {
-    const item = document.createElement("div");
-    item.className = "item";
+async function loadOps() {
+  if (state.opsLoaded) return;
+  state.opsLoaded = true;
+  await Promise.all([loadVisits(), loadNotice()]);
+}
 
-    const title = document.createElement("h3");
-    title.append(document.createTextNode(user.username || ""));
-    title.append(document.createTextNode(" "));
-    const role = document.createElement("small");
-    role.className = "admin-small";
-    role.textContent = `(${roleLabel(user.role)})`;
-    title.append(role);
-    item.append(title);
+// ---- 시작 ----
 
-    const createdAt = document.createElement("div");
-    createdAt.className = "mini";
-    createdAt.textContent = `가입일: ${user.created_at || "-"}`;
-    item.append(createdAt);
-
-    if (user.role === "admin") {
-      const notice = document.createElement("div");
-      notice.className = "mini";
-      notice.textContent = "admin 계정은 권한 변경 대상에서 제외됩니다.";
-      item.append(notice);
-    } else {
-      const actions = document.createElement("div");
-      actions.className = "btns admin-actions";
-
-      const pick = document.createElement("button");
-      pick.type = "button";
-      pick.className = "user-pick";
-      pick.dataset.username = user.username || "";
-      pick.dataset.role = user.role || "";
-      pick.textContent = "권한 관리에 입력";
-      pick.addEventListener("click", () => {
-        $("role-username").value = pick.dataset.username || "";
-        $("role-value").value =
-          pick.dataset.role === "manager" ? "manager" : "user";
-        $("role-username").scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      });
-      actions.append(pick);
-      item.append(actions);
-    }
-
-    return item;
+function showTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll("#tabs button").forEach((node) => {
+    node.classList.toggle("active", node.dataset.tab === tab);
   });
+  $("pane-list").classList.toggle("hidden", !LIST_TABS.includes(tab));
+  $("pane-errors").classList.toggle("hidden", tab !== "errors");
+  $("pane-ops").classList.toggle("hidden", tab !== "ops");
+  if (tab === "ops") guarded(loadOps)();
+  renderList();
+}
 
-  list.replaceChildren(...items);
+function bind(id, onClick) {
+  $(id).addEventListener("click", guarded(onClick));
+}
+
+function bindEvents() {
+  document.querySelectorAll("#tabs button").forEach((node) => {
+    node.addEventListener("click", () => showTab(node.dataset.tab));
+  });
+  $("search").addEventListener("input", renderList);
+  bind("new-cafe-btn", () => openForm("add"));
+  bind("form-save", saveForm);
+  bind("form-delete", deleteFromForm);
+  bind("geocode-btn", geocode);
+  bind("logout-btn", async () => {
+    await api("/logout", { method: "POST" }).catch(() => {});
+    clearAuthToken();
+    location.href = "index.html";
+  });
+  bind("notice-save", saveNotice);
+  bind("csv-dry-run", () => importCsv(true));
+  bind("csv-upload", () => importCsv(false));
+  $("csv-file").addEventListener("change", () => {
+    $("csv-file-name").textContent =
+      $("csv-file").files[0]?.name || "CSV 파일 고르기";
+  });
 }
 
 async function init() {
@@ -1253,117 +552,14 @@ async function init() {
     location.href = "login.html";
     return;
   }
-
-  state.me = me.user;
-  if (!["manager", "admin"].includes(state.me.role)) {
+  if (me.user.role !== "admin") {
     alert("관리자 권한이 없습니다.");
     location.href = "index.html";
     return;
   }
-
-  $("hello").textContent = `${state.me.username} (${roleLabel(state.me.role)})`;
-
-  const admin = isAdmin();
-  $("visit-sec").classList.toggle("hidden", !admin);
-  if (admin) loadVisitStats().catch(() => {});
-  $("notice-sec").classList.toggle("hidden", !admin);
-  $("user-sec").classList.toggle("hidden", !admin);
-  $("role-sec").classList.toggle("hidden", !admin);
-  $("csv-dry-run").classList.toggle("hidden", !admin);
-  $("csv-upload").classList.toggle("hidden", !admin);
-  $("csv-file").disabled = !admin;
-  $("oakerman-pick").disabled = !admin;
-  $("reviewed-note").textContent = admin
-    ? "전체 매니저/관리자 처리 내역"
-    : "내가 처리한 승인/반려 내역";
-
-  const errorTabs = [...document.querySelectorAll("#error-tabs button")];
-  errorTabs.forEach((btn) =>
-    btn.addEventListener("click", async () => {
-      errorTabs.forEach((item) => item.classList.remove("active"));
-      btn.classList.add("active");
-      state.errorStatus = btn.dataset.status;
-      await loadErrorReports();
-    }),
-  );
-
-  const reviewedTabs = [...document.querySelectorAll("#reviewed-tabs button")];
-  reviewedTabs.forEach((btn) =>
-    btn.addEventListener("click", async () => {
-      reviewedTabs.forEach((item) => item.classList.remove("active"));
-      btn.classList.add("active");
-      state.reviewedStatus = btn.dataset.status;
-      await loadReviewedSubmissions();
-    }),
-  );
-
-  const reviewConsoleTabs = [
-    ...document.querySelectorAll("#review-console-tabs button"),
-  ];
-  reviewConsoleTabs.forEach((btn) =>
-    btn.addEventListener("click", () => {
-      reviewConsoleTabs.forEach((item) => item.classList.remove("active"));
-      btn.classList.add("active");
-      state.reviewConsoleTab = btn.dataset.tab;
-      renderReviewConsole();
-    }),
-  );
-
-  $("logout-btn").addEventListener("click", async () => {
-    await api("/logout", { method: "POST" }).catch(() => {});
-    clearAuthToken();
-    location.href = "index.html";
-  });
-  $("notice-save").addEventListener("click", () =>
-    saveNotice().catch((error) => alert(error.message)),
-  );
-  $("cafe-lifecycle").addEventListener("change", async () => {
-    state.cafeLifecycle = $("cafe-lifecycle").value;
-    await loadCafes();
-  });
-  $("cafe-search").addEventListener("input", renderCafeList);
-  $("legacy-review-toggle").addEventListener("click", toggleLegacyReviewPanel);
-  $("new-cafe-btn").addEventListener("click", prepareNewCafe);
-  $("save-cafe-btn").addEventListener("click", () =>
-    saveCafe().catch((error) => alert(error.message)),
-  );
-  $("delete-btn").addEventListener("click", () =>
-    deleteCafe().catch((error) => alert(error.message)),
-  );
-  $("csv-file").addEventListener("change", updateCsvFileName);
-  $("csv-dry-run").addEventListener("click", dryRunCsv);
-  $("csv-upload").addEventListener("click", uploadCsv);
-  $("role-set").addEventListener("click", () =>
-    setRole().catch((error) => alert(error.message)),
-  );
-  $("user-search").addEventListener("input", () => {
-    clearTimeout(state.userSearchTimer);
-    state.userSearchTimer = setTimeout(
-      () =>
-        loadUsers().catch((error) => {
-          $("user-count").textContent = error.message;
-        }),
-      180,
-    );
-  });
-
-  $("user-toggle").addEventListener("click", () => {
-    const expanded = !$("user-body").classList.toggle("hidden");
-    $("user-toggle").textContent = expanded
-      ? "회원 목록 접기"
-      : "회원 목록 펼치기";
-    $("user-toggle").setAttribute("aria-expanded", expanded.toString());
-  });
-
-  const tasks = [
-    loadCafes(),
-    loadSubmissions(),
-    loadErrorReports(),
-    loadReviewedSubmissions(),
-  ];
-  if (admin) tasks.push(loadUsers());
-  updateCsvFileName();
-  await Promise.all(tasks);
+  $("hello").textContent = `${me.user.username} (${roleLabel(me.user.role)})`;
+  bindEvents();
+  await Promise.all([reload(), loadErrors()]);
 }
 
 init().catch((error) => {

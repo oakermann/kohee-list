@@ -109,7 +109,7 @@ happens in the admin console, not in exported CSV files.
 
 Current product candidates:
 
-1. KOHEE admin review console Phase 4 (Phase 2/3 landed; Phase 5 blocked by `#legacy-review-panel` element dependencies in `admin.html`).
+1. KOHEE admin console follow-up: Kakao place search for coordinates (tabbed console rewritten 2026-10-21).
 2. Safer smoke-check split into --public, --admin, and --worker target groups (with --pages compatibility).
 3. Legacy manager compatibility cleanup planning.
 

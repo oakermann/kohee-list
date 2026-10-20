@@ -14,10 +14,7 @@ import {
   unholdCafe,
   toCafeResponse,
 } from "../server/cafes.js";
-import {
-  importCsv,
-  parseCsvLine,
-} from "../server/csv.js";
+import { importCsv, parseCsvLine } from "../server/csv.js";
 import { getFavorites, toggleFavorite } from "../server/favorites.js";
 import { approveSubmission } from "../server/submissions.js";
 import {
@@ -1078,13 +1075,6 @@ assert.equal(
   false,
 );
 
-function textOfAdminNode(node) {
-  if (!node) return "";
-  return `${node.textContent || ""}${(node.children || [])
-    .map(textOfAdminNode)
-    .join("")}`;
-}
-
 class AdminClassList {
   constructor() {
     this.values = new Set();
@@ -1140,11 +1130,6 @@ const adminSource = await fs.readFile("site/assets/admin.js", "utf8");
 const adminBody = adminSource
   .replace(/import[\s\S]*?from "\.\/common\.js\?v=[^"]+";\s*/, "")
   .replace(/init\(\)\.catch[\s\S]*$/, "");
-const adminElements = new Map([
-  ["csv-msg", new AdminNode()],
-  ["review-console-list", new AdminNode()],
-  ["review-console-note", new AdminNode()],
-]);
 const adminContext = {
   console,
   document: {
@@ -1156,51 +1141,61 @@ const adminContext = {
     },
     querySelectorAll: () => [],
   },
-  $: (id) => adminElements.get(id),
-  statusLabel: (status) => status,
+  $: () => new AdminNode(),
   formatDate: (value) => String(value || ""),
-  errorStatusLabel: (status) => status,
   roleLabel: (role) => role,
   api: async () => ({ ok: false, text: async () => "" }),
   jsonApi: async () => ({}),
   clearAuthToken() {},
-  storeCsrfFromPayload() {},
   alert() {},
   confirm: () => true,
   prompt: () => "",
-  setTimeout: (handler) => handler(),
-  clearTimeout() {},
   location: { href: "" },
 };
 vm.createContext(adminContext);
 vm.runInContext(
-  `${adminBody}\nthis.__adminTest = { state, renderReviewConsole };`,
+  `${adminBody}\nthis.__adminTest = { state, tabItems, cafeState };`,
   adminContext,
 );
-adminContext.__adminTest.state.me = { role: "admin" };
-adminContext.__adminTest.state.reviewConsoleTab = "hold";
-adminContext.__adminTest.state.cafes = [
+const adminTest = adminContext.__adminTest;
+adminTest.state.submissions = [
+  { id: "submission-1", name: "Submitted Cafe", status: "pending" },
+];
+adminTest.state.cafes = [
+  { id: "candidate-1", status: "candidate", deleted_at: null },
+  { id: "approved-1", status: "approved", deleted_at: null },
   {
-    id: "imported-hidden",
-    name: "Imported Hidden",
-    address: "Seoul",
+    id: "hold-1",
     status: "hidden",
-    hidden_at: null,
+    hidden_at: "2026-05-06T01:00:00.000Z",
     deleted_at: null,
   },
+  { id: "imported-1", status: "hidden", hidden_at: null, deleted_at: null },
+  { id: "rejected-1", status: "rejected", deleted_at: null },
   {
-    id: "candidate-hold",
-    name: "Candidate Hold",
-    address: "Seoul",
-    status: "hidden",
-    hidden_at: "2026-05-05T00:00:00.000Z",
-    deleted_at: null,
+    id: "deleted-approved",
+    status: "approved",
+    deleted_at: "2026-05-06T02:00:00.000Z",
   },
 ];
-adminContext.__adminTest.renderReviewConsole();
-const holdListText = textOfAdminNode(adminElements.get("review-console-list"));
-assert.match(holdListText, /Candidate Hold/);
-assert.doesNotMatch(holdListText, /Imported Hidden/);
+const adminTabIds = (tab) =>
+  Array.from(adminTest.tabItems(tab), (item) => item.data.id);
+assert.deepEqual(adminTabIds("queue"), ["submission-1", "candidate-1"]);
+// Public tab mirrors /data: approved and not deleted, nothing else.
+assert.deepEqual(adminTabIds("public"), ["approved-1"]);
+assert.deepEqual(adminTabIds("hidden"), [
+  "hold-1",
+  "imported-1",
+  "rejected-1",
+  "deleted-approved",
+]);
+// Hold (hidden + hidden_at) and legacy imported hidden stay distinguishable.
+assert.deepEqual(
+  Array.from(adminTest.tabItems("hidden"), (item) =>
+    adminTest.cafeState(item.data),
+  ),
+  ["hold", "imported", "rejected", "deleted"],
+);
 
 function createApproveSubmissionTestEnv(role = "manager") {
   const statements = [];

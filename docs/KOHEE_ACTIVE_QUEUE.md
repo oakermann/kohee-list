@@ -12,18 +12,22 @@ issue-close features here.
 
 ## Product Candidates
 
-### 1. Admin review console Phase 4 (Phase 2/3 Landed, Phase 5 Blocked)
+### 1. Admin console — rewritten 2026-10-21
 
 Risk: MEDIUM
 
-Scope:
+Done: `site/admin.html`/`admin.js`/`admin.css` rewritten as one tabbed console
+(대기 = pending submissions + candidates · 공개 · 숨김 = hold/imported
+hidden/rejected/deleted · 오류 = open reports · 운영 = visits, notice, CSV
+import). `#legacy-review-panel` is gone; CSV import/dry run moved to 운영 with
+the same endpoint. One dialog handles add/edit/submission review and fills
+lat/lng from the existing `/geocode` (Nominatim) with the matched label shown.
+Removed: role panel (server only accepts `user`, so it did nothing), read-only
+user list, reviewed-submission history, resolved error reports. No API/D1/CSV
+behavior changed.
 
-- Phase 2 (tab state & data routing) has landed in `assets/admin.js`. Phase 3 review CSV exports and CSV reset were removed on 2026-10-20.
-- Phase 4 (row detail expansion / drawer) is the next open step.
-- Phase 5 (remove `#legacy-review-panel`): the panel still owns CSV import (file input, dry run, upload) and the cafe list, so move those into the console first.
-- Improve review-console UX.
-- Do not change API behavior unless separately approved.
-- Do not change D1/schema/auth/CSV/public `/data` behavior.
+Next (needs owner approval): Kakao place search for coordinates (owner REST key,
+server change).
 
 ### 3. Smoke-check safety split
 
