@@ -28,19 +28,37 @@ import { recordVisit, getVisitStats } from "../server/stats.js";
   assert.ok(insert, "visit upsert missing");
   assert.match(insert.sql, /ON CONFLICT\(day, ip_hash\)/i);
   const flat = JSON.stringify(statements);
-  assert.equal(flat.includes("203.0.113.77"), false, "raw ip must never reach the DB");
-  assert.match(insert.bindings[1], /^[0-9a-f]{64}$/, "ip_hash must be a sha256 hex");
-  assert.ok(statements.some((s) => /DELETE FROM visit_stats WHERE day </i.test(s.sql)),
-    "retention purge missing");
+  assert.equal(
+    flat.includes("203.0.113.77"),
+    false,
+    "raw ip must never reach the DB",
+  );
+  assert.match(
+    insert.bindings[1],
+    /^[0-9a-f]{64}$/,
+    "ip_hash must be a sha256 hex",
+  );
+  // 공개 읽기 경로에는 쓰기를 하나만 둔다 — 보관 기한 정리는 관리자 통계 조회 때.
+  assert.equal(statements.length, 1);
 }
 
 // getVisitStats: 30일 집계 형태 + 합계 계산.
 {
-  const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const today = new Date(Date.now() + 9 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  const statements = [];
   const env = {
     DB: {
-      prepare() {
+      prepare(sql) {
+        const st = { sql, bindings: [] };
+        statements.push(st);
         return {
+          bind(...values) {
+            st.bindings = values;
+            return this;
+          },
+          run: async () => ({ success: true }),
           all: async () => ({
             results: [
               { day: today, uniques: 3, hits: 9 },
@@ -51,11 +69,20 @@ import { recordVisit, getVisitStats } from "../server/stats.js";
       },
     },
   };
-  const res = await getVisitStats(new Request("https://kohee.test/stats/visits"), env);
+  const res = await getVisitStats(
+    new Request("https://kohee.test/stats/visits"),
+    env,
+  );
   const body = await res.json();
   assert.equal(body.today.uniques, 3);
-  assert.equal(body.last7.uniques, 3);      // 2000년 행은 7일 합계에서 제외
+  assert.equal(body.last7.uniques, 3); // 2000년 행은 7일 합계에서 제외
   assert.equal(body.days.length, 2);
+  // 보관 기한 정리와 30일 창 모두 KST 날짜 문자열로 자른다(UTC date('now') 를 쓰지 않는다).
+  const purge = statements.find((s) =>
+    /DELETE FROM visit_stats WHERE day < \?/i.test(s.sql),
+  );
+  assert.match(purge.bindings[0], /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(statements.every((s) => !/date\('now'/i.test(s.sql)));
 }
 
 console.log("[visit-stats] ok");

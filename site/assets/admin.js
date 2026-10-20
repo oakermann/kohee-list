@@ -443,8 +443,8 @@ async function loadVisits() {
   summary.className = "visit-tiles";
   summary.replaceChildren(
     visitTile("오늘", `${stats.today.uniques}명`, `조회 ${stats.today.hits}회`),
-    visitTile("최근 7일", `${stats.last7.uniques}명`),
-    visitTile("최근 30일", `${stats.last30.uniques}명`),
+    visitTile("7일", `${stats.last7.uniques}`, "날마다 센 사람 합"),
+    visitTile("30일", `${stats.last30.uniques}`, "날마다 센 사람 합"),
   );
   const days = (stats.days || []).slice(0, 14);
   const peak = Math.max(0, ...days.map((day) => Number(day.uniques) || 0));

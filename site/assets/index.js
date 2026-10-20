@@ -22,8 +22,12 @@ let favoriteIds = new Set();
 let openModalCafeId = "";
 
 const FAVORITE_SYNC_KEY = "kohee-favorites-sync";
-const GEO_HIGH_ACCURACY_TIMEOUT_MS = 15000;
-const GEO_FALLBACK_TIMEOUT_MS = 4000;
+// 한 번만 묻는다: 정밀 GPS 는 실내·PC 에서 오래 걸리고, 1분 안 위치는 다시 쓴다.
+const GEO_OPTIONS = {
+  enableHighAccuracy: false,
+  maximumAge: 60000,
+  timeout: 8000,
+};
 const GEO_APPROX_THRESHOLD_M = 1200;
 const GEO_UNRELIABLE_ACCURACY_M = 5000;
 // Sentinel distance for cafes without usable coordinates (kept out of results).
@@ -322,7 +326,7 @@ function renderModalDescription(desc, signature) {
 
 async function loadData() {
   try {
-    const response = await api(`/data?${Date.now()}`);
+    const response = await api("/data");
     if (!response.ok) throw new Error();
     const rows = await response.json();
     data = Array.isArray(rows)
@@ -377,7 +381,9 @@ function render() {
     );
 
     if (selectedCategory) {
-      located = located.filter((cafe) => cafeCategories(cafe).includes(selectedCategory));
+      located = located.filter((cafe) =>
+        cafeCategories(cafe).includes(selectedCategory),
+      );
     }
 
     // No cafe has usable coordinates -> the cause is missing cafe data, not GPS.
@@ -529,7 +535,7 @@ function setDistanceNote(modeData) {
     note.append(
       modeData.accuracy > GEO_APPROX_THRESHOLD_M
         ? "브라우저 위치 정확도가 낮아 거리가 대략적으로 보일 수 있습니다."
-        : "현재 위치 기준 거리 표시 중"
+        : "현재 위치 기준 거리 표시 중",
     );
   }
 
@@ -555,34 +561,16 @@ function clearDistances() {
   setDistanceNote(null);
 }
 
-function requestGeoPosition(options) {
+function requestUserPosition() {
   return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    navigator.geolocation.getCurrentPosition(resolve, reject, GEO_OPTIONS);
   });
 }
 
-async function requestUserPosition() {
-  let lastError = null;
-
-  try {
-    return await requestGeoPosition({
-      enableHighAccuracy: true,
-      timeout: GEO_HIGH_ACCURACY_TIMEOUT_MS,
-      maximumAge: 0,
-    });
-  } catch (error) {
-    lastError = error;
-  }
-
-  try {
-    return await requestGeoPosition({
-      enableHighAccuracy: false,
-      timeout: GEO_FALLBACK_TIMEOUT_MS,
-      maximumAge: 0,
-    });
-  } catch (error) {
-    throw error || lastError || new Error("위치 정보를 가져오지 못했습니다.");
-  }
+function geoErrorMessage(error) {
+  if (error?.code === 1) return "위치 권한이 꺼져 있습니다.";
+  if (error?.code === 3) return "위치를 찾는 데 너무 오래 걸립니다.";
+  return error?.message || "위치를 가져오지 못했습니다.";
 }
 
 function applyUserPosition(pos) {
@@ -595,9 +583,12 @@ function applyUserPosition(pos) {
 
   lastPositionAccuracyM = Number(pos?.coords?.accuracy || 0) || null;
 
-  if (lastPositionAccuracyM && lastPositionAccuracyM > GEO_UNRELIABLE_ACCURACY_M) {
+  if (
+    lastPositionAccuracyM &&
+    lastPositionAccuracyM > GEO_UNRELIABLE_ACCURACY_M
+  ) {
     const km = Math.round(lastPositionAccuracyM / 1000);
-    throw new Error(`브라우저가 대략적인 위치(오차 반경 ±${km}km)만 제공했습니다.\nWindows 설정에서 OS 위치 서비스를 켜시거나, 카페명 또는 주소로 검색해 주세요.`);
+    throw new Error(`기기가 대략적인 위치(오차 ±${km}km)만 줬습니다.`);
   }
 
   setDistanceNote({ type: "gps", accuracy: lastPositionAccuracyM });
@@ -615,7 +606,12 @@ function applyHomePosition(home) {
 
   data.forEach((cafe) => {
     cafe.dis = isValidCafeCoord(cafe)
-      ? getDist(Number(home.lat), Number(home.lng), Number(cafe.lat), Number(cafe.lng))
+      ? getDist(
+          Number(home.lat),
+          Number(home.lng),
+          Number(cafe.lat),
+          Number(cafe.lng),
+        )
       : GEO_DISTANCE_LIMIT_KM;
   });
 }
@@ -651,30 +647,22 @@ async function promptAndSaveNeighborhood() {
   try {
     setNearbyLoading(true);
     const res = await api("/geocode?q=" + encodeURIComponent(label));
-    if (!res.ok) throw new Error();
-    const payload = await res.json();
-
-    let lat = payload.lat;
-    let lng = payload.lng;
-    if (lat === undefined && payload.items && payload.items[0]) {
-      lat = payload.items[0].lat;
-      lng = payload.items[0].lng;
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !isValidUserCoord(payload.lat, payload.lng)) {
+      alert(
+        "동네를 찾을 수 없습니다. 구 이름을 붙여 보세요 (예: 강남구 역삼동).",
+      );
+      return;
     }
+    // 같은 이름 동네가 여럿이다 — 실제로 잡힌 곳을 보여 주고 확인받는다.
+    if (!confirm(`이곳이 맞나요?\n${payload.label}`)) return;
 
-    if (lat === undefined || lng === undefined) throw new Error();
-
-    const homeData = {
-      lat: Number(lat),
-      lng: Number(lng),
-      label: label,
-    };
-
+    const homeData = { lat: payload.lat, lng: payload.lng, label };
     setStorageValue("kohee-home", JSON.stringify(homeData));
-
     applyHomePosition(homeData);
     activateNearbyMode();
-  } catch (e) {
-    alert("동네를 찾을 수 없습니다.");
+  } catch (error) {
+    alert(`동네를 찾지 못했습니다: ${error.message}`);
   } finally {
     setNearbyLoading(false);
   }
@@ -702,47 +690,46 @@ function exitNearbyMode() {
   setNearbyActive(false);
 }
 
-async function applySavedHomeOrPrompt() {
-  const homeStr = getStorageValue("kohee-home");
-  if (homeStr) {
-    try {
-      const home = JSON.parse(homeStr);
-      if (home && isValidUserCoord(Number(home.lat), Number(home.lng)) && home.label) {
-        applyHomePosition(home);
-        activateNearbyMode();
-        return;
-      }
-    } catch (e) {
-      // ignore parse error
-    }
+function savedHome() {
+  try {
+    const home = JSON.parse(getStorageValue("kohee-home") || "null");
+    return home &&
+      isValidUserCoord(Number(home.lat), Number(home.lng)) &&
+      home.label
+      ? home
+      : null;
+  } catch {
+    return null;
   }
-
-  await promptAndSaveNeighborhood();
 }
 
+// 저장한 동네가 있으면 그게 기준이다(사용자가 고른 것). 없으면 GPS, 안 되면 이유를 말하고 동네를 묻는다.
 async function handleNearbyClick() {
-  // Toggle: pressing the button again while active returns to the default view.
   if (nearbyMode) {
     exitNearbyMode();
     render();
     return;
   }
 
-  setNearbyLoading(true);
-
-  if (!navigator.geolocation) {
-    await applySavedHomeOrPrompt();
-    setNearbyLoading(false);
+  const home = savedHome();
+  if (home) {
+    applyHomePosition(home);
+    activateNearbyMode();
     return;
   }
 
+  if (!navigator.geolocation) {
+    await promptAndSaveNeighborhood();
+    return;
+  }
+
+  setNearbyLoading(true);
   try {
-    const pos = await requestUserPosition();
-    applyUserPosition(pos);
+    applyUserPosition(await requestUserPosition());
     activateNearbyMode();
   } catch (error) {
-    console.error(error);
-    await applySavedHomeOrPrompt();
+    alert(`${geoErrorMessage(error)}\n동네 이름으로 찾겠습니다.`);
+    await promptAndSaveNeighborhood();
   } finally {
     setNearbyLoading(false);
   }

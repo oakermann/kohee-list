@@ -28,7 +28,6 @@ import {
   mySubmissions,
   rejectSubmission,
   submitCafe,
-  updateSubmission,
 } from "./submissions.js";
 import {
   getErrorReports,
@@ -39,10 +38,7 @@ import {
 } from "./errorReports.js";
 import { getFavorites, getGeocode, toggleFavorite } from "./favorites.js";
 import { getVisitStats } from "./stats.js";
-import { getUsers, setRole } from "./users.js";
-import {
-  importCsv,
-} from "./csv.js";
+import { importCsv } from "./csv.js";
 
 const USER_FACING_OPERATOR_LABEL = "운영진";
 
@@ -125,7 +121,6 @@ export const ADMIN_OPERATION_ROUTES = [
   ["POST", "/resolve-error-report", adminOnly(resolveErrorReport)],
   ["POST", "/approve", adminOnly(approveSubmission)],
   ["POST", "/reject", adminOnly(rejectSubmission)],
-  ["POST", "/update-submission", adminOnly(updateSubmission)],
   ["GET", "/cafes", adminOnly(listCafes)],
   ["GET", "/stats/visits", adminOnly(getVisitStats)],
   ["POST", "/add", adminOnly(addCafe)],
@@ -136,8 +131,6 @@ export const ADMIN_OPERATION_ROUTES = [
 ];
 
 export const ADMIN_ROUTES = [
-  ["GET", "/users", getUsers],
-  ["POST", "/set-role", setRole],
   ["POST", "/notice", setNotice],
   ["POST", "/approve-cafe", approveCafe],
   ["POST", "/hold-cafe", holdCafe],

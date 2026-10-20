@@ -5,7 +5,6 @@ import vm from "node:vm";
 import {
   addCafe,
   approveCafe,
-  applyPickPermission,
   deleteCafe,
   getData,
   holdCafe,
@@ -184,19 +183,6 @@ assert.deepEqual(await permissionErrorResponse.json(), {
 });
 
 assert.deepEqual(
-  applyPickPermission(
-    "manager",
-    { oakerman_pick: true, manager_pick: true },
-    { oakerman_pick: 1 },
-  ),
-  { oakerman_pick: 1, manager_pick: 1 },
-);
-assert.deepEqual(
-  applyPickPermission("admin", { oakerman_pick: true, manager_pick: false }),
-  { oakerman_pick: 1, manager_pick: 0 },
-);
-
-assert.deepEqual(
   toCafeResponse({
     id: "cafe-1",
     name: "Approved Cafe",
@@ -238,7 +224,6 @@ assert.deepEqual(
     region_distance_m: 466,
     category: ["espresso"],
     oakerman_pick: true,
-    manager_pick: false,
     updated_at: "2026-04-28T00:00:00.000Z",
   },
 );
@@ -249,6 +234,9 @@ const publicCafeResponse = await getData(
   {
     DB: {
       prepare(sql) {
+        if (/INSERT INTO visit_stats/i.test(sql)) {
+          return { bind: () => ({ run: async () => ({ success: true }) }) };
+        }
         capturedPublicCafeSql = sql;
         return {
           all: async () => ({
@@ -293,7 +281,6 @@ assert.deepEqual(Object.keys(publicCafeBody[0]).sort(), [
   "instagram",
   "lat",
   "lng",
-  "manager_pick",
   "name",
   "naver_url",
   "oakerman_pick",
@@ -479,7 +466,7 @@ function createListCafesTestEnv(role = "manager") {
   };
 }
 
-async function requestListCafes(lifecycle, role = "manager") {
+async function requestListCafes(lifecycle, role = "admin") {
   const { env, statements } = createListCafesTestEnv(role);
   const response = await listCafes(
     new Request(`https://kohee.test/cafes?lifecycle=${lifecycle}`, {
@@ -587,21 +574,16 @@ async function requestAddCafe(role = "manager", overrides = {}) {
   return { response, statements };
 }
 
+// 옛 manager 역할은 카페를 넣지 못한다.
 const managerAdd = await requestAddCafe("manager");
-assert.equal(managerAdd.response.status, 201);
-const managerAddInsert = managerAdd.statements.find((statement) =>
-  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
-);
-assert.ok(managerAddInsert);
-assert.match(managerAddInsert.sql, /status/i);
-assert.equal(managerAddInsert.bindings[16], "candidate");
+assert.equal(managerAdd.response.status, 403);
 
 const adminAdd = await requestAddCafe("admin");
 assert.equal(adminAdd.response.status, 201);
 const adminAddInsert = adminAdd.statements.find((statement) =>
   /INSERT\s+INTO\s+cafes/i.test(statement.sql),
 );
-assert.equal(adminAddInsert.bindings[16], "candidate");
+assert.equal(adminAddInsert.bindings[15], "candidate");
 
 // naver_url: place URL은 저장되고, 위험 스킴은 cleanUrl이 비운다.
 const addWithNaver = await requestAddCafe("admin", {
@@ -1371,20 +1353,6 @@ const duplicateAudit = duplicateApprove.statements.find((statement) =>
 );
 assert.ok(duplicateAudit);
 assert.match(duplicateAudit.bindings[6], /"duplicate":true/);
-
-let candidatePublicSql = "";
-await getData(new Request("https://kohee.test/data"), {
-  DB: {
-    prepare(sql) {
-      candidatePublicSql = sql;
-      return { all: async () => ({ results: [] }) };
-    },
-  },
-});
-assert.match(
-  candidatePublicSql,
-  /WHERE\s+status = 'approved'\s+AND deleted_at IS NULL/i,
-);
 
 function createFavoritesTestEnv({
   cafeStatus = "approved",
