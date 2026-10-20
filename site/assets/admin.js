@@ -1271,7 +1271,6 @@ async function init() {
   $("role-sec").classList.toggle("hidden", !admin);
   $("csv-dry-run").classList.toggle("hidden", !admin);
   $("csv-upload").classList.toggle("hidden", !admin);
-  $("csv-reset").classList.toggle("hidden", !admin);
   $("csv-file").disabled = !admin;
   $("oakerman-pick").disabled = !admin;
   $("reviewed-note").textContent = admin

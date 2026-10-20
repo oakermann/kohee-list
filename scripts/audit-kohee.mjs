@@ -124,7 +124,8 @@ if (contract) {
   else fail("GOVERNANCE lane file allowlist missing AGENTS.md");
   if (governanceLane?.files?.includes("docs/KOHEE_MASTER_CONTEXT.md"))
     ok("GOVERNANCE lane includes docs/KOHEE_MASTER_CONTEXT.md");
-  else fail("GOVERNANCE lane file allowlist missing docs/KOHEE_MASTER_CONTEXT.md");
+  else
+    fail("GOVERNANCE lane file allowlist missing docs/KOHEE_MASTER_CONTEXT.md");
 
   const inv = contract.invariants || {};
   const requiredInv = {
@@ -293,15 +294,40 @@ if (prohibitedAutomation.length > 0) {
     `Prohibited repository automation detected: ${prohibitedAutomation.join(", ")}`,
   );
 } else {
-  ok("No prohibited unattended worker/auto-merge/branch-delete/issue-close/gate-bypass automation detected");
+  ok(
+    "No prohibited unattended worker/auto-merge/branch-delete/issue-close/gate-bypass automation detected",
+  );
 }
 
 const cacheBust = checkAssetCacheBusting();
-if (cacheBust.skipped) warn(`asset cache-bust check skipped: ${cacheBust.reason}`);
+if (cacheBust.skipped)
+  warn(`asset cache-bust check skipped: ${cacheBust.reason}`);
 else if (cacheBust.ok) ok("changed assets have bumped ?v= references");
 else cacheBust.failures.forEach(fail);
 
-for (const file of ["site/assets/index.js", "site/assets/mypage.js", "site/assets/admin.js"]) {
+// A lookup of a removed element throws on null and stops the whole page script.
+for (const page of ["index", "mypage", "admin"]) {
+  const js = read(`site/assets/${page}.js`);
+  const ids = (re, text) => [...text.matchAll(re)].map((m) => m[1]);
+  const present = new Set([
+    ...ids(/\bid="([\w-]+)"/g, read(`site/${page}.html`)),
+    ...ids(/\.id = "([\w-]+)"/g, js),
+  ]);
+  const missing = ids(/(?:\$|getElementById)\("([\w-]+)"\)/g, js).filter(
+    (id) => !present.has(id),
+  );
+  if (missing.length)
+    fail(
+      `site/assets/${page}.js looks up ids missing from site/${page}.html: ${[...new Set(missing)].join(", ")}`,
+    );
+  else ok(`site/assets/${page}.js element lookups all exist`);
+}
+
+for (const file of [
+  "site/assets/index.js",
+  "site/assets/mypage.js",
+  "site/assets/admin.js",
+]) {
   const content = read(file);
   if (!content) continue;
   const lines = content.split("\n");
@@ -315,7 +341,11 @@ for (const file of ["site/assets/index.js", "site/assets/mypage.js", "site/asset
   });
 }
 
-for (const file of ["site/assets/index.js", "site/assets/mypage.js", "site/assets/admin.js"]) {
+for (const file of [
+  "site/assets/index.js",
+  "site/assets/mypage.js",
+  "site/assets/admin.js",
+]) {
   const content = read(file);
   for (const marker of ["?ㅼ", "?꾨", "?놁", "?ㅽ"]) {
     if (content.includes(marker))
@@ -323,10 +353,7 @@ for (const file of ["site/assets/index.js", "site/assets/mypage.js", "site/asset
   }
 }
 
-const refs =
-  read("README.md") +
-  read(".prettierignore") +
-  read("package.json");
+const refs = read("README.md") + read(".prettierignore") + read("package.json");
 if (/\baaaa\b|\baaa\b/.test(refs)) warn("Possible aaa/aaaa reference found");
 else ok("No obvious aaa/aaaa references detected");
 
