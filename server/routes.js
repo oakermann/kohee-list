@@ -41,12 +41,7 @@ import { getFavorites, getGeocode, toggleFavorite } from "./favorites.js";
 import { getVisitStats } from "./stats.js";
 import { getUsers, setRole } from "./users.js";
 import {
-  exportApprovedReviewCsv,
-  exportCandidatesReviewCsv,
-  exportHoldReviewCsv,
-  exportSubmissionsReviewCsv,
   importCsv,
-  resetCsv,
 } from "./csv.js";
 
 const USER_FACING_OPERATOR_LABEL = "운영진";
@@ -144,11 +139,6 @@ export const ADMIN_ROUTES = [
   ["GET", "/users", getUsers],
   ["POST", "/set-role", setRole],
   ["POST", "/notice", setNotice],
-  ["POST", "/reset-csv", resetCsv],
-  ["GET", "/export-csv/candidates-review", exportCandidatesReviewCsv],
-  ["GET", "/export-csv/hold-review", exportHoldReviewCsv],
-  ["GET", "/export-csv/approved-review", exportApprovedReviewCsv],
-  ["GET", "/export-csv/submissions-review", exportSubmissionsReviewCsv],
   ["POST", "/approve-cafe", approveCafe],
   ["POST", "/hold-cafe", holdCafe],
   ["POST", "/unhold-cafe", unholdCafe],

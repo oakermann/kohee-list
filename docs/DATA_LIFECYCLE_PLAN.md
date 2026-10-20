@@ -14,7 +14,8 @@
 - 신규 `/add` 및 status가 없는 신규 CSV row는 `candidate`로 저장된다.
 - admin만 candidate cafe를 `/approve-cafe`로 `approved` 승격할 수 있다.
 - admin만 candidate cafe를 `/hold-cafe`로 `hidden` 보류 처리하고 `/unhold-cafe`로 다시 `candidate` 상태로 되돌릴 수 있다.
-- `deleteCafe`와 `resetCsv`는 recoverable lifecycle 동작으로 처리한다.
+- `deleteCafe`는 recoverable lifecycle 동작으로 처리한다.
+- CSV 초기화(`resetCsv`, `/reset-csv`)와 검토 CSV 내보내기 4종은 2026-10-20 삭제했다(오너 승인). 대량 교체는 하지 않고 CSV import(후보로 저장)만 쓴다.
 - purge/archive는 아직 구현하지 않았으며 별도 위험 작업으로 분리한다.
 
 ## 1. 현재 데이터 흐름
@@ -50,7 +51,6 @@
 - `POST /unhold-cafe`: `admin`만 active hidden cafe를 다시 `candidate` 상태로 전환한다.
 - `POST /delete`: `admin`만 `deleteCafe`를 실행한다.
 - `POST /restore`: `admin`만 soft-deleted cafe를 복구한다.
-- `POST /reset-csv`: `admin`만 `resetCsv`를 실행한다.
 - `POST /import-csv`: `admin`만 CSV import를 실행한다.
 
 ### Current deleteCafe
@@ -67,24 +67,6 @@
 - deleted cafe는 public `/data`에 노출하지 않는다.
 - 복구는 같은 cafe id를 살리는 방식으로 유지한다.
 - 완전 삭제/purge는 별도 승인된 위험 작업으로만 다룬다.
-
-### Current resetCsv
-
-현재 `resetCsv`는 recoverable lifecycle reset이다.
-
-1. 전체 `cafes` 개수를 센다.
-2. active cafe를 `deleted_at` 기반으로 soft delete 처리한다.
-3. CSV row를 add/update로 적용한다.
-4. status가 없는 신규 CSV row는 `candidate`로 저장한다.
-5. 기존 row update는 CSV에 status가 없으면 기존 status를 유지한다.
-6. `audit_logs`에 `csv.reset`을 기록한다.
-
-유지 원칙:
-
-- cafe row와 linked references를 물리 삭제하지 않는다.
-- 백업 강제와 diff는 API 레벨에서 보장되지 않는다.
-- apply 실패 시 reset 전 cafe 상태와 resetCsv가 수정할 수 있는 필드로 되돌리는 보상 rollback을 시도한다.
-- reset 이후 public API는 `approved`이면서 `deleted_at IS NULL`인 cafe만 반환한다.
 
 ### Current CSV import
 
@@ -109,7 +91,7 @@
 
 - `favorites`는 `cafes(id)`를 FK로 참조하며 `ON DELETE CASCADE`다.
 - `submissions.linked_cafe_id`는 `cafes(id)`를 참조하며 `ON DELETE SET NULL`이다.
-- 현재 `deleteCafe`와 `resetCsv`는 cafe row를 물리 삭제하지 않으므로 FK cascade와 `ON DELETE SET NULL`이 일반 삭제 흐름에서 실행되지 않는다.
+- 현재 `deleteCafe`는 cafe row를 물리 삭제하지 않으므로 FK cascade와 `ON DELETE SET NULL`이 일반 삭제 흐름에서 실행되지 않는다.
 
 soft delete 전환 시 원칙:
 
@@ -377,37 +359,7 @@ restore 기능은 필요하다.
 
 ## 6. resetCsv 설계
 
-`resetCsv`는 가장 위험하므로 기존 전체 hard delete를 유지하지 않는다.
-
-### 비교
-
-| 방식                           | 장점                                        | 단점                             | 추천      |
-| ------------------------------ | ------------------------------------------- | -------------------------------- | --------- |
-| A. resetCsv 유지 + 백업 강제   | 현재 운영 방식과 가까움                     | 여전히 대량 변경 위험이 큼       | 임시 방안 |
-| B. soft reset                  | 복구 가능. 기존 endpoint 유지 가능          | public에서 전체가 사라질 수 있음 | 가능      |
-| C. CSV replace workflow로 대체 | diff/preview/confirm/rollback을 명확히 분리 | 구현량이 큼                      | 최종 권장 |
-| D. confirm phrase 요구         | 실수 방지                                   | 단독으로는 복구/검증 부족        | 보조 필수 |
-
-### 최종 권장
-
-`resetCsv`는 장기적으로 폐기하고 CSV replace workflow로 전환한다.
-
-1차 안전화에서는 다음을 적용한다.
-
-- admin 전용 유지.
-- 적용 전 CSV 백업 필수.
-- dry-run 필수.
-- 변경 diff 제공.
-- confirm phrase 필수.
-- hard delete 금지.
-- 전체 삭제 대신 기존 active cafes를 `hidden` 또는 soft-deleted 상태로 전환.
-- audit log에 affected count, backup id/path, confirm phrase 통과 여부 기록.
-
-### Favorites/submissions 영향
-
-- soft reset에서는 favorites와 submissions 연결을 유지한다.
-- public/favorites 조회에서 hidden/deleted cafe를 제외한다.
-- rollback은 resetCsv가 수정할 수 있는 cafe 필드를 이전 snapshot으로 되돌리는 방식이다.
+2026-10-20 삭제. 대량 교체 경로는 두지 않는다.
 
 ## 7. CSV import와 상태 모델 연결
 
@@ -429,7 +381,6 @@ restore 기능은 필요하다.
 - `/add`로 생성되는 신규 cafe는 `candidate`로 저장한다.
 - 신규 CSV row는 `status`가 비어 있거나 `approved`여도 `candidate`로 저장한다.
 - 기존 CSV duplicate/update row도 기본 `candidate`로 저장한다.
-- resetCsv에서 기존 row를 재활성화할 때도 `approved`로 바꾸지 않는다.
 - CSV로 공개 상태를 만들 수 없으며, 공개 전환은 기존 `/approve-cafe`를 사용한다.
 - admin만 `/approve-cafe`로 candidate cafe를 `approved`로 승격할 수 있다.
 - admin만 `/hold-cafe`와 `/unhold-cafe`로 active cafe의 `candidate`와 `hidden` 상태를 오갈 수 있다.
@@ -588,7 +539,6 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 - `deleteCafe`가 `deleted_at`, `deleted_by`를 기록한다.
 - `restoreCafe`가 `deleted_at`을 `NULL`로 복구한다.
 - restore가 기존 status를 임의로 public 승격하지 않는다.
-- `resetCsv`가 hard delete하지 않는다.
 - CSV import가 기존 `status`를 의도 없이 바꾸지 않는다.
 - CSV import가 status 없는 신규 row를 `candidate`로 저장한다.
 - CSV import/update/reset이 status를 의도 없이 `approved`로 강제하지 않는다.
@@ -650,14 +600,9 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 - 검증: admin 권한, restore 후 public 비노출 기본, admin 목록 확인.
 - rollback: restore route/UI revert.
 
-### Phase 6. resetCsv hard delete 제거
+### Phase 6. resetCsv 제거
 
-- 목표: hard reset 제거와 replace workflow 기반 전환.
-- 상태: 완료.
-- 수정 파일: `server/cafes.js`, `server/csv.js`, admin assets, scripts.
-- 위험도: 높음.
-- 검증: dry-run, confirm phrase, backup 존재 확인, audit log.
-- rollback: 기존 endpoint 복구 전에는 원격 적용 금지. 적용 후에는 DB backup 필요.
+- 상태: 2026-10-20 `resetCsv`·`/reset-csv` 삭제 완료.
 
 ### Phase 6.5. purge/archive 정책 구현
 
@@ -679,7 +624,6 @@ Purge/archive 원칙:
 - purge 전 favorites/submissions 연결 상태를 확인해야 한다.
 - purge 실행 시 audit log는 필수다.
 - 장기적으로 `cafes_archive` 테이블 또는 별도 export archive 방식을 검토한다.
-- `resetCsv`는 purge가 아니라 replace/hidden workflow로 다룬다.
 
 ### Phase 7. CSV import 상태 정책 연결
 

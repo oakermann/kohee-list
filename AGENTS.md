@@ -28,7 +28,7 @@ Hard no-change areas unless explicitly approved:
 - `worker.js`
 - auth/session behavior
 - D1 behavior
-- CSV import/reset behavior
+- CSV import behavior
 - public `/data` behavior
 - cafe lifecycle behavior
 - Cloudflare deploy behavior
