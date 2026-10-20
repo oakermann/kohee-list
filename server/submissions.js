@@ -171,6 +171,7 @@ export async function approveSubmission(req, env) {
       throw new HttpError(409, "Submission already reviewed");
 
     let linkedCafeId = cleanText(body.linkedCafeId, 80);
+    const writes = [];
     const isDuplicate = body.duplicate ? 1 : 0;
 
     if (isDuplicate) {
@@ -195,6 +196,7 @@ export async function approveSubmission(req, env) {
         signature: body.signature ?? parseJsonArray(sub.signature),
         beanShop: body.beanShop ?? sub.beanShop,
         instagram: body.instagram ?? sub.instagram,
+        naver_url: body.naver_url,
         // 수정 후 승인 화면도 백데이터 칸을 보여주므로 여기서 받아 넘기지 않으면 관리자가
         // 입력한 값이 말없이 사라진다. 제보에는 이 칸이 없으므로 기본값은 빈 값이다.
         region: body.region,
@@ -211,13 +213,13 @@ export async function approveSubmission(req, env) {
 
       linkedCafeId = crypto.randomUUID();
       const createdAt = nowIso();
-      await env.DB.prepare(
-        `INSERT INTO cafes(
-          id, name, address, desc, lat, lng, signature, beanShop, instagram, region, region_distance_m, memo, category,
+      writes.push(
+        env.DB.prepare(
+          `INSERT INTO cafes(
+          id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, memo, category,
           oakerman_pick, status, created_by, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
           linkedCafeId,
           merged.name,
           merged.address,
@@ -227,6 +229,7 @@ export async function approveSubmission(req, env) {
           merged.signature,
           merged.beanShop,
           merged.instagram,
+          merged.naver_url,
           merged.region,
           merged.region_distance_m,
           merged.memo,
@@ -235,17 +238,19 @@ export async function approveSubmission(req, env) {
           "candidate",
           reviewer.user_id,
           createdAt,
-        )
-        .run();
+        ),
+      );
     }
 
-    await env.DB.prepare(
-      `UPDATE submissions
+    // 카페 추가와 제보 처리는 한 묶음 — 따로 쓰면 둘째가 실패한 뒤 다시 승인할 때 카페가 둘 생긴다.
+    writes.push(
+      env.DB.prepare(
+        `UPDATE submissions
        SET status = 'approved', reviewed_by = ?, reviewed_at = ?, linked_cafe_id = ?, reject_reason = NULL
        WHERE id = ?`,
-    )
-      .bind(reviewer.user_id, nowIso(), linkedCafeId || null, submissionId)
-      .run();
+      ).bind(reviewer.user_id, nowIso(), linkedCafeId || null, submissionId),
+    );
+    await env.DB.batch(writes);
 
     await safeWriteAuditLog(env, {
       actorUserId: reviewer.user_id,

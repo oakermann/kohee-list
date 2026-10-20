@@ -14,7 +14,7 @@ import {
   unholdCafe,
   toCafeResponse,
 } from "../server/cafes.js";
-import { importCsv, parseCsvLine } from "../server/csv.js";
+import { importCsv, parseCsv } from "../server/csv.js";
 import { getFavorites, toggleFavorite } from "../server/favorites.js";
 import { approveSubmission } from "../server/submissions.js";
 import {
@@ -30,8 +30,13 @@ import {
 
 const originalConsoleError = console.error;
 
-assert.deepEqual(parseCsvLine('a,"b,c","d""e"'), ["a", "b,c", 'd"e']);
-assert.throws(() => parseCsvLine('a,"b'), /Malformed CSV row/);
+assert.deepEqual(parseCsv('a,"b,c","d""e"'), [["a", "b,c", 'd"e']]);
+// 따옴표 안 줄바꿈은 한 칸이다 — 여러 줄 소개가 행을 깨면 안 된다.
+assert.deepEqual(parseCsv('h1,h2\r\n"two\nlines",x\n\n'), [
+  ["h1", "h2"],
+  ["two\nlines", "x"],
+]);
+assert.throws(() => parseCsv('a,"b'), /Malformed CSV/);
 assert.deepEqual(parseJsonArray("espresso, drip|null"), ["espresso", "drip"]);
 assert.equal(cleanUrl("javascript:alert(1)"), "");
 assert.equal(
@@ -926,6 +931,16 @@ assert.equal(
   false,
 );
 
+// 좌표 없는 후보는 공개하지 못한다('내 주변'에서 조용히 빠지므로).
+const noCoordsApprove = await requestApproveCafe("admin", { lat: 0, lng: 0 });
+assert.equal(noCoordsApprove.response.status, 400);
+assert.equal(
+  noCoordsApprove.statements.some((statement) =>
+    /SET\s+status\s*=\s*'approved'/i.test(statement.sql),
+  ),
+  false,
+);
+
 const hiddenCafeApprove = await requestApproveCafe("admin", {
   status: "hidden",
 });
@@ -1250,6 +1265,7 @@ function createApproveSubmissionTestEnv(role = "manager") {
             all: async () => ({ results: [] }),
           };
         },
+        batch: async (list) => list.map(() => ({ success: true })),
       },
     },
   };
@@ -1297,8 +1313,9 @@ for (const role of ["admin"]) {
   assert.ok(cafeInsert);
   assert.match(cafeInsert.sql, /status/i);
   assert.doesNotMatch(cafeInsert.sql, /approved_at|approved_by/i);
-  assert.equal(cafeInsert.bindings[14], "candidate");
-  assert.equal(cafeInsert.bindings[15], `${role}-user`);
+  assert.equal(cafeInsert.bindings[15], "candidate");
+  assert.equal(cafeInsert.bindings[16], `${role}-user`);
+  assert.match(cafeInsert.sql, /instagram,\s*naver_url,/i);
   // 수정 후 승인에서 입력한 백데이터가 말없이 버려지면 안 된다.
   assert.match(cafeInsert.sql, /region,\s*region_distance_m,\s*memo/i);
 
@@ -1602,207 +1619,106 @@ assert.equal(
   false,
 );
 
-function createImportCsvTestEnv(role = "admin", existingCafe = true) {
+function createImportCsvTestEnv(role = "admin") {
   const statements = [];
+  const batches = [];
+  const prepare = (sql) => {
+    const statement = { sql, bindings: [] };
+    statements.push(statement);
+    return {
+      bind(...values) {
+        statement.bindings = values;
+        return this;
+      },
+      first: async () =>
+        sql.includes("FROM sessions")
+          ? {
+              session_id: "session-1",
+              user_id: `${role}-user`,
+              username: role,
+              role,
+              expires_at: "2999-01-01T00:00:00.000Z",
+              csrf_token_hash: "",
+            }
+          : null,
+      all: async () => ({
+        results: [
+          { name: "Existing Cafe", address: "서울 성동구  연무장길 1" },
+        ],
+      }),
+      run: async () => ({ success: true }),
+    };
+  };
   return {
     statements,
+    batches,
     env: {
       SESSION_SECRET: "unit-test-secret",
-      DB: {
-        prepare(sql) {
-          const statement = { sql, bindings: [] };
-          statements.push(statement);
-          return {
-            bind(...values) {
-              statement.bindings = values;
-              return this;
-            },
-            first: async () => {
-              if (sql.includes("FROM sessions")) {
-                return {
-                  session_id: "session-1",
-                  user_id: `${role}-user`,
-                  username: role,
-                  role,
-                  expires_at: "2999-01-01T00:00:00.000Z",
-                  csrf_token_hash: "",
-                };
-              }
-              if (sql.includes("FROM cafes") && sql.includes("lower(trim")) {
-                if (!existingCafe) return null;
-                return {
-                  id: "cafe-1",
-                  name: "Imported Cafe",
-                  oakerman_pick: 1,
-                  manager_pick: 0,
-                  status: "candidate",
-                  deleted_at: "2026-04-28T00:00:00.000Z",
-                };
-              }
-              return null;
-            },
-            run: async () => ({ success: true }),
-          };
-        },
-      },
+      DB: { prepare, batch: async (list) => batches.push(list) },
     },
   };
 }
 
-async function requestImportCsv(
-  role = "admin",
-  body = "name,address,desc\nImported Cafe,Seoul,Coffee",
-  existingCafe = true,
-) {
-  const { env, statements } = createImportCsvTestEnv(role, existingCafe);
+async function requestImportCsv(body, { role = "admin", dryRun = false } = {}) {
+  const { env, statements, batches } = createImportCsvTestEnv(role);
   const response = await importCsv(
-    new Request("https://kohee.test/import-csv", {
+    new Request(`https://kohee.test/import-csv${dryRun ? "?dryRun=1" : ""}`, {
       method: "POST",
       headers: { authorization: "Bearer unit-token" },
       body,
     }),
     env,
   );
-  return { response, statements };
+  return { response, statements, batches, payload: await response.json() };
 }
 
-const { response: importResponse, statements: importStatements } =
-  await requestImportCsv();
-assert.equal(importResponse.status, 200);
-const importUpdate = importStatements.find((statement) =>
-  /UPDATE\s+cafes\s+SET/i.test(statement.sql),
-);
-assert.ok(importUpdate);
-assert.match(importUpdate.sql, /status\s*=\s*\?/i);
-assert.equal(importUpdate.bindings[10], "candidate");
-assert.match(importUpdate.sql, /hidden_at\s*=\s*\?/i);
-assert.equal(importUpdate.bindings[11], null);
-assert.equal(importUpdate.bindings[12], null);
-assert.match(importUpdate.sql, /deleted_at\s*=\s*NULL/i);
-assert.match(importUpdate.sql, /deleted_by\s*=\s*NULL/i);
-assert.match(importUpdate.sql, /delete_reason\s*=\s*NULL/i);
-
-const { response: importNewResponse, statements: importNewStatements } =
-  await requestImportCsv(
-    "admin",
-    "name,address,desc\nNew Cafe,Seoul,Coffee",
-    false,
+{
+  // 새 행만 후보로, 주소(공백 무시)가 이미 있으면 건너뛴다. 기존 카페를 고치는 SQL 은 없다.
+  const csvBody =
+    'name,address,desc,status,category\nNew Cafe,Seoul 1,"Coffee\nsecond line",approved,drip\nDup,서울 성동구 연무장길 1,Coffee,approved,drip';
+  const imported = await requestImportCsv(csvBody);
+  assert.equal(imported.response.status, 200);
+  assert.equal(imported.payload.added, 1);
+  assert.deepEqual(
+    Array.from(imported.payload.skipped, (row) => row.existing),
+    ["Existing Cafe"],
   );
-assert.equal(importNewResponse.status, 200);
-const importNewInsert = importNewStatements.find((statement) =>
-  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
-);
-assert.ok(importNewInsert);
-assert.match(importNewInsert.sql, /status/i);
-assert.equal(importNewInsert.bindings[11], "candidate");
-assert.equal(importNewInsert.bindings[12], null);
-assert.equal(importNewInsert.bindings[13], null);
-
-const {
-  response: importApprovedResponse,
-  statements: importApprovedStatements,
-} = await requestImportCsv(
-  "admin",
-  "name,address,desc,status\nApproved CSV,Seoul,Coffee,approved",
-  false,
-);
-assert.equal(importApprovedResponse.status, 200);
-const importApprovedInsert = importApprovedStatements.find((statement) =>
-  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
-);
-assert.equal(importApprovedInsert.bindings[11], "candidate");
-assert.equal(importApprovedInsert.bindings[12], null);
-assert.equal(importApprovedInsert.bindings[13], null);
-assert.match(
-  capturedPublicCafeSql,
-  /WHERE\s+status = 'approved'\s+AND deleted_at IS NULL/i,
-);
-
-const { response: importHiddenResponse, statements: importHiddenStatements } =
-  await requestImportCsv(
-    "admin",
-    "name,address,desc,status\nHidden CSV,Seoul,Coffee,hidden",
-    false,
+  assert.equal(imported.batches.length, 1);
+  assert.equal(imported.batches[0].length, 1);
+  const insert = imported.statements.find((statement) =>
+    /INSERT\s+INTO\s+cafes/i.test(statement.sql),
   );
-assert.equal(importHiddenResponse.status, 200);
-const importHiddenInsert = importHiddenStatements.find((statement) =>
-  /INSERT\s+INTO\s+cafes/i.test(statement.sql),
-);
-assert.ok(importHiddenInsert);
-assert.equal(importHiddenInsert.bindings[11], "hidden");
-assert.match(importHiddenInsert.bindings[12], /^\d{4}-\d{2}-\d{2}T/);
-assert.equal(importHiddenInsert.bindings[13], "admin-user");
-
-const {
-  response: importHiddenUpdateResponse,
-  statements: hiddenUpdateStatements,
-} = await requestImportCsv(
-  "admin",
-  "name,address,desc,status\nImported Cafe,Seoul,Coffee,hidden",
-  true,
-);
-assert.equal(importHiddenUpdateResponse.status, 200);
-const importHiddenUpdate = hiddenUpdateStatements.find((statement) =>
-  /UPDATE\s+cafes\s+SET/i.test(statement.sql),
-);
-assert.ok(importHiddenUpdate);
-assert.equal(importHiddenUpdate.bindings[10], "hidden");
-assert.match(importHiddenUpdate.bindings[11], /^\d{4}-\d{2}-\d{2}T/);
-assert.equal(importHiddenUpdate.bindings[12], "admin-user");
-
-const invalidImport = await requestImportCsv(
-  "admin",
-  "name,address,desc,category\nBad,Seoul,Coffee,tea",
-);
-assert.equal(invalidImport.response.status, 400);
-assert.equal(
-  invalidImport.statements.some((statement) =>
-    /UPDATE\s+cafes\s+SET/i.test(statement.sql),
-  ),
-  false,
-);
-
-for (const role of ["manager", "user"]) {
-  const unauthorizedImport = await requestImportCsv(role);
-  assert.equal(unauthorizedImport.response.status, 403);
+  assert.equal(insert.bindings[1], "New Cafe");
+  assert.equal(insert.bindings[3], "Coffee\nsecond line");
+  assert.equal(insert.bindings[12], "candidate");
   assert.equal(
-    unauthorizedImport.statements.some((statement) =>
-      /UPDATE\s+cafes\s+SET/i.test(statement.sql),
+    imported.statements.some((statement) =>
+      /UPDATE\s+cafes/i.test(statement.sql),
     ),
     false,
   );
+  const audit = imported.statements.find((statement) =>
+    /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
+  );
+  assert.equal(audit.bindings[2], "csv.import");
+  assert.doesNotMatch(audit.bindings[6], /password|session|secret/i);
+
+  // 틀린 행이 하나라도 있으면 아무것도 넣지 않는다. 검증(dryRun)은 행별 사유를 돌려준다.
+  const bad = "name,address,desc,category\nBad,Seoul,Coffee,tea";
+  const rejected = await requestImportCsv(bad);
+  assert.equal(rejected.response.status, 400);
+  assert.equal(rejected.batches.length, 0);
+  const preview = await requestImportCsv(bad, { dryRun: true });
+  assert.equal(preview.response.status, 200);
+  assert.equal(preview.payload.failedRows[0].error, "Invalid category value");
+  assert.equal(preview.batches.length, 0);
+
+  for (const role of ["manager", "user"]) {
+    const unauthorized = await requestImportCsv(csvBody, { role });
+    assert.equal(unauthorized.response.status, 403);
+    assert.equal(unauthorized.batches.length, 0);
+  }
 }
-
-const dryRunInvalidImport = await importCsv(
-  new Request("https://kohee.test/import-csv", {
-    method: "POST",
-    headers: { authorization: "Bearer unit-token" },
-    body: "name,address,desc,category\nBad,Seoul,Coffee,tea",
-  }),
-  createImportCsvTestEnv("admin").env,
-);
-assert.equal(dryRunInvalidImport.status, 400);
-
-const dryRunInvalidPreview = await importCsv(
-  new Request("https://kohee.test/import-csv?dryRun=1", {
-    method: "POST",
-    headers: { authorization: "Bearer unit-token" },
-    body: "name,address,desc,category\nBad,Seoul,Coffee,tea",
-  }),
-  createImportCsvTestEnv("admin").env,
-);
-assert.equal(dryRunInvalidPreview.status, 200);
-const dryRunInvalidBody = await dryRunInvalidPreview.json();
-assert.equal(dryRunInvalidBody.failed, 1);
-assert.equal(dryRunInvalidBody.failedRows[0].error, "Invalid category value");
-
-const importAudit = importStatements.find((statement) =>
-  /INSERT\s+INTO\s+audit_logs/i.test(statement.sql),
-);
-assert.ok(importAudit);
-assert.equal(importAudit.bindings[2], "csv.import");
-assert.match(importAudit.bindings[6], /"actor_role":"admin"/);
-assert.doesNotMatch(importAudit.bindings[6], /password|session|secret/i);
 
 console.log("[unit] ok");
 

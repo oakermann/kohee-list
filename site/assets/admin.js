@@ -486,15 +486,18 @@ async function importCsv(dryRun) {
   const body = await csvFile().text();
   csvMsg(dryRun ? "검증 중..." : "올리는 중...");
   const r = await postText(`/import-csv${dryRun ? "?dryRun=1" : ""}`, body);
-  if (dryRun) {
-    csvMsg(
-      `검증: 신규 ${r.wouldAdd || 0} · 수정 ${r.wouldUpdate || 0} · 중복 ${r.wouldDuplicate || 0} · 실패 ${r.failed || 0}`,
-    );
-    return;
-  }
   csvMsg(
-    `올림: 신규 ${r.added || 0} · 수정 ${r.updated || 0} · 중복 ${r.duplicated || 0} · 실패 ${r.failed || 0}`,
+    [
+      `${dryRun ? "넣을 것" : "넣음"} ${r.added}곳 (후보)`,
+      r.skipped.length &&
+        `이미 있어 건너뜀 ${r.skipped.length}: ${r.skipped.map((s) => `${s.row}행 ${s.name}`).join(", ")}`,
+      r.failed &&
+        `틀린 행 ${r.failed}: ${r.failedRows.map((f) => `${f.row}행 ${f.error}`).join(", ")}`,
+    ]
+      .filter(Boolean)
+      .join(" · "),
   );
+  if (dryRun) return;
   clearCsvFile();
   await reload();
 }

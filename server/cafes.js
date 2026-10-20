@@ -398,6 +398,8 @@ export async function approveCafe(req, env) {
     if (exists.status !== "candidate") {
       throw new HttpError(400, "Only candidate cafes can be approved");
     }
+    // 좌표 0 인 카페는 '내 주변'에서 조용히 빠진다 — 공개 전에 막는다.
+    assertValidCafeCoords(exists);
 
     const approvedAt = nowIso();
     await env.DB.prepare(
