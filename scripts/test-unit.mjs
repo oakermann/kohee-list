@@ -1177,10 +1177,10 @@ adminTest.state.cafes = [
 ];
 const adminTabIds = (tab) =>
   Array.from(adminTest.tabItems(tab), (item) => item.data.id);
-assert.deepEqual(adminTabIds("queue"), ["submission-1", "candidate-1"]);
+assert.deepEqual(adminTabIds("inbox"), ["submission-1", "candidate-1"]);
 // Public tab mirrors /data: approved and not deleted, nothing else.
 assert.deepEqual(adminTabIds("public"), ["approved-1"]);
-assert.deepEqual(adminTabIds("hidden"), [
+assert.deepEqual(adminTabIds("down"), [
   "hold-1",
   "imported-1",
   "rejected-1",
@@ -1188,7 +1188,7 @@ assert.deepEqual(adminTabIds("hidden"), [
 ]);
 // Hold (hidden + hidden_at) and legacy imported hidden stay distinguishable.
 assert.deepEqual(
-  Array.from(adminTest.tabItems("hidden"), (item) =>
+  Array.from(adminTest.tabItems("down"), (item) =>
     adminTest.cafeState(item.data),
   ),
   ["hold", "imported", "rejected", "deleted"],

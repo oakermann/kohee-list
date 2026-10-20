@@ -8,7 +8,7 @@ import {
 } from "./common.js?v=20260803-1";
 
 const state = {
-  tab: "queue",
+  tab: "inbox",
   cafes: [],
   submissions: [],
   errors: [],
@@ -16,15 +16,16 @@ const state = {
   opsLoaded: false,
 };
 
-const LIST_TABS = ["queue", "public", "hidden"];
+const LIST_TABS = ["inbox", "public", "down"];
 
+// 카드의 상태 줄 — 내린 것 탭에서는 왜 내려갔는지가 보인다.
 const STATE_LABEL = {
   candidate: "후보",
-  approved: "공개",
+  approved: "공개 중",
   hold: "보류",
   imported: "숨김(가져옴)",
   rejected: "반려",
-  deleted: "삭제됨",
+  deleted: "내림",
 };
 
 const FORM_FIELDS = {
@@ -94,7 +95,7 @@ function postText(path, body) {
   });
 }
 
-// ---- 카페 분류: 대기(제보+후보) · 공개 · 숨김(나머지 카페 전부) ----
+// ---- 분류: 새로 들어옴(제보+후보) · 공개 중 · 내린 것(나머지 카페 전부) ----
 
 function cafeState(cafe) {
   if (cafe.deleted_at) return "deleted";
@@ -107,13 +108,13 @@ function tabItems(tab) {
     state.cafes
       .filter((cafe) => states.includes(cafeState(cafe)))
       .map((data) => ({ kind: "cafe", data }));
-  if (tab === "queue")
+  if (tab === "inbox")
     return [
       ...state.submissions.map((data) => ({ kind: "sub", data })),
       ...cafes(["candidate"]),
     ];
   if (tab === "public") return cafes(["approved"]);
-  return cafes(["hold", "imported", "rejected", "deleted"]);
+  return cafes(["deleted", "hold", "imported", "rejected"]);
 }
 
 function hasCoords(item) {
@@ -134,74 +135,72 @@ function sameAddressCafe(item) {
   );
 }
 
-// ---- 목록 ----
+// ---- 목록: 카드를 누르면 고치기, 버튼은 그 탭에서 할 일 한두 개 ----
 
-function submissionCard(sub) {
-  const dup = sameAddressCafe(sub);
-  const lines = [
-    ["제보", sub.username, formatDate(sub.created_at)]
-      .filter(Boolean)
-      .join(" · "),
-    sub.address,
-    sub.desc,
-    sub.reason && `추천 이유: ${sub.reason}`,
-    dup && `같은 주소: ${dup.name} (${STATE_LABEL[cafeState(dup)]})`,
-  ];
-  return card(sub.name, lines, [
-    ["검토", () => openForm("approve", sub), "primary"],
-    ["중복", () => markDuplicate(sub, dup)],
-    ["반려", () => rejectSubmission(sub)],
-  ]);
-}
-
-function cafeActions(cafe) {
-  const edit = ["수정", () => openForm("edit", cafe)];
-  switch (cafeState(cafe)) {
+function itemActions(kind, data, cafeStatus) {
+  if (kind === "sub")
+    return [
+      ["공개", () => openForm("approve", data), "primary"],
+      ["버리기", () => discardSubmission(data)],
+    ];
+  switch (cafeStatus) {
     case "candidate":
       return [
-        edit,
-        [
-          "공개",
-          () => cafeAction("/approve-cafe", cafe, "공개할까요?"),
-          "primary",
-        ],
-        ["보류", () => cafeAction("/hold-cafe", cafe, "보류할까요?")],
+        ["공개", () => publishCafe(data), "primary"],
+        ["버리기", () => cafeAction("/delete", data, "버릴까요?")],
       ];
-    case "hold":
-      return [
-        edit,
-        [
-          "후보로",
-          () => cafeAction("/unhold-cafe", cafe, "후보로 되돌릴까요?"),
-        ],
-      ];
+    case "approved":
+      return [["내리기", () => cafeAction("/delete", data, "내릴까요?")]];
     case "deleted":
-      return [["복구", () => cafeAction("/restore", cafe, "복구할까요?")]];
+      return [["되살리기", () => reviveDeleted(data)]];
+    case "hold":
+    case "imported":
+      return [
+        [
+          "되살리기",
+          () => cafeAction("/unhold-cafe", data, "후보로 되살릴까요?"),
+        ],
+      ];
     default:
-      return [edit];
+      return [];
   }
 }
 
-function cafeCard(cafe) {
-  const dup = sameAddressCafe(cafe);
-  return card(
-    cafe.name,
+function itemCard({ kind, data }) {
+  const isSub = kind === "sub";
+  const cafeStatus = isSub ? "" : cafeState(data);
+  const dup = sameAddressCafe(data);
+  const item = card(
+    data.name,
     [
-      `${STATE_LABEL[cafeState(cafe)]}${cafe.oakerman_pick ? " · 오커맨픽" : ""}`,
-      cafe.address,
-      !hasCoords(cafe) && "좌표 없음 — 지도에 안 나옴",
+      isSub
+        ? ["제보", data.username, formatDate(data.created_at)]
+            .filter(Boolean)
+            .join(" · ")
+        : `${STATE_LABEL[cafeStatus]}${data.oakerman_pick ? " · 오커맨픽" : ""}`,
+      data.address,
+      isSub && data.desc,
+      isSub && data.reason && `추천 이유: ${data.reason}`,
+      !isSub && !hasCoords(data) && "좌표 없음 — 눌러서 채워야 공개됨",
       dup && `같은 주소: ${dup.name} (${STATE_LABEL[cafeState(dup)]})`,
-      cafe.deleted_at && `삭제: ${formatDate(cafe.deleted_at, true)}`,
     ],
-    cafeActions(cafe),
+    itemActions(kind, data, cafeStatus),
   );
+  if (cafeStatus !== "deleted") {
+    item.classList.add("tappable");
+    item.addEventListener("click", (event) => {
+      if (!event.target.closest("button"))
+        openForm(isSub ? "approve" : "edit", data);
+    });
+  }
+  return item;
 }
 
 function renderCounts() {
   const counts = {
-    queue: tabItems("queue").length,
+    inbox: tabItems("inbox").length,
     public: tabItems("public").length,
-    hidden: tabItems("hidden").length,
+    down: tabItems("down").length,
     errors: state.errors.length,
   };
   document.querySelectorAll("#tabs [data-count]").forEach((node) => {
@@ -218,9 +217,7 @@ function renderList() {
   );
   $("list").replaceChildren(
     ...(items.length
-      ? items.map(({ kind, data }) =>
-          kind === "sub" ? submissionCard(data) : cafeCard(data),
-        )
+      ? items.map(itemCard)
       : [el("div", "item empty-state", "없습니다.")]),
   );
 }
@@ -243,40 +240,50 @@ async function cafeAction(path, cafe, question) {
   await reload();
 }
 
-async function rejectSubmission(sub) {
-  const reason = prompt(`'${sub.name}' 반려 사유 (선택)`, "");
-  if (reason === null) return;
-  await post("/reject", { submissionId: sub.id, reject_reason: reason });
-  await reload();
-}
-
-function findCafe(name) {
-  const query = name.trim().toLowerCase();
-  const matches = state.cafes.filter(
-    (cafe) =>
-      !cafe.deleted_at && String(cafe.name).toLowerCase().includes(query),
-  );
-  return matches.length === 1 ? matches[0] : null;
-}
-
-async function markDuplicate(sub, suggested) {
-  const text = prompt("이미 있는 카페 이름", suggested ? suggested.name : "");
-  if (!text?.trim()) return;
-  const cafe = findCafe(text);
-  if (!cafe) throw new Error("그 이름의 카페가 하나로 좁혀지지 않습니다.");
-  if (
-    !confirm(`'${sub.name}' 제보를 '${cafe.name}' 와 같은 곳으로 처리할까요?`)
-  )
+// 좌표가 없으면 공개해도 '내 주변'에 안 나온다(서버도 막는다) — 양식에서 채우고 공개.
+async function publishCafe(cafe) {
+  if (!hasCoords(cafe)) {
+    openForm("publish", cafe);
     return;
-  await post("/approve", {
-    submissionId: sub.id,
-    duplicate: true,
-    linkedCafeId: cafe.id,
-  });
+  }
+  await cafeAction("/approve-cafe", cafe, "공개할까요?");
+}
+
+// 보류였던 카페는 되살리면 보류로 돌아온다 — 한 번에 후보까지 올린다.
+async function reviveDeleted(cafe) {
+  if (!confirm(`'${cafe.name}' 되살릴까요?`)) return;
+  await post("/restore", { id: cafe.id });
+  if (cafe.status === "hidden") await post("/unhold-cafe", { id: cafe.id });
   await reload();
 }
 
-// ---- 카페 양식 (신규 · 수정 · 제보 검토) ----
+// 같은 주소 카페가 있으면 중복으로 묶고(제보자에게 '승인'으로 보임), 없으면 반려.
+async function discardSubmission(sub) {
+  const dup = sameAddressCafe(sub);
+  if (dup) {
+    if (
+      !confirm(
+        `'${sub.name}' 는 이미 있는 '${dup.name}' 와 같은 곳입니다. 중복으로 처리할까요?`,
+      )
+    )
+      return;
+    await post("/approve", {
+      submissionId: sub.id,
+      duplicate: true,
+      linkedCafeId: dup.id,
+    });
+  } else {
+    const reason = prompt(
+      `'${sub.name}' 버리는 이유 (제보자 마이페이지에 보임, 비워도 됨)`,
+      "",
+    );
+    if (reason === null) return;
+    await post("/reject", { submissionId: sub.id, reject_reason: reason });
+  }
+  await reload();
+}
+
+// ---- 카페 양식: 신규·제보·좌표 없는 후보는 저장 = 공개, 수정은 저장만 ----
 
 function fillForm(data) {
   for (const [key, id] of Object.entries(FORM_FIELDS))
@@ -292,20 +299,13 @@ function fillForm(data) {
 function openForm(mode, data = {}) {
   state.form = { mode, id: data.id || "" };
   fillForm(data);
-  $("form-title").textContent = {
-    add: "신규 등록",
-    edit: data.name,
-    approve: "제보 검토",
-  }[mode];
+  $("form-title").textContent =
+    mode === "add" ? "신규 등록" : data.name || "카페";
   $("form-note").textContent =
     mode === "edit"
-      ? `지금 상태: ${STATE_LABEL[cafeState(data)]}`
-      : "저장하면 후보로 들어갑니다. 공개는 대기 탭에서 따로 누릅니다.";
-  $("form-save").textContent = mode === "approve" ? "후보로 받기" : "저장";
-  $("form-delete").classList.toggle(
-    "hidden",
-    mode !== "edit" || !!data.deleted_at,
-  );
+      ? `지금: ${STATE_LABEL[cafeState(data)]}`
+      : "저장하면 바로 사이트에 공개됩니다. 좌표가 맞는지 확인하세요.";
+  $("form-save").textContent = mode === "edit" ? "저장" : "공개";
   $("cafe-dialog").showModal();
   if (!hasCoords(data) && data.address) guarded(geocode)();
 }
@@ -334,19 +334,15 @@ async function saveForm() {
   if (!$("cafe-form").reportValidity()) return;
   const payload = collectForm();
   const { mode, id } = state.form;
+  let cafeId = id;
   if (mode === "approve")
-    await post("/approve", { ...payload, submissionId: id });
-  else if (mode === "edit") await post("/edit", { ...payload, id });
-  else await post("/add", payload);
+    cafeId = (await post("/approve", { ...payload, submissionId: id }))
+      .linked_cafe_id;
+  else if (mode === "add") cafeId = (await post("/add", payload)).id;
+  else await post("/edit", { ...payload, id });
+  if (mode !== "edit") await post("/approve-cafe", { id: cafeId });
   $("cafe-dialog").close();
   await reload();
-}
-
-async function deleteFromForm() {
-  const cafe = state.cafes.find((item) => item.id === state.form.id);
-  if (!cafe) return;
-  $("cafe-dialog").close();
-  await cafeAction("/delete", cafe, "삭제할까요? (숨김 탭에서 복구 가능)");
 }
 
 async function geocode() {
@@ -516,6 +512,7 @@ function showTab(tab) {
     node.classList.toggle("active", node.dataset.tab === tab);
   });
   $("pane-list").classList.toggle("hidden", !LIST_TABS.includes(tab));
+  $("new-cafe-btn").classList.toggle("hidden", tab !== "inbox");
   $("pane-errors").classList.toggle("hidden", tab !== "errors");
   $("pane-ops").classList.toggle("hidden", tab !== "ops");
   if (tab === "ops") guarded(loadOps)();
@@ -533,7 +530,6 @@ function bindEvents() {
   $("search").addEventListener("input", renderList);
   bind("new-cafe-btn", () => openForm("add"));
   bind("form-save", saveForm);
-  bind("form-delete", deleteFromForm);
   bind("geocode-btn", geocode);
   bind("logout-btn", async () => {
     await api("/logout", { method: "POST" }).catch(() => {});
