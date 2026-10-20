@@ -1,7 +1,4 @@
 /* design tokens live in base.css — 어드민은 오너만 쓴다: 흰 바탕 없이 var(--bg) */
-* {
-  color: var(--ink) !important;
-}
 body {
   background: var(--bg);
   min-height: 100vh;
@@ -81,13 +78,9 @@ button:not(:disabled):active,
   box-shadow: none;
 }
 button.primary,
-.tabs button.active,
-.sub-tabs button.active {
+.tabs button.active {
   background: var(--line);
-  color: var(--bg) !important;
-}
-.tabs button.active span {
-  color: var(--bg) !important;
+  color: var(--bg);
 }
 input,
 textarea,
@@ -103,7 +96,7 @@ select {
 }
 input::placeholder,
 textarea::placeholder {
-  color: var(--faint) !important;
+  color: var(--faint);
 }
 textarea {
   min-height: 64px;
@@ -137,11 +130,6 @@ textarea {
 .tabs span {
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
-}
-.sub-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
 }
 .list-tools {
   display: grid;
@@ -247,7 +235,7 @@ dialog form {
 }
 .chip:has(input:checked) {
   background: var(--line);
-  color: var(--bg) !important;
+  color: var(--bg);
 }
 
 .page-legal-footer {

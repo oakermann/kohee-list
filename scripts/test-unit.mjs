@@ -1200,9 +1200,6 @@ const adminTest = adminContext.__adminTest;
 adminTest.state.submissions = [
   { id: "submission-1", name: "Submitted Cafe", status: "pending" },
 ];
-adminTest.state.rejected = [
-  { id: "submission-2", name: "Rejected Submission", status: "rejected" },
-];
 adminTest.state.cafes = [
   {
     id: "candidate-1",
@@ -1253,13 +1250,12 @@ assert.deepEqual(adminTabIds("hidden"), [
   "imported-1",
   "rejected-1",
   "deleted-approved",
-  "submission-2",
 ]);
 assert.deepEqual(
   Array.from(adminTest.tabItems("hidden"), (item) =>
-    item.kind === "cafe" ? adminTest.cafeState(item.data) : "sub",
+    adminTest.cafeState(item.data),
   ),
-  ["hold", "imported", "rejected", "deleted", "sub"],
+  ["hold", "imported", "rejected", "deleted"],
 );
 adminApiResponses = {
   "/export-csv/submissions-review": {

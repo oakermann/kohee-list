@@ -18,11 +18,11 @@ Risk: MEDIUM
 
 Done: `site/admin.html`/`admin.js`/`admin.css` rewritten as one tabbed console
 (대기 = pending submissions + candidates · 공개 · 숨김 = hold/imported
-hidden/rejected/deleted + rejected submissions · 오류 · 운영 = visits, notice,
-CSV, users). `#legacy-review-panel` is gone; CSV import/reset live in 운영 with
+hidden/rejected/deleted · 오류 = open reports · 운영 = visits, notice, CSV). `#legacy-review-panel` is gone; CSV import/reset live in 운영 with
 the same endpoints. One dialog handles add/edit/submission review and fills
 lat/lng from the existing `/geocode` (Nominatim) with the matched label shown.
-The role panel was removed (server only accepts `user`, so it did nothing).
+Removed: role panel (server only accepts `user`, so it did nothing), read-only
+user list, rejected/approved submission history, resolved error reports.
 No API/D1/CSV behavior changed.
 
 Next (each needs owner approval): Kakao place search for coordinates (owner REST

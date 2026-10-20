@@ -8,17 +8,12 @@ import {
 } from "./common.js?v=20260803-1";
 
 const state = {
-  me: null,
   tab: "queue",
   cafes: [],
   submissions: [],
-  rejected: [],
   errors: [],
-  errorStatus: "open",
-  openErrors: 0,
   form: null,
   opsLoaded: false,
-  userTimer: null,
 };
 
 const LIST_TABS = ["queue", "public", "hidden"];
@@ -115,7 +110,7 @@ function saveFile(filename, text) {
   URL.revokeObjectURL(anchor.href);
 }
 
-// ---- 카페 분류: 대기(제보+후보) · 공개 · 숨김(나머지 전부) ----
+// ---- 카페 분류: 대기(제보+후보) · 공개 · 숨김(나머지 카페 전부) ----
 
 function cafeState(cafe) {
   if (cafe.deleted_at) return "deleted";
@@ -128,14 +123,13 @@ function tabItems(tab) {
     state.cafes
       .filter((cafe) => states.includes(cafeState(cafe)))
       .map((data) => ({ kind: "cafe", data }));
-  const subs = (rows) => rows.map((data) => ({ kind: "sub", data }));
   if (tab === "queue")
-    return [...subs(state.submissions), ...cafes(["candidate"])];
+    return [
+      ...state.submissions.map((data) => ({ kind: "sub", data })),
+      ...cafes(["candidate"]),
+    ];
   if (tab === "public") return cafes(["approved"]);
-  return [
-    ...cafes(["hold", "imported", "rejected", "deleted"]),
-    ...subs(state.rejected),
-  ];
+  return cafes(["hold", "imported", "rejected", "deleted"]);
 }
 
 function hasCoords(item) {
@@ -168,9 +162,7 @@ function submissionCard(sub) {
     sub.desc,
     sub.reason && `추천 이유: ${sub.reason}`,
     dup && `같은 주소: ${dup.name} (${STATE_LABEL[cafeState(dup)]})`,
-    sub.status === "rejected" && `반려: ${sub.reject_reason || "사유 없음"}`,
   ];
-  if (sub.status !== "pending") return card(sub.name, lines);
   return card(sub.name, lines, [
     ["검토", () => openForm("approve", sub), "primary"],
     ["중복", () => markDuplicate(sub, dup)],
@@ -226,7 +218,7 @@ function renderCounts() {
     queue: tabItems("queue").length,
     public: tabItems("public").length,
     hidden: tabItems("hidden").length,
-    errors: state.openErrors,
+    errors: state.errors.length,
   };
   document.querySelectorAll("#tabs [data-count]").forEach((node) => {
     node.textContent = String(counts[node.dataset.count] ?? "");
@@ -250,14 +242,12 @@ function renderList() {
 }
 
 async function reload() {
-  const [cafes, pending, rejected] = await Promise.all([
+  const [cafes, pending] = await Promise.all([
     jsonApi("/cafes?lifecycle=all"),
     jsonApi("/submissions?status=pending"),
-    jsonApi("/submissions?status=rejected"),
   ]);
   state.cafes = Array.isArray(cafes) ? cafes : [];
   state.submissions = pending.items || [];
-  state.rejected = rejected.items || [];
   renderList();
 }
 
@@ -276,10 +266,8 @@ async function rejectSubmission(sub) {
   await reload();
 }
 
-function findCafe(text) {
-  const query = text.trim().toLowerCase();
-  const byId = state.cafes.find((cafe) => cafe.id === text.trim());
-  if (byId) return byId;
+function findCafe(name) {
+  const query = name.trim().toLowerCase();
   const matches = state.cafes.filter(
     (cafe) =>
       !cafe.deleted_at && String(cafe.name).toLowerCase().includes(query),
@@ -288,10 +276,7 @@ function findCafe(text) {
 }
 
 async function markDuplicate(sub, suggested) {
-  const text = prompt(
-    "이미 있는 카페 이름 (또는 id)",
-    suggested ? suggested.name : "",
-  );
+  const text = prompt("이미 있는 카페 이름", suggested ? suggested.name : "");
   if (!text?.trim()) return;
   const cafe = findCafe(text);
   if (!cafe) throw new Error("그 이름의 카페가 하나로 좁혀지지 않습니다.");
@@ -338,7 +323,7 @@ function openForm(mode, data = {}) {
     mode !== "edit" || !!data.deleted_at,
   );
   $("cafe-dialog").showModal();
-  if (!hasCoords(data) && data.address) geocode().catch(() => {});
+  if (!hasCoords(data) && data.address) guarded(geocode)();
 }
 
 function collectForm() {
@@ -399,12 +384,9 @@ async function geocode() {
 // ---- 오류 제보 ----
 
 function errorCard(report) {
-  const done = report.status === "resolved";
   const item = card(report.title, [
     `${report.username || "-"} · ${report.page || "-"} · ${formatDate(report.created_at, true)}`,
     report.content,
-    done &&
-      `처리 완료 · ${report.resolved_by_username || ""} ${formatDate(report.resolved_at, true)}`,
   ]);
   const input = el("textarea");
   input.placeholder = "답변 (제보한 사람 마이페이지에 보임)";
@@ -417,15 +399,14 @@ function errorCard(report) {
       "primary",
     ),
   );
-  if (!done) row.append(button("처리 완료", () => resolveError(report)));
+  row.append(button("처리 완료", () => resolveError(report)));
   item.append(input, row);
   return item;
 }
 
 async function loadErrors() {
-  const data = await jsonApi(`/error-reports?status=${state.errorStatus}`);
+  const data = await jsonApi("/error-reports?status=open");
   state.errors = data.items || [];
-  if (state.errorStatus === "open") state.openErrors = state.errors.length;
   $("error-list").replaceChildren(
     ...(state.errors.length
       ? state.errors.map(errorCard)
@@ -446,7 +427,7 @@ async function resolveError(report) {
   await loadErrors();
 }
 
-// ---- 운영: 방문자 · 공지 · CSV · 회원 ----
+// ---- 운영: 방문자 · 공지 · CSV ----
 
 function visitTile(label, value, sub) {
   const box = el("div", "visit-tile");
@@ -559,24 +540,10 @@ async function resetCsv() {
   await reload();
 }
 
-async function loadUsers() {
-  const query = encodeURIComponent($("user-search").value.trim().toLowerCase());
-  const data = await jsonApi(`/users?q=${query}`);
-  const users = data.items || [];
-  $("user-count").textContent = `${users.length}명`;
-  $("user-list").replaceChildren(
-    ...users.map((user) =>
-      card(`${user.username} (${roleLabel(user.role)})`, [
-        `가입 ${formatDate(user.created_at)}`,
-      ]),
-    ),
-  );
-}
-
 async function loadOps() {
   if (state.opsLoaded) return;
   state.opsLoaded = true;
-  await Promise.all([loadVisits(), loadNotice(), loadUsers()]);
+  await Promise.all([loadVisits(), loadNotice()]);
 }
 
 // ---- 시작 ----
@@ -593,17 +560,6 @@ function showTab(tab) {
   renderList();
 }
 
-function bindErrorTabs() {
-  const tabs = [...document.querySelectorAll("#error-tabs button")];
-  for (const node of tabs) {
-    node.addEventListener("click", () => {
-      tabs.forEach((item) => item.classList.toggle("active", item === node));
-      state.errorStatus = node.dataset.status;
-      guarded(loadErrors)();
-    });
-  }
-}
-
 function bind(id, onClick) {
   $(id).addEventListener("click", guarded(onClick));
 }
@@ -612,7 +568,6 @@ function bindEvents() {
   document.querySelectorAll("#tabs button").forEach((node) => {
     node.addEventListener("click", () => showTab(node.dataset.tab));
   });
-  bindErrorTabs();
   $("search").addEventListener("input", renderList);
   bind("new-cafe-btn", () => openForm("add"));
   bind("form-save", saveForm);
@@ -632,10 +587,6 @@ function bindEvents() {
     $("csv-file-name").textContent =
       $("csv-file").files[0]?.name || "CSV 파일 고르기";
   });
-  $("user-search").addEventListener("input", () => {
-    clearTimeout(state.userTimer);
-    state.userTimer = setTimeout(guarded(loadUsers), 180);
-  });
 }
 
 async function init() {
@@ -649,7 +600,6 @@ async function init() {
     location.href = "index.html";
     return;
   }
-  state.me = me.user;
   $("hello").textContent = `${me.user.username} (${roleLabel(me.user.role)})`;
   bindEvents();
   await Promise.all([reload(), loadErrors()]);
