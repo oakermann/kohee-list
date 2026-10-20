@@ -11,7 +11,8 @@ permissions:
 
 concurrency:
   group: kohee-deploy-main
-  cancel-in-progress: true
+  # A cancelled deploy is never retried: the next run only diffs from its own before-SHA.
+  cancel-in-progress: false
 
 jobs:
   deploy:
