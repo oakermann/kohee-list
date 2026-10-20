@@ -66,6 +66,15 @@ function filesInDirectory(directory, predicate) {
   }
 }
 
+// This file lists the prohibited patterns itself; scan everything but that list.
+function automationGuardRead(file) {
+  const content = read(file);
+  if (file !== "scripts/audit-kohee.mjs") return content;
+  const start = content.search(/^const prohibitedAutomationPatterns = \[$/m);
+  const end = content.search(/^const prohibitedAutomation =/m);
+  return content.slice(0, start) + content.slice(end);
+}
+
 const contractRaw = read("kohee.contract.json");
 if (!contractRaw) fail("kohee.contract.json missing");
 let contract = null;
@@ -231,17 +240,13 @@ if (/wrangler\s+d1\s+migrations\s+apply/i.test(d1Sources)) {
 
 const automationGuardSources = [
   ...filesInDirectory(".github/workflows", (name) => /\.ya?ml$/i.test(name)),
-  // This file names the prohibited patterns itself, so it is not scanned.
-  ...filesInDirectory(
-    "scripts",
-    (name) =>
-      /\.(mjs|js|cjs|ps1|sh|cmd|bat)$/i.test(name) &&
-      name !== "audit-kohee.mjs",
+  ...filesInDirectory("scripts", (name) =>
+    /\.(mjs|js|cjs|ps1|sh|cmd|bat)$/i.test(name),
   ),
   "package.json",
 ];
 const automationGuardContent = automationGuardSources
-  .map((file) => `${file}\n${read(file)}`)
+  .map((file) => `${file}\n${automationGuardRead(file)}`)
   .join("\n");
 const prohibitedAutomationPatterns = [
   {
@@ -277,9 +282,7 @@ if (prohibitedAutomation.length > 0) {
     `Prohibited repository automation detected: ${prohibitedAutomation.join(", ")}`,
   );
 } else {
-  ok(
-    "No prohibited unattended worker/auto-merge/branch-delete/issue-close/gate-bypass automation detected",
-  );
+  ok("Repository automation guard passed");
 }
 
 const cacheBust = checkAssetCacheBusting();
