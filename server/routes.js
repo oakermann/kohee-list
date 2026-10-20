@@ -101,7 +101,6 @@ export const PUBLIC_ROUTES = [
   ["GET", "/version", versionInfo],
   ["GET", "/data", getData],
   ["GET", "/notice", getNotice],
-  ["GET", "/geocode", getGeocode],
 ];
 
 export const USER_ROUTES = [
@@ -123,6 +122,8 @@ export const ADMIN_OPERATION_ROUTES = [
   ["POST", "/reject", adminOnly(rejectSubmission)],
   ["GET", "/cafes", adminOnly(listCafes)],
   ["GET", "/stats/visits", adminOnly(getVisitStats)],
+  // 주소→좌표(Nominatim, 초당 1회 정책) — 어드민 좌표 채우기만 쓴다. 공개로 두면 남이 막히게 할 수 있다.
+  ["GET", "/geocode", adminOnly(getGeocode)],
   ["POST", "/add", adminOnly(addCafe)],
   ["POST", "/edit", adminOnly(editCafe)],
   ["POST", "/delete", adminOnly(deleteCafe)],
