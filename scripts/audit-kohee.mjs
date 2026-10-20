@@ -123,7 +123,7 @@ if (contract) {
     holdDefinition: "status = 'hidden' AND hidden_at IS NOT NULL",
     legacyHiddenDefinition: "status = 'hidden' AND hidden_at IS NULL",
     csvApprovedStagesAs: "candidate",
-    csvHiddenStagesAs: "hidden_with_hidden_at",
+    csvHiddenStagesAs: "candidate",
   };
   for (const [k, v] of Object.entries(requiredInv)) {
     if (inv[k] === v) ok(`invariant matched: ${k}`);
@@ -181,12 +181,10 @@ for (const file of ["site/assets/index.js", "site/assets/mypage.js"]) {
 }
 
 const csv = read("server/csv.js");
-if (/DEFAULT_IMPORTED_CAFE_STATUS\s*=\s*"candidate"/.test(csv)) {
+if (/IMPORTED_CAFE_STATUS\s*=\s*"candidate"/.test(csv)) {
   ok("CSV approved stages as candidate appears enforced");
 } else {
-  fail(
-    "CSV approved publishing risk: DEFAULT_IMPORTED_CAFE_STATUS is not candidate",
-  );
+  fail("CSV approved publishing risk: IMPORTED_CAFE_STATUS is not candidate");
 }
 
 const submissions = read("server/submissions.js");

@@ -7,7 +7,6 @@ function read(path) {
 
 const routes = read("server/routes.js");
 const auth = read("server/auth.js");
-const users = read("server/users.js");
 const common = read("site/assets/common.js");
 const adminHtml = read("site/admin.html");
 
@@ -22,12 +21,14 @@ assert.ok(routes.includes('const USER_FACING_OPERATOR_LABEL = "운영진"'));
 
 assert.ok(auth.includes("role: clientRole(user.role)"));
 assert.ok(auth.includes('return role === "admin" ? "admin" : "user"'));
-assert.ok(users.includes("role: publicRole(row.role)"));
-assert.ok(users.includes('return role === "admin" ? "admin" : "user"'));
-assert.ok(users.includes('role !== "user"'));
-assert.equal(users.includes('body.role !== "manager"'), false);
+// 권한을 바꾸는 경로 자체가 없다 — 관리자는 첫 가입자 하나뿐이다.
+assert.equal(routes.includes('"/set-role"'), false);
 
-assert.equal(/\bmanager\s*:/.test(common), false, "common.js should not expose any legacy manager role key");
+assert.equal(
+  /\bmanager\s*:/.test(common),
+  false,
+  "common.js should not expose any legacy manager role key",
+);
 assert.ok(common.includes('admin: "관리자"'));
 assert.ok(common.includes('|| "일반 유저"'));
 

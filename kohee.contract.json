@@ -1,9 +1,7 @@
 {
   "project": "KOHEE LIST",
   "authModelTarget": "admin_user",
-  "legacyRoles": [
-    "manager"
-  ],
+  "legacyRoles": ["manager"],
   "sourceOfTruth": "docs/KOHEE_MASTER_CONTEXT.md",
   "invariants": {
     "publicCafeWhere": "status = 'approved' AND deleted_at IS NULL",
@@ -12,7 +10,7 @@
     "holdDefinition": "status = 'hidden' AND hidden_at IS NOT NULL",
     "legacyHiddenDefinition": "status = 'hidden' AND hidden_at IS NULL",
     "csvApprovedStagesAs": "candidate",
-    "csvHiddenStagesAs": "hidden_with_hidden_at"
+    "csvHiddenStagesAs": "candidate"
   },
   "lanes": {
     "PUBLIC_EXPOSURE": {
@@ -62,9 +60,7 @@
     },
     "FRONTEND_RENDERING": {
       "purpose": "Frontend rendering safety, admin/mypage/index UI, XSS-safe DOM updates, and external links.",
-      "files": [
-        "site"
-      ]
+      "files": ["site"]
     },
     "DEPLOY_SAFETY": {
       "purpose": "GitHub Actions, Cloudflare deploy safety, D1 migration blocking, repo safety, and deploy.",
@@ -90,10 +86,7 @@
     }
   },
   "verify": {
-    "LOW": [
-      "npm run test:unit",
-      "git diff --check"
-    ],
+    "LOW": ["npm run test:unit", "git diff --check"],
     "MEDIUM": [
       "npm run test:unit",
       "powershell -ExecutionPolicy Bypass -File .\\scripts\\check-syntax.ps1",

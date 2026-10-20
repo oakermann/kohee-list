@@ -31,7 +31,7 @@ product validation, deploy safety, and D1/CSV/public-data guardrails.
 - `functions/`
   - Pages Functions (`/api` proxy)
 - `scripts/`
-  - Validation, deployment, smoke-test, and CSV backup scripts
+  - Validation, safety audit, and smoke-check scripts
 - `schema.sql`
   - Base D1 schema
 

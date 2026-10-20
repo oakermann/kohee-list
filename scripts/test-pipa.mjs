@@ -497,6 +497,7 @@ console.log("[pipa-audit] ok");
   );
   assert.ok(rateLimitDelete, "delete batch must purge login rate-limit keys");
   assert.deepEqual(rateLimitDelete.bindings, ["login:%:coffee-user"]);
+  assert.match(rateLimitDelete.sql, /ESCAPE/);
   // Purged before users are deleted (still inside the same atomic batch).
   const rlIdx = batches[0].indexOf(rateLimitDelete);
   const usersIdx = batches[0].findIndex((s) =>

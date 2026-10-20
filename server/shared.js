@@ -14,7 +14,6 @@ export const NO_STORE_CACHE_CONTROL = "no-store";
 export const PUBLIC_DATA_CACHE_CONTROL = "public, max-age=60, s-maxage=60";
 export const SESSION_COOKIE = "kohee_session";
 export const CSRF_COOKIE = "kohee_csrf";
-export const ROLES = ["user", "manager", "admin"];
 export const SESSION_MAX_AGE = 14 * 24 * 60 * 60;
 export const DEPLOY_CHECK = "codex-worker-20260428";
 
@@ -189,10 +188,6 @@ export async function readJson(req) {
     throw new HttpError(415, "Expected JSON body", "VALIDATION_ERROR");
   }
   return req.json();
-}
-
-export function safeRole(role) {
-  return ROLES.includes(role) ? role : "user";
 }
 
 export function normalizeBool(value) {

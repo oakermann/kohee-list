@@ -1,6 +1,7 @@
+// CSV 가져오기 = 새 카페를 후보로 넣는 것뿐이다. 기존 카페는 절대 덮어쓰지 않는다
+// (옛 갱신 경로가 공개 카페를 후보로 내리고, CSV 에 없는 칸을 0·빈 값으로 덮었다).
 import {
   HttpError,
-  cleanText,
   json,
   nowIso,
   requireAuth,
@@ -11,107 +12,82 @@ import { normalizeCafePayload } from "./cafes.js";
 import { safeWriteAuditLog } from "./security.js";
 
 const REQUIRED_HEADERS = ["name", "address", "desc"];
-const OPTIONAL_HEADERS = [
-  "id",
-  "lat",
-  "lng",
-  "signature",
-  "beanShop",
-  "instagram",
-  "category",
-  "status",
-  "oakerman_pick",
-];
-const ALLOWED_CATEGORIES = new Set([
-  "espresso",
-  "drip",
-  "decaf",
-  "instagram",
-  "dessert",
-]);
-const ALLOWED_CAFE_STATUSES = new Set([
-  "candidate",
-  "approved",
-  "hidden",
-  "rejected",
-]);
-const DEFAULT_IMPORTED_CAFE_STATUS = "candidate";
-const DUPLICATE_CAFE_COLUMNS =
-  "id, name, address, desc, lat, lng, signature, beanShop, instagram, category, oakerman_pick, status, hidden_at, hidden_by, deleted_at, deleted_by, delete_reason, updated_at";
+const IMPORTED_CAFE_STATUS = "candidate";
 
-export function parseCsvLine(line) {
-  const out = [];
-  let current = "";
-  let quote = false;
-
-  for (let i = 0; i < line.length; i += 1) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (quote && line[i + 1] === '"') {
-        current += '"';
+// RFC 4180: 따옴표 안의 쉼표·줄바꿈·"" 를 그대로 읽는다.
+export function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') {
+        cell += '"';
         i += 1;
-      } else {
-        quote = !quote;
-      }
-      continue;
-    }
-    if (ch === "," && !quote) {
-      out.push(current);
-      current = "";
-      continue;
-    }
-    current += ch;
+      } else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i += 1;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else cell += ch;
   }
-
-  if (quote) {
-    throw new HttpError(400, "Malformed CSV row", "VALIDATION_ERROR");
-  }
-
-  out.push(current);
-  return out;
+  if (quoted) throw new HttpError(400, "Malformed CSV", "VALIDATION_ERROR");
+  row.push(cell);
+  rows.push(row);
+  return rows.filter((cells) => cells.some((value) => value.trim()));
 }
 
-function boolCsv(value) {
-  const normalized = String(value || "")
-    .trim()
+// 이름은 표기가 갈려 같은 곳을 놓친다 — 주소(공백 제거)로 비교한다.
+export function addressKey(address) {
+  return String(address || "")
+    .replace(/\s+/g, "")
     .toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes";
 }
 
-function splitCsvList(value) {
-  return String(value || "")
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-}
-
-function rowValue(cols, idx, name) {
-  const i = idx[name];
-  return Number.isInteger(i) ? cols[i] || "" : "";
-}
-
-function buildRowBody(cols, idx) {
-  return {
-    id: rowValue(cols, idx, "id"),
-    name: rowValue(cols, idx, "name"),
-    address: rowValue(cols, idx, "address"),
-    desc: rowValue(cols, idx, "desc"),
-    lat: Number(rowValue(cols, idx, "lat") || 0),
-    lng: Number(rowValue(cols, idx, "lng") || 0),
-    signature: splitCsvList(rowValue(cols, idx, "signature")),
-    beanShop: rowValue(cols, idx, "beanShop"),
-    instagram: rowValue(cols, idx, "instagram"),
-    category: splitCsvList(rowValue(cols, idx, "category")),
-    status: cleanText(rowValue(cols, idx, "status"), 40),
-    oakerman_pick: boolCsv(rowValue(cols, idx, "oakerman_pick")),
+function rowPayload(headers, cells) {
+  const value = (name) => {
+    const i = headers.indexOf(name);
+    return i < 0 ? "" : String(cells[i] || "").trim();
   };
+  const list = (name) =>
+    value(name)
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  const payload = normalizeCafePayload({
+    name: value("name"),
+    address: value("address"),
+    desc: value("desc"),
+    lat: value("lat"),
+    lng: value("lng"),
+    signature: list("signature"),
+    beanShop: value("beanShop"),
+    instagram: value("instagram"),
+    naver_url: value("naver_url"),
+    category: list("category"),
+    oakerman_pick: ["1", "true", "yes"].includes(
+      value("oakerman_pick").toLowerCase(),
+    ),
+  });
+  if (!payload.name || !payload.address || !payload.desc) {
+    throw new HttpError(400, "name/address/desc required", "VALIDATION_ERROR");
+  }
+  return payload;
 }
 
-function validateHeaders(headers) {
-  const idx = Object.fromEntries(headers.map((h, i) => [h, i]));
-  const missing = REQUIRED_HEADERS.filter(
-    (name) => !Number.isInteger(idx[name]),
-  );
+async function analyzeCsv(raw, env) {
+  const [headerCells, ...body] = parseCsv(raw);
+  const headers = (headerCells || []).map((name) => name.trim());
+  const missing = REQUIRED_HEADERS.filter((name) => !headers.includes(name));
   if (missing.length) {
     throw new HttpError(
       400,
@@ -119,247 +95,67 @@ function validateHeaders(headers) {
       "VALIDATION_ERROR",
     );
   }
-  return idx;
-}
-
-function validateRowShape(cols, headers) {
-  if (cols.length !== headers.length) {
-    throw new HttpError(
-      400,
-      "CSV row field count does not match headers",
-      "VALIDATION_ERROR",
-    );
-  }
-}
-
-function validateRowBody(body) {
-  if (!cleanText(body.name, 120)) {
-    throw new HttpError(400, "name is required", "VALIDATION_ERROR");
-  }
-  if (!cleanText(body.address, 200)) {
-    throw new HttpError(400, "address is required", "VALIDATION_ERROR");
-  }
-  if (!cleanText(body.desc, 2000)) {
-    throw new HttpError(400, "desc is required", "VALIDATION_ERROR");
-  }
-
-  const invalidCategories = body.category.filter(
-    (value) => !ALLOWED_CATEGORIES.has(value),
-  );
-  if (invalidCategories.length) {
-    throw new HttpError(400, "Invalid category value", "VALIDATION_ERROR");
-  }
-
-  if (body.status && !ALLOWED_CAFE_STATUSES.has(body.status)) {
-    throw new HttpError(400, "Invalid status value", "VALIDATION_ERROR");
-  }
-}
-
-async function findDuplicateCafe(env, name, address) {
-  return env.DB.prepare(
-    `SELECT ${DUPLICATE_CAFE_COLUMNS}
-     FROM cafes
-     WHERE lower(trim(name)) = lower(trim(?)) AND lower(trim(address)) = lower(trim(?))
-     LIMIT 1`,
-  )
-    .bind(name, address)
-    .first();
-}
-
-function resolveCsvCafeStatus(csvStatus) {
-  if (csvStatus === "hidden") return "hidden";
-  return DEFAULT_IMPORTED_CAFE_STATUS;
-}
-
-function csvHoldFields(status, timestamp, user) {
-  return status === "hidden"
-    ? { hidden_at: timestamp, hidden_by: user.user_id }
-    : { hidden_at: null, hidden_by: null };
-}
-
-async function analyzeCsv(raw, env, user) {
-  const lines = raw.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length < 2)
+  if (!body.length)
     throw new HttpError(400, "CSV is empty", "VALIDATION_ERROR");
 
-  const headers = parseCsvLine(lines[0]).map((v) => v.trim());
-  const idx = validateHeaders(headers);
-  const rows = [];
-  const duplicateRows = [];
+  const existing = await env.DB.prepare(
+    "SELECT name, address FROM cafes",
+  ).all();
+  const known = new Map(
+    (existing.results || []).map((cafe) => [
+      addressKey(cafe.address),
+      cafe.name,
+    ]),
+  );
+  const added = [];
+  const skipped = [];
   const failedRows = [];
-  const previewRows = [];
-  const stats = {
-    total: lines.length - 1,
-    wouldAdd: 0,
-    wouldUpdate: 0,
-    wouldDuplicate: 0,
-    failed: 0,
-  };
-
-  for (let i = 1; i < lines.length; i += 1) {
-    const rowNumber = i + 1;
+  body.forEach((cells, index) => {
+    const row = index + 2;
     try {
-      const cols = parseCsvLine(lines[i]);
-      validateRowShape(cols, headers);
-      const body = buildRowBody(cols, idx);
-      validateRowBody(body);
-      const givenId = cleanText(body.id, 80);
-      let action = "add";
-      let existing = null;
-
-      if (givenId) {
-        existing = await env.DB.prepare("SELECT * FROM cafes WHERE id = ?")
-          .bind(givenId)
-          .first();
-        if (existing) action = "update";
+      if (cells.length !== headers.length) {
+        throw new HttpError(400, "CSV row field count does not match headers");
       }
-
-      if (!existing) {
-        existing = await findDuplicateCafe(env, body.name, body.address);
-        if (existing) action = "duplicate";
+      const payload = rowPayload(headers, cells);
+      const key = addressKey(payload.address);
+      if (known.has(key)) {
+        skipped.push({ row, name: payload.name, existing: known.get(key) });
+        return;
       }
-
-      const payload = normalizeCafePayload(body, user.role, existing || {});
-      if (!payload.name || !payload.address || !payload.desc) {
-        throw new Error("name/address/desc required");
-      }
-      const status = resolveCsvCafeStatus(body.status);
-
-      if (action === "add") stats.wouldAdd += 1;
-      if (action === "update") stats.wouldUpdate += 1;
-      if (action === "duplicate") {
-        stats.wouldUpdate += 1;
-        stats.wouldDuplicate += 1;
-        duplicateRows.push({
-          row: rowNumber,
-          id: existing.id,
-          name: existing.name || payload.name,
-        });
-      }
-
-      rows.push({
-        row: rowNumber,
-        action,
-        givenId,
-        existing,
-        payload,
-        status,
-      });
-      if (previewRows.length < 20) {
-        previewRows.push({
-          row: rowNumber,
-          action,
-          id: existing?.id || givenId || "",
-          name: payload.name,
-          address: payload.address,
-        });
-      }
+      known.set(key, payload.name);
+      added.push(payload);
     } catch (err) {
       // 행 검증 실패만 실패 행이다 — DB·코드 오류를 '잘못된 행' 으로 바꾸면 원인이 숨는다
       if (!(err instanceof HttpError)) throw err;
-      stats.failed += 1;
-      failedRows.push({ row: rowNumber, error: err.message });
+      failedRows.push({ row, error: err.message });
     }
-  }
-
-  return {
-    headers: [...REQUIRED_HEADERS, ...OPTIONAL_HEADERS].filter((name) =>
-      Number.isInteger(idx[name]),
-    ),
-    rows,
-    duplicateRows,
-    failedRows,
-    previewRows,
-    ...stats,
-  };
+  });
+  return { total: body.length, added, skipped, failedRows };
 }
 
-function throwIfCsvValidationFailed(analysis) {
-  if (analysis.failed > 0) {
-    throw new HttpError(400, "CSV validation failed", "VALIDATION_ERROR");
-  }
-}
-
-async function applyCsvRows(env, user, rows) {
-  let added = 0;
-  let updated = 0;
-  let duplicated = 0;
-
-  for (const row of rows) {
-    const id = row.existing?.id || row.givenId || crypto.randomUUID();
-    row.appliedId = id;
-    const timestamp = nowIso();
-
-    if (row.action === "add") {
-      const holdFields = csvHoldFields(row.status, timestamp, user);
-      await env.DB.prepare(
-        `INSERT INTO cafes(
-          id, name, address, desc, lat, lng, signature, beanShop, instagram, category,
-          oakerman_pick, status, hidden_at, hidden_by, created_by, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(
-          id,
-          row.payload.name,
-          row.payload.address,
-          row.payload.desc,
-          row.payload.lat,
-          row.payload.lng,
-          row.payload.signature,
-          row.payload.beanShop,
-          row.payload.instagram,
-          row.payload.category,
-          row.payload.oakerman_pick,
-          row.status,
-          holdFields.hidden_at,
-          holdFields.hidden_by,
-          user.user_id,
-          timestamp,
-        )
-        .run();
-      added += 1;
-      continue;
-    }
-
-    const holdFields = csvHoldFields(row.status, timestamp, user);
-    await env.DB.prepare(
-      `UPDATE cafes SET
-        name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, status = ?, hidden_at = ?, hidden_by = ?,
-        deleted_at = NULL, deleted_by = NULL, delete_reason = NULL, updated_at = ?
-       WHERE id = ?`,
-    )
-      .bind(
-        row.payload.name,
-        row.payload.address,
-        row.payload.desc,
-        row.payload.lat,
-        row.payload.lng,
-        row.payload.signature,
-        row.payload.beanShop,
-        row.payload.instagram,
-        row.payload.category,
-        row.payload.oakerman_pick,
-        row.status,
-        holdFields.hidden_at,
-        holdFields.hidden_by,
-        timestamp,
-        id,
-      )
-      .run();
-    updated += 1;
-    if (row.action === "duplicate") duplicated += 1;
-  }
-
-  return { added, updated, duplicated };
-}
-
-async function applyCsvRowsOrThrow(env, user, rows) {
-  try {
-    return await applyCsvRows(env, user, rows);
-  } catch {
-    throw new HttpError(500, "CSV apply failed", "SERVER_ERROR");
-  }
+function insertCafe(env, user, payload, timestamp) {
+  return env.DB.prepare(
+    `INSERT INTO cafes(
+      id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
+      oakerman_pick, status, created_by, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(
+    crypto.randomUUID(),
+    payload.name,
+    payload.address,
+    payload.desc,
+    payload.lat,
+    payload.lng,
+    payload.signature,
+    payload.beanShop,
+    payload.instagram,
+    payload.naver_url,
+    payload.category,
+    payload.oakerman_pick,
+    IMPORTED_CAFE_STATUS,
+    user.user_id,
+    timestamp,
+  );
 }
 
 export async function importCsv(req, env) {
@@ -368,39 +164,41 @@ export async function importCsv(req, env) {
     requireRole(user, ["admin"]);
 
     const dryRun = new URL(req.url).searchParams.get("dryRun") === "1";
-    const raw = await req.text();
-    const analysis = await analyzeCsv(raw, env, user);
-
-    if (dryRun) {
-      return json({ ok: true, dryRun: true, ...analysis }, 200, req, env);
+    const { total, added, skipped, failedRows } = await analyzeCsv(
+      await req.text(),
+      env,
+    );
+    const result = {
+      total,
+      added: added.length,
+      skipped,
+      failed: failedRows.length,
+      failedRows,
+    };
+    if (dryRun)
+      return json({ ok: true, dryRun: true, ...result }, 200, req, env);
+    if (failedRows.length) {
+      throw new HttpError(400, "CSV validation failed", "VALIDATION_ERROR");
     }
 
-    throwIfCsvValidationFailed(analysis);
-    const applied = await applyCsvRowsOrThrow(env, user, analysis.rows);
+    // 한 묶음(batch) = 전부 들어가거나 하나도 안 들어간다.
+    const timestamp = nowIso();
+    if (added.length) {
+      await env.DB.batch(
+        added.map((payload) => insertCafe(env, user, payload, timestamp)),
+      );
+    }
     await safeWriteAuditLog(env, {
       actorUserId: user.user_id,
       action: "csv.import",
       targetType: "cafes",
       after: {
         actor_role: user.role,
-        total: analysis.total,
-        ...applied,
-        failed: analysis.failed,
+        total,
+        added: added.length,
+        skipped: skipped.length,
       },
     });
-
-    return json(
-      {
-        ok: true,
-        total: analysis.total,
-        ...applied,
-        duplicateRows: analysis.duplicateRows,
-        failed: analysis.failed,
-        failedRows: analysis.failedRows,
-      },
-      200,
-      req,
-      env,
-    );
+    return json({ ok: true, ...result }, 200, req, env);
   });
 }

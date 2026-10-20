@@ -35,18 +35,8 @@ export function parseCafeCategories(value) {
   return categories;
 }
 
-export function applyPickPermission(role, payload, existing = {}) {
-  return {
-    oakerman_pick:
-      role === "admin"
-        ? normalizeBool(payload.oakerman_pick)
-        : normalizeBool(existing.oakerman_pick),
-    manager_pick: role === "manager" ? normalizeBool(payload.manager_pick) : 0,
-  };
-}
-
 export function toCafeResponse(row) {
-  const cafe = {
+  return {
     id: row.id,
     name: row.name,
     address: row.address,
@@ -63,12 +53,6 @@ export function toCafeResponse(row) {
     oakerman_pick: !!row.oakerman_pick,
     updated_at: row.updated_at,
   };
-
-  if (Object.prototype.hasOwnProperty.call(row, "manager_pick")) {
-    cafe.manager_pick = !!row.manager_pick;
-  }
-
-  return cafe;
 }
 
 export function toAdminCafeResponse(row) {
@@ -84,8 +68,10 @@ export function toAdminCafeResponse(row) {
 
 export async function getData(req, env) {
   return withGuard(req, env, async () => {
-    // 방문 집계는 부가 기능 - 실패해도 공개 데이터 제공은 깨지 않는다.
-    await recordVisit(req, env).catch(() => {});
+    // 방문 집계는 부가 기능 - 실패해도 공개 데이터는 내보내되, 실패는 로그에 남긴다.
+    await recordVisit(req, env).catch((error) =>
+      console.error("visit record failed", error),
+    );
     const rows = await env.DB.prepare(
       `SELECT id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, category,
         oakerman_pick, updated_at
@@ -102,7 +88,7 @@ export async function getData(req, env) {
 export async function listCafes(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["admin", "manager"]);
+    requireRole(user, ["admin"]);
 
     const url = new URL(req.url);
     const lifecycle = String(url.searchParams.get("lifecycle") || "active");
@@ -180,7 +166,7 @@ export function assertValidCafeCoords(payload) {
 export async function addCafe(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
-    requireRole(user, ["admin", "manager"]);
+    requireRole(user, ["admin"]);
 
     const body = await readJson(req);
     const payload = normalizeCafePayload(body);
@@ -194,8 +180,8 @@ export async function addCafe(req, env) {
     await env.DB.prepare(
       `INSERT INTO cafes(
         id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, memo, category,
-        oakerman_pick, manager_pick, status, created_by, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        oakerman_pick, status, created_by, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -213,7 +199,6 @@ export async function addCafe(req, env) {
         payload.memo,
         payload.category,
         payload.oakerman_pick,
-        0,
         status,
         user.user_id,
         updatedAt,
@@ -261,7 +246,7 @@ export async function editCafe(req, env) {
     await env.DB.prepare(
       `UPDATE cafes SET
         name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, naver_url = ?, region = ?, region_distance_m = ?, memo = ?, category = ?,
-        oakerman_pick = ?, manager_pick = 0, updated_at = ?
+        oakerman_pick = ?, updated_at = ?
        WHERE id = ?`,
     )
       .bind(
@@ -398,6 +383,8 @@ export async function approveCafe(req, env) {
     if (exists.status !== "candidate") {
       throw new HttpError(400, "Only candidate cafes can be approved");
     }
+    // 좌표 0 인 카페는 '내 주변'에서 조용히 빠진다 — 공개 전에 막는다.
+    assertValidCafeCoords(exists);
 
     const approvedAt = nowIso();
     await env.DB.prepare(
