@@ -23,7 +23,6 @@ $summary = [ordered]@{
   workspace = $Workspace
   base_url = $BaseUrl
   timestamp = (Get-Date).ToString("s")
-  sync = "pending"
   syntax = "pending"
   backup = if ($SkipBackup) { "skipped" } else { "pending" }
   deploy = "pending"
@@ -41,11 +40,6 @@ function Save-Report {
 
 Push-Location $Workspace
 try {
-  Write-Host "[release-safe] syncing local page mirrors"
-  & powershell -ExecutionPolicy Bypass -File .\sync-pages.ps1
-  $summary.sync = "ok"
-  Save-Report
-
   Write-Host "[release-safe] running syntax checks"
   & powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1
   $summary.syntax = "ok"
@@ -60,7 +54,7 @@ try {
   }
 
   Write-Host "[release-safe] deploying worker and pages"
-  & powershell -ExecutionPolicy Bypass -File .\scripts\deploy-all.ps1 -SkipSync
+  & powershell -ExecutionPolicy Bypass -File .\scripts\deploy-all.ps1
   $summary.deploy = "ok"
   Save-Report
 

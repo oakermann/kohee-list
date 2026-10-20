@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import { checkAssetCacheBusting } from "./check-asset-cache-busting.mjs";
 
 const strict = process.argv.includes("--strict");
 const warnings = [];
@@ -37,7 +37,7 @@ function mustInclude(content, needle, failMsg, okMsg) {
 }
 
 function hasPublicLifecycleLeakMarker(file, content) {
-  if (file === "assets/index.js") {
+  if (file === "site/assets/index.js") {
     const normalized = content
       .replaceAll("is-hidden", "")
       .replaceAll("document.hidden", "");
@@ -46,50 +46,13 @@ function hasPublicLifecycleLeakMarker(file, content) {
     );
   }
 
-  if (file === "assets/mypage.js") {
+  if (file === "site/assets/mypage.js") {
     return /\b(deleted_at|hidden_at|hidden_by|candidate)\b/i.test(content);
   }
 
   return /\b(status|candidate|hidden|rejected|deleted_at|deleted)\b/i.test(
     content,
   );
-}
-
-function git(args) {
-  try {
-    return execFileSync("git", args, { encoding: "utf8", stdio: "pipe" }).trim();
-  } catch {
-    return "";
-  }
-}
-
-function ensureRemoteRef(branch) {
-  if (!branch) return "";
-  const remoteRef = `origin/${branch}`;
-  if (git(["rev-parse", "--verify", remoteRef])) return remoteRef;
-
-  git([
-    "fetch",
-    "--no-tags",
-    "--depth=1",
-    "origin",
-    `${branch}:refs/remotes/origin/${branch}`,
-  ]);
-
-  if (git(["rev-parse", "--verify", remoteRef])) return remoteRef;
-  return "";
-}
-
-function gitFile(ref, path) {
-  if (!ref) return "";
-  try {
-    return execFileSync("git", ["show", `${ref}:${path}`], {
-      encoding: "utf8",
-      stdio: "pipe",
-    });
-  } catch {
-    return "";
-  }
 }
 
 function filesInDirectory(directory, predicate) {
@@ -122,114 +85,6 @@ function automationGuardRead(file) {
   }
 
   return content;
-}
-
-function firstUsableBaseRef() {
-  const fetchedBaseRef = ensureRemoteRef(process.env.GITHUB_BASE_REF);
-  const fetchedMainRef = fetchedBaseRef ? "" : ensureRemoteRef("main");
-  const candidates = [
-    fetchedBaseRef,
-    process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "",
-    fetchedMainRef,
-    "origin/main",
-    "HEAD^1",
-    "HEAD~1",
-  ].filter(Boolean);
-  for (const candidate of candidates) {
-    if (git(["rev-parse", "--verify", candidate])) return candidate;
-  }
-  return "";
-}
-
-function changedFilesFromGit() {
-  const files = new Set();
-  const baseRef = firstUsableBaseRef();
-  const diffRanges = [
-    baseRef ? `${baseRef}...HEAD` : "",
-    "HEAD",
-    "--cached",
-  ].filter(Boolean);
-
-  for (const range of diffRanges) {
-    const output =
-      range === "--cached"
-        ? git(["diff", "--name-only", "--cached"])
-        : git(["diff", "--name-only", range]);
-    for (const file of output.split(/\r?\n/).filter(Boolean)) files.add(file);
-  }
-
-  const untracked = git(["ls-files", "--others", "--exclude-standard"]);
-  for (const file of untracked.split(/\r?\n/).filter(Boolean)) files.add(file);
-
-  return { baseRef, files };
-}
-
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function assetVersion(html, assetPath) {
-  const escaped = escapeRegex(assetPath);
-  const match = html.match(new RegExp(`${escaped}\\?v=([^"'>\\s]+)`));
-  return match?.[1] || "";
-}
-
-function checkAdminAssetVersion(assetPath) {
-  if (assetPath === "./assets/admin.js") return;
-  const rootHtml = read("admin.html");
-  const deployHtml = read(".pages-deploy/admin.html");
-  const rootVersion = assetVersion(rootHtml, assetPath);
-  const deployVersion = assetVersion(deployHtml, assetPath);
-  const label = assetPath.replace("./assets/", "");
-
-  if (!rootVersion) {
-    fail(`admin.html missing cache-busted ${assetPath}?v=... reference`);
-    return;
-  }
-  if (!deployVersion) {
-    fail(`.pages-deploy/admin.html missing cache-busted ${assetPath}?v=... reference`);
-    return;
-  }
-  if (rootVersion !== deployVersion) {
-    fail(
-      `admin ${label} cache-bust mismatch: root=${rootVersion}, .pages-deploy=${deployVersion}`,
-    );
-  } else {
-    ok(`admin ${label} cache-bust versions match (${rootVersion})`);
-  }
-}
-
-function checkAdminAssetBump({ assetFile, assetPath, htmlFile, baseRef }) {
-  if (assetFile === "assets/admin.js") return;
-  if (!baseRef) {
-    warn(
-      `${assetFile} changed but no base ref was available to confirm ${htmlFile} version bump`,
-    );
-    return;
-  }
-
-  const currentVersion = assetVersion(read(htmlFile), assetPath);
-  const previousVersion = assetVersion(gitFile(baseRef, htmlFile), assetPath);
-
-  if (!currentVersion) {
-    fail(`${htmlFile} missing cache-busted ${assetPath}?v=... reference`);
-    return;
-  }
-  if (!previousVersion) {
-    warn(
-      `${assetFile} changed but ${htmlFile} had no comparable base ${assetPath}?v=... reference`,
-    );
-    return;
-  }
-  if (currentVersion === previousVersion) {
-    fail(
-      `${assetFile} changed but ${htmlFile} did not bump ${assetPath} version (${currentVersion})`,
-    );
-  } else {
-    ok(
-      `${assetFile} changed and ${htmlFile} bumped ${assetPath} version (${previousVersion} -> ${currentVersion})`,
-    );
-  }
 }
 
 const contractRaw = read("kohee.contract.json");
@@ -325,7 +180,7 @@ if (/"manager_pick"/.test(forbiddenPublicKeysBlock)) {
   fail("scripts/smoke-check.mjs does not explicitly forbid manager_pick");
 }
 
-for (const file of ["assets/index.js", "assets/mypage.js"]) {
+for (const file of ["site/assets/index.js", "site/assets/mypage.js"]) {
   const content = read(file);
   if (!content) continue;
   if (hasPublicLifecycleLeakMarker(file, content)) {
@@ -391,7 +246,6 @@ const scriptSources = [
   "scripts/verify-release.ps1",
   "scripts/check-repo-safety.mjs",
   "scripts/check-syntax.ps1",
-  "scripts/check-deploy-sync.mjs",
 ]
   .map((p) => read(p))
   .join("\n");
@@ -449,38 +303,12 @@ if (prohibitedAutomation.length > 0) {
   ok("No prohibited unattended worker/auto-merge/branch-delete/issue-close/gate-bypass automation detected");
 }
 
-const changed = changedFilesFromGit();
-checkAdminAssetVersion("./assets/admin.js");
-checkAdminAssetVersion("./assets/admin.css");
+const cacheBust = checkAssetCacheBusting();
+if (cacheBust.skipped) warn(`asset cache-bust check skipped: ${cacheBust.reason}`);
+else if (cacheBust.ok) ok("changed assets have bumped ?v= references");
+else cacheBust.failures.forEach(fail);
 
-const adminAssetChecks = [
-  { assetFile: "assets/admin.js", assetPath: "./assets/admin.js" },
-  {
-    assetFile: ".pages-deploy/assets/admin.js",
-    assetPath: "./assets/admin.js",
-  },
-  { assetFile: "assets/admin.css", assetPath: "./assets/admin.css" },
-  {
-    assetFile: ".pages-deploy/assets/admin.css",
-    assetPath: "./assets/admin.css",
-  },
-];
-
-for (const check of adminAssetChecks) {
-  if (!changed.files.has(check.assetFile)) continue;
-  checkAdminAssetBump({
-    ...check,
-    htmlFile: "admin.html",
-    baseRef: changed.baseRef,
-  });
-  checkAdminAssetBump({
-    ...check,
-    htmlFile: ".pages-deploy/admin.html",
-    baseRef: changed.baseRef,
-  });
-}
-
-for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
+for (const file of ["site/assets/index.js", "site/assets/mypage.js", "site/assets/admin.js"]) {
   const content = read(file);
   if (!content) continue;
   const lines = content.split("\n");
@@ -494,7 +322,7 @@ for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
   });
 }
 
-for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
+for (const file of ["site/assets/index.js", "site/assets/mypage.js", "site/assets/admin.js"]) {
   const content = read(file);
   for (const marker of ["?ㅼ", "?꾨", "?놁", "?ㅽ"]) {
     if (content.includes(marker))
@@ -505,8 +333,7 @@ for (const file of ["assets/index.js", "assets/mypage.js", "assets/admin.js"]) {
 const refs =
   read("README.md") +
   read(".prettierignore") +
-  read("package.json") +
-  read("sync-pages.ps1");
+  read("package.json");
 if (/\baaaa\b|\baaa\b/.test(refs)) warn("Possible aaa/aaaa reference found");
 else ok("No obvious aaa/aaaa references detected");
 

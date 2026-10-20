@@ -61,7 +61,7 @@ console.log("[test-live-assets] Running live asset check unit assertions...");
 
 // 2. Test matching pair passes
 {
-  const indexHtml = await readFile(".pages-deploy/index.html", "utf8");
+  const indexHtml = await readFile("site/index.html", "utf8");
   const mockFetch = async (url) => {
     if (url === "https://test.site/index.html") {
       return {
@@ -73,7 +73,7 @@ console.log("[test-live-assets] Running live asset check unit assertions...");
     if (url.includes("assets/")) {
       const assetUrl = new URL(url);
       const relPath = assetUrl.pathname.replace(/^\//, "");
-      const text = await readFile(`.pages-deploy/${relPath}`, "utf8");
+      const text = await readFile(`site/${relPath}`, "utf8");
       return {
         ok: true,
         status: 200,
@@ -96,7 +96,7 @@ console.log("[test-live-assets] Running live asset check unit assertions...");
 
 // 3. Test mismatched asset fails and identifies the asset (The 2026-08-02 failure scenario)
 {
-  const indexHtml = await readFile(".pages-deploy/index.html", "utf8");
+  const indexHtml = await readFile("site/index.html", "utf8");
   const mockFetch = async (url) => {
     if (url === "https://test.site/index.html") {
       return {
@@ -152,7 +152,7 @@ console.log("[test-live-assets] Running live asset check unit assertions...");
 
 // 5. Test live asset HTTP 404 fails
 {
-  const indexHtml = await readFile(".pages-deploy/index.html", "utf8");
+  const indexHtml = await readFile("site/index.html", "utf8");
   const mockFetch = async (url) => {
     if (url === "https://test.site/index.html") {
       return {

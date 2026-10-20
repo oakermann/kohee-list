@@ -37,16 +37,13 @@ try {
   )
   $jsFiles += Get-ChildItem -LiteralPath (Join-Path $Workspace "scripts") -Filter *.mjs | ForEach-Object { $_.FullName }
   $jsFiles += Get-ChildItem -LiteralPath (Join-Path $Workspace "server") -Filter *.js | ForEach-Object { $_.FullName }
-  $jsFiles += Get-ChildItem -LiteralPath (Join-Path $Workspace ".pages-deploy\assets") -Filter *.js | ForEach-Object { $_.FullName }
+  $jsFiles += Get-ChildItem -LiteralPath (Join-Path $Workspace "site\assets") -Filter *.js | ForEach-Object { $_.FullName }
 
   foreach ($file in $jsFiles) {
     Test-JavaScriptModule -Path $file
   }
 
-  $psFiles = @(
-    (Join-Path $Workspace "sync-pages.ps1")
-  )
-  $psFiles += Get-ChildItem -LiteralPath (Join-Path $Workspace "scripts") -Filter *.ps1 | ForEach-Object { $_.FullName }
+  $psFiles = Get-ChildItem -LiteralPath (Join-Path $Workspace "scripts") -Filter *.ps1 | ForEach-Object { $_.FullName }
 
   foreach ($file in $psFiles) {
     Test-PowerShellFile -Path $file

@@ -1141,7 +1141,7 @@ class AdminNode {
   }
 }
 
-const adminSource = await fs.readFile("assets/admin.js", "utf8");
+const adminSource = await fs.readFile("site/assets/admin.js", "utf8");
 const adminBody = adminSource
   .replace(/import[\s\S]*?from "\.\/common\.js\?v=[^"]+";\s*/, "")
   .replace(/init\(\)\.catch[\s\S]*$/, "");

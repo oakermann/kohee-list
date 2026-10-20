@@ -22,8 +22,7 @@ specific product change.
 Hard no-change areas unless explicitly approved:
 
 - `server/**`
-- `assets/**`
-- `.pages-deploy/**`
+- `site/**`
 - `migrations/**`
 - `schema.sql`
 - `worker.js`
@@ -47,7 +46,6 @@ Hard no-change areas unless explicitly approved:
 Expected validation commands for product-safe repository work:
 
 ```text
-npm run check:deploy-sync
 npm run test:unit
 npm run verify:release
 git diff --check

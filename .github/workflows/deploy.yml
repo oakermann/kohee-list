@@ -126,13 +126,6 @@ jobs:
           )
           $summary | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
 
-      # Only .pages-deploy is uploaded below. If the mirror and the root copy have drifted,
-      # deploying ships the mirror and silently discards the change that was reviewed, so
-      # refuse before uploading rather than discovering it hours later.
-      - name: Deploy mirror and cache busting
-        if: steps.changes.outputs.shouldDeployPages == 'true' && steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
-        run: npm run check:deploy-sync
-
       - name: Deploy Cloudflare Pages
         id: pages_deploy
         if: steps.changes.outputs.shouldDeployPages == 'true' && steps.changes.outputs.shouldBlockAutoDeployDueToD1 != 'true'
@@ -141,8 +134,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npm run build:pages
-          npx wrangler pages deploy .pages-deploy --project-name kohee --branch main
+          npx wrangler pages deploy site --project-name kohee --branch main
 
       - name: Smoke check Pages
         id: pages_smoke

@@ -18,81 +18,36 @@ export function runAssetCacheBustingTests() {
     assert.deepEqual(getAssetVersionsInHtml(html, "login.js"), []);
   }
 
-  // Test 2: Asset changed without bump -> FAILS and names asset + html files
+  // Test 2: Asset changed without bump -> FAILS and names asset + html file
   {
-    const mockFilesBase = {
-      "index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-      ".pages-deploy/index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-    };
-    const mockFilesWork = {
-      "index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-      ".pages-deploy/index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-    };
-
     const res = checkAssetCacheBusting({
       git: () => "true",
       baseRef: "MOCK_BASE",
-      changedFiles: ["assets/index.js"],
-      htmlFiles: ["index.html", ".pages-deploy/index.html"],
-      readFile: (file) => mockFilesWork[file] || null,
-      getBaseFileContent: (ref, file) => mockFilesBase[file] || null,
+      changedFiles: ["site/assets/index.js"],
+      htmlFiles: ["site/index.html"],
+      readFile: () => `<script src="./assets/index.js?v=20260722-5"></script>`,
+      getBaseFileContent: () => `<script src="./assets/index.js?v=20260722-5"></script>`,
     });
 
     assert.equal(res.ok, false);
     assert.equal(res.failures.length, 1);
     assert.match(res.failures[0], /assets\/index\.js/);
-    assert.match(res.failures[0], /index\.html/);
-    assert.match(res.failures[0], /\.pages-deploy\/index\.html/);
+    assert.match(res.failures[0], /site\/index\.html/);
   }
 
-  // Test 3: Asset changed WITH bump in both copies -> PASSES
+  // Test 3: Asset changed WITH bump -> PASSES
   {
-    const mockFilesBase = {
-      "index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-      ".pages-deploy/index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-    };
-    const mockFilesWork = {
-      "index.html": `<script src="./assets/index.js?v=20260802-1"></script>`,
-      ".pages-deploy/index.html": `<script src="./assets/index.js?v=20260802-1"></script>`,
-    };
-
     const res = checkAssetCacheBusting({
       git: () => "true",
       baseRef: "MOCK_BASE",
-      changedFiles: ["assets/index.js"],
-      htmlFiles: ["index.html", ".pages-deploy/index.html"],
-      readFile: (file) => mockFilesWork[file] || null,
-      getBaseFileContent: (ref, file) => mockFilesBase[file] || null,
+      changedFiles: ["site/assets/index.js"],
+      htmlFiles: ["site/index.html"],
+      readFile: () => `<script src="./assets/index.js?v=20260802-1"></script>`,
+      getBaseFileContent: () => `<script src="./assets/index.js?v=20260722-5"></script>`,
     });
 
     assert.equal(res.ok, true);
     assert.equal(res.failures.length, 0);
-  }
-
-  // Test 4: Asset changed with bump ONLY in root index.html -> FAILS for .pages-deploy/index.html
-  {
-    const mockFilesBase = {
-      "index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-      ".pages-deploy/index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-    };
-    const mockFilesWork = {
-      "index.html": `<script src="./assets/index.js?v=20260802-1"></script>`,
-      ".pages-deploy/index.html": `<script src="./assets/index.js?v=20260722-5"></script>`,
-    };
-
-    const res = checkAssetCacheBusting({
-      git: () => "true",
-      baseRef: "MOCK_BASE",
-      changedFiles: ["assets/index.js"],
-      htmlFiles: ["index.html", ".pages-deploy/index.html"],
-      readFile: (file) => mockFilesWork[file] || null,
-      getBaseFileContent: (ref, file) => mockFilesBase[file] || null,
-    });
-
-    assert.equal(res.ok, false);
-    assert.equal(res.failures.length, 1);
-    assert.match(res.failures[0], /\.pages-deploy\/index\.html/);
-    assert.doesNotMatch(res.failures[0], /index\.html,/);
   }
 
   // Test 5: No git history / base -> Skipped graceful no-op

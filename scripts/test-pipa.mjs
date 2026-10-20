@@ -16,7 +16,7 @@ const PASSWORD_HASH = await hashPassword(CORRECT_PASSWORD);
 // ---------------------------------------------------------------------------
 // #1 Privacy policy page (PIPA Article 30)
 // ---------------------------------------------------------------------------
-for (const path of ["privacy.html", ".pages-deploy/privacy.html"]) {
+for (const path of ["site/privacy.html"]) {
   const html = read(path);
   // All 8 required 처리방침 sections are present.
   assert.ok(
@@ -43,18 +43,13 @@ for (const path of ["privacy.html", ".pages-deploy/privacy.html"]) {
   );
 }
 
-// A "개인정보 처리방침" footer link exists on all 5 app pages + their mirrors.
+// A "개인정보 처리방침" footer link exists on all 5 app pages.
 for (const path of [
-  "index.html",
-  "mypage.html",
-  "submit.html",
-  "login.html",
-  "admin.html",
-  ".pages-deploy/index.html",
-  ".pages-deploy/mypage.html",
-  ".pages-deploy/submit.html",
-  ".pages-deploy/login.html",
-  ".pages-deploy/admin.html",
+  "site/index.html",
+  "site/mypage.html",
+  "site/submit.html",
+  "site/login.html",
+  "site/admin.html",
 ]) {
   const html = read(path);
   assert.match(
@@ -321,7 +316,7 @@ function signupRequest(body) {
 }
 
 // Frontend: consent checkbox + privacy link + consent:true in the request.
-for (const path of ["login.html", ".pages-deploy/login.html"]) {
+for (const path of ["site/login.html"]) {
   const html = read(path);
   assert.ok(
     html.includes('id="signup-consent"'),
@@ -333,7 +328,7 @@ for (const path of ["login.html", ".pages-deploy/login.html"]) {
     `${path} signup consent must link privacy.html`,
   );
 }
-for (const path of ["assets/login.js", ".pages-deploy/assets/login.js"]) {
+for (const path of ["site/assets/login.js"]) {
   const js = read(path);
   // Reads the consent checkbox and includes it in the signup request body.
   assert.match(js, /signup-consent/, `${path} must read the consent checkbox`);
@@ -382,7 +377,7 @@ console.log("[pipa-consent] ok");
 }
 
 // Third-party PII minimization notices on free-text inputs.
-for (const path of ["submit.html", ".pages-deploy/submit.html"]) {
+for (const path of ["site/submit.html"]) {
   const html = read(path);
   assert.ok(
     html.includes("타인의 이름·연락처 등 개인정보는 입력하지 마세요"),

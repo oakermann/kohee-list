@@ -2,14 +2,6 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import process from "node:process";
 
-const FRONTEND_FILES = new Set([
-  "index.html",
-  "admin.html",
-  "login.html",
-  "submit.html",
-  "mypage.html",
-]);
-
 const TOOLING_FILES = new Set([
   "package.json",
   "package-lock.json",
@@ -83,17 +75,14 @@ function getChangedFiles() {
 }
 
 function isFrontend(file) {
-  return (
-    FRONTEND_FILES.has(file) ||
-    file.startsWith("assets/") ||
-    file.startsWith(".pages-deploy/")
-  );
+  return file.startsWith("site/");
 }
 
 function isWorker(file) {
   return (
     file === "worker.js" ||
     file.startsWith("server/") ||
+    file.startsWith("site/") || // the Worker serves site/ as its static assets
     file === "wrangler.toml"
   );
 }
