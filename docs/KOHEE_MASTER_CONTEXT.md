@@ -1,132 +1,57 @@
-# KOHEE LIST Master Context
+# KOHEE LIST — 시스템 정본
 
-Last updated: 2026-05-19
+카페 큐레이션 사이트. 주소 하나(https://kohee.pages.dev), Cloudflare Pages 프로젝트 하나(`kohee`)가
+화면(`site/`)과 API(`functions/api` → `server/`)를 함께 내고, D1(`kohee-list`)에 직접 묶인다.
+워커·회원·세션·IP 수집은 없다(2026-10-21, 마이그레이션 0011).
 
-KOHEE LIST is a product repository. OAP is maintained separately.
+## 데이터
 
-This document is the source of truth for KOHEE LIST product behavior, safety
-rules, lifecycle rules, CSV policy, deployment risk handling, and product
-backlog. When this document conflicts with older scattered notes, this document
-takes precedence unless the user gives a newer explicit instruction.
+| 표              | 무엇                                      |
+| --------------- | ----------------------------------------- |
+| `cafes`         | 공개 카페·후보·사용자 제보가 한 표에 산다 |
+| `error_reports` | 오류 제보와 운영자 답변(같은 줄)          |
+| `settings`      | 메인 공지                                 |
 
-## 1. Project Baseline
+카페 상태:
 
-- Project: KOHEE LIST
-- GitHub repo: `oakermann/kohee-list`
-- Main branch: `main`
-- Cloudflare Pages project: `kohee`
-- Production service Worker: `kohee-list`
-- Database: Cloudflare D1
+- **공개** = `status = 'approved' AND deleted_at IS NULL` — 사이트(`/api/data`)에 보이는 유일한 조건
+- **후보** = `status = 'candidate'` — 어드민 등록·CSV·사용자 제보(`client_id` 있음)
+- **내림** = `deleted_at` 있음 — 버린 제보·내린 카페. 되살리면 원래 상태로, 완전 삭제는 내린 것만
+- 공개하려면 좌표(lat/lng)가 있어야 한다 — 좌표 0 은 '내 주변'에서 조용히 빠진다
 
-KOHEE LIST is a curated, explainable cafe list. It is not a broad map app,
-generic review app, ad directory, or uncontrolled cafe crawler.
+공개 응답에는 운영 메모·제보자 표·제보 사유·상태 칸을 내보내지 않는다(`scripts/test-api.mjs` 가 지킨다).
 
-## 2. Hard Safety Boundaries
+## 사람
 
-Do not change these areas unless the user explicitly approves the exact product
-change:
+- **이용자**: 로그인 없음. 찜은 브라우저(localStorage)에만. 제보·오류 제보는 브라우저가 만든 무작위
+  표(`client_id`)를 붙여 보내고, 같은 브라우저의 '찜·내 제보'에서 처리 결과·답변을 본다.
+  도배는 사이트 전체 하루 상한(`SUBMIT_DAILY_CAP`)으로 막는다 — 어차피 어드민이 공개해야 보인다.
+- **어드민**: 비밀번호 하나(Pages 비밀값 `ADMIN_PASSWORD`). 로그인하면 `만료.서명` 쿠키(HttpOnly·Secure·
+  SameSite=Strict, 서명 열쇠 = 비밀번호). 비밀번호를 바꾸면 모든 쿠키가 무효.
+  `wrangler pages secret put ADMIN_PASSWORD --project-name kohee`
 
-- D1 schema or migrations
-- auth/session/security behavior
-- CSV import behavior
-- public `/data` behavior
-- cafe lifecycle behavior
-- production deploy behavior
-- secrets or production config
+## 운영 콘솔(`/admin`)
 
-D1/schema/migration work is HIGH/HOLD by default. Plan first, back up first,
-and never add automatic remote migration apply behavior without explicit
-approval.
+첫 화면 = 운영(칸 고르기): 새로 들어옴 [공개][버리기] · 공개 중 [내리기] · 내린 것 [되살리기][완전 삭제] ·
+오류 제보 · 공지 · CSV 가져오기 · 방문자(Cloudflare Web Analytics). 카드를 누르면 수정.
+좌표는 주소로 자동 채움(`/api/geocode`, Nominatim, 어드민 전용 — 초당 1회 정책).
 
-## 3. Core Product Invariants
+CSV 가져오기 = 새 카페만 후보로. 주소(공백 무시)가 같은 카페는 건너뛰고, 틀린 행이 하나라도 있으면
+아무것도 넣지 않는다(batch). 기존 카페를 고치는 경로는 없다.
 
-Public cafe exposure:
+## 배포
 
-- Public `/data` must only expose cafes where
-  `status = 'approved' AND deleted_at IS NULL`.
-- Candidate, hold/hidden, rejected, deleted, archived, duplicate-suspected, and
-  internal-review records must not appear in public data.
-- Public APIs must not expose submitter identity/contact, admin/operator
-  identity, internal notes, selection reasons, evidence URLs, review memos, hold
-  reasons, confidence/evidence level, duplicate flags, audit logs, or
-  deleted/hidden metadata.
+- PR·main: `.github/workflows/check.yml` — `npm test`, 포맷, 저장소 안전(백업·DB 파일 커밋 금지)
+- main 합침: `deploy.yml` — Pages 배포 + `npm run smoke:check`(실제 사이트)
+- DB 구조 변경(`migrations/`·`schema.sql`)이 섞인 push 는 배포하지 않는다: 백업
+  (`wrangler d1 export kohee-list --remote`) → `d1-migrate.yml`(apply) → Deploy 수동 실행
+- 화면 파일은 `Cache-Control: no-cache`(매번 확인, 안 바뀌면 304) — `?v=` 를 올리지 않는다
 
-Cafe lifecycle:
+## 로컬
 
-- New cafe-like records default to candidate/hold, not public.
-- Admin approval is required for public exposure.
-- CSV import must not directly publish approved cafes.
-- `status=approved` from CSV stages as candidate unless a separate admin
-  approval path is used.
-- Hold rows are `status='hidden' AND hidden_at IS NOT NULL`.
-- Legacy imported hidden rows are `status='hidden' AND hidden_at IS NULL`.
-- Recoverable deletion is preferred over hard deletion.
-- Purge is separate HIGH-risk work.
-
-Roles:
-
-- Target runtime role model is `admin` and `user`.
-- Legacy `manager` may remain in D1/schema as a migration concern only.
-- Do not expand manager behavior.
-- Do not add `super_admin`.
-
-Categories:
-
-- Allowed categories are `espresso`, `drip`, `decaf`, `instagram`, and
-  `dessert`.
-- Categories represent verified strengths, not mere menu existence.
-- Drip/espresso require stronger coffee-specific evidence or admin
-  confirmation.
-- Existing original CSV `decaf` tags are treated as user-verified and preserved
-  unless explicitly told otherwise.
-- `instagram` is for spaces where the space itself is a meaningful reason to
-  visit, not just a minor interior detail.
-
-## 4. CSV And Review Workflow Policy
-
-CSV is an import path only, never a direct public overwrite mechanism. Review
-happens in the admin console, not in exported CSV files.
-
-- CSV reset (`/reset-csv`) and the candidate/hold/approved/submissions review
-  CSV exports were removed on 2026-10-20 (owner-approved cleanup).
-- CSV import (`/import-csv`, dry-run first) stores new rows as `candidate`.
-- CSV import must not auto-approve public records.
-- Protected fields must not be overwritten from CSV: `id`, `submission_id`,
-  `created_at`, submitter fields, `admin_reply_message`, `deleted_at`, and
-  direct approved/public status.
-
-## 5. Deployment And D1 Safety
-
-- GitHub Actions handles normal deploys after merge to `main`.
-- Local Cloudflare deploys require explicit user instruction.
-- Do not change existing production Pages/Worker/D1 deploy behavior during
-  docs/tooling cleanup.
-- D1 changes are manual-review only: plan first, backup/runbook first, no
-  automatic remote migration, no migration in GitHub Actions without explicit
-  approval.
-
-## 6. Product Backlog
-
-Current product candidates:
-
-1. KOHEE admin console follow-up: Kakao place search for coordinates (tabbed console rewritten 2026-10-21).
-2. Safer smoke-check split into --public, --admin, and --worker target groups (with --pages compatibility).
-3. Legacy manager compatibility cleanup planning.
-
-HOLD/HIGH candidates:
-
-1. Remove manager from D1 schema role CHECK.
-2. Design evidence DB with cafe evidence and category verification.
-
-## 7. Required Validation
-
-For product-safe repository work, run:
-
-```text
-npm run test:unit
-npm run verify:release
-git diff --check
 ```
-
-Use `npm run audit:kohee` when product invariants, governance references, or
-safety checks are touched.
+npx wrangler d1 execute kohee-list --local --file <백업.sql>   # 또는 --file schema.sql
+npx wrangler d1 migrations apply kohee-list --local
+npx wrangler pages dev site --binding ADMIN_PASSWORD=<아무거나>   # http://127.0.0.1:8788
+SITE_URL=http://127.0.0.1:8788 npm run smoke:check
+```

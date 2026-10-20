@@ -1,217 +1,80 @@
-﻿import {
+﻿// 오류 제보 — 로그인 없이 받고, 제보자는 브라우저 표(client_id)로 답변을 본다.
+import {
   HttpError,
+  cleanClientId,
   cleanText,
   json,
   nowIso,
   readJson,
-  requireAuth,
-  requireRole,
-  withGuard,
 } from "./shared.js";
-import { consumeRateLimit, safeWriteAuditLog } from "./security.js";
+import { assertUnderDailyCap } from "./cafes.js";
 
-export function toErrorReportResponse(row) {
-  return {
-    id: row.id,
-    user_id: row.user_id,
-    username: row.username || "",
-    title: row.title,
-    page: row.page || "",
-    content: row.content,
-    status: row.status,
-    reply_message: row.reply_message || "",
-    replied_by: row.replied_by || null,
-    replied_by_username: row.replied_by_username || null,
-    replied_at: row.replied_at || null,
-    resolved_by: row.resolved_by,
-    resolved_by_username: row.resolved_by_username || null,
-    resolved_at: row.resolved_at,
-    created_at: row.created_at,
-  };
-}
+const COLUMNS =
+  "id, title, page, content, status, reply, replied_at, resolved_at, created_at";
 
 export async function submitErrorReport(req, env) {
-  return withGuard(req, env, async () => {
-    const user = await requireAuth(req, env);
-    await consumeRateLimit(env, `error:${user.user_id}`, 10, 10);
-    const body = await readJson(req);
-
-    const title = cleanText(body.title, 120);
-    const page = cleanText(body.page, 200);
-    const content = cleanText(body.content, 2000);
-    if (!title || !content) throw new HttpError(400, "title/content required");
-
-    const id = crypto.randomUUID();
-    await env.DB.prepare(
-      `INSERT INTO error_reports(id, user_id, title, page, content, status, created_at)
-       VALUES (?, ?, ?, ?, ?, 'open', ?)`,
-    )
-      .bind(id, user.user_id, title, page, content, nowIso())
-      .run();
-
-    return json({ ok: true, id }, 201, req, env);
-  });
+  const body = await readJson(req);
+  const clientId = cleanClientId(body.client_id);
+  const title = cleanText(body.title, 120);
+  const content = cleanText(body.content, 2000);
+  if (!title || !content) throw new HttpError(400, "title, content required");
+  await assertUnderDailyCap(env, "error_reports");
+  const id = crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO error_reports (id, client_id, title, page, content, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(id, clientId, title, cleanText(body.page, 200), content, nowIso())
+    .run();
+  return json({ ok: true, id }, 201);
 }
 
 export async function myErrorReports(req, env) {
-  return withGuard(req, env, async () => {
-    const user = await requireAuth(req, env);
-    const rows = await env.DB.prepare(
-      `SELECT e.*, u.username,
-              resolver.username AS resolved_by_username,
-              reply.message AS reply_message,
-              reply.replied_by,
-              replier.username AS replied_by_username,
-              reply.replied_at
-       FROM error_reports e
-       JOIN users u ON u.id = e.user_id
-       LEFT JOIN users resolver ON resolver.id = e.resolved_by
-       LEFT JOIN error_report_replies reply ON reply.report_id = e.id
-       LEFT JOIN users replier ON replier.id = reply.replied_by
-       WHERE e.user_id = ?
-       ORDER BY COALESCE(reply.updated_at, e.created_at) DESC, e.created_at DESC`,
-    )
-      .bind(user.user_id)
-      .all();
-
-    return json(
-      { ok: true, items: (rows.results || []).map(toErrorReportResponse) },
-      200,
-      req,
-      env,
-    );
-  });
+  const clientId = cleanClientId(
+    new URL(req.url).searchParams.get("client_id"),
+  );
+  const rows = await env.DB.prepare(
+    `SELECT ${COLUMNS} FROM error_reports WHERE client_id = ? ORDER BY created_at DESC`,
+  )
+    .bind(clientId)
+    .all();
+  return json({ ok: true, items: rows.results });
 }
 
-export async function getErrorReports(req, env) {
-  return withGuard(req, env, async () => {
-    const user = await requireAuth(req, env);
-    requireRole(user, ["admin"]);
+export async function listErrorReports(_req, env) {
+  const rows = await env.DB.prepare(
+    `SELECT ${COLUMNS} FROM error_reports WHERE status = 'open' ORDER BY created_at DESC`,
+  ).all();
+  return json({ ok: true, items: rows.results });
+}
 
-    const status = new URL(req.url).searchParams.get("status") || "open";
-    const filter = ["open", "resolved"].includes(status) ? status : "open";
-    const rows = await env.DB.prepare(
-      `SELECT e.*, u.username,
-              resolver.username AS resolved_by_username,
-              reply.message AS reply_message,
-              reply.replied_by,
-              replier.username AS replied_by_username,
-              reply.replied_at
-       FROM error_reports e
-       JOIN users u ON u.id = e.user_id
-       LEFT JOIN users resolver ON resolver.id = e.resolved_by
-       LEFT JOIN error_report_replies reply ON reply.report_id = e.id
-       LEFT JOIN users replier ON replier.id = reply.replied_by
-       WHERE e.status = ?
-       ORDER BY COALESCE(reply.updated_at, e.created_at) DESC, e.created_at DESC`,
-    )
-      .bind(filter)
-      .all();
-
-    return json(
-      { ok: true, items: (rows.results || []).map(toErrorReportResponse) },
-      200,
-      req,
-      env,
-    );
-  });
+async function updateReport(env, id, sql, ...values) {
+  const result = await env.DB.prepare(sql)
+    .bind(...values, cleanText(id, 80))
+    .run();
+  if (!result.meta?.changes) throw new HttpError(404, "Error report not found");
+  return json({ ok: true });
 }
 
 export async function replyErrorReport(req, env) {
-  return withGuard(req, env, async () => {
-    const user = await requireAuth(req, env);
-    requireRole(user, ["admin"]);
-
-    const body = await readJson(req);
-    const id = cleanText(body.id, 80);
-    const message = cleanText(body.message, 2000);
-    if (!id) throw new HttpError(400, "id required");
-    if (!message) throw new HttpError(400, "message required");
-
-    const exists = await env.DB.prepare(
-      `SELECT e.*, reply.message AS reply_message
-       FROM error_reports e
-       LEFT JOIN error_report_replies reply ON reply.report_id = e.id
-       WHERE e.id = ?`,
-    )
-      .bind(id)
-      .first();
-    if (!exists) throw new HttpError(404, "Error report not found");
-
-    const timestamp = nowIso();
-    await env.DB.prepare(
-      `INSERT INTO error_report_replies(id, report_id, message, replied_by, replied_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(report_id) DO UPDATE SET
-         message = excluded.message,
-         replied_by = excluded.replied_by,
-         replied_at = excluded.replied_at,
-         updated_at = excluded.updated_at`,
-    )
-      .bind(
-        crypto.randomUUID(),
-        id,
-        message,
-        user.user_id,
-        timestamp,
-        timestamp,
-        timestamp,
-      )
-      .run();
-
-    await safeWriteAuditLog(env, {
-      actorUserId: user.user_id,
-      action: "error_report.reply",
-      targetType: "error_report",
-      targetId: id,
-      before: exists,
-      after: {
-        actor_role: user.role,
-        message,
-        replied_by: user.user_id,
-        replied_at: timestamp,
-      },
-    });
-
-    return json({ ok: true }, 200, req, env);
-  });
+  const body = await readJson(req);
+  const reply = cleanText(body.message, 2000);
+  if (!reply) throw new HttpError(400, "message required");
+  return updateReport(
+    env,
+    body.id,
+    "UPDATE error_reports SET reply = ?, replied_at = ? WHERE id = ?",
+    reply,
+    nowIso(),
+  );
 }
 
 export async function resolveErrorReport(req, env) {
-  return withGuard(req, env, async () => {
-    const user = await requireAuth(req, env);
-    requireRole(user, ["admin"]);
-
-    const body = await readJson(req);
-    const id = cleanText(body.id, 80);
-    if (!id) throw new HttpError(400, "id required");
-
-    const exists = await env.DB.prepare(
-      "SELECT * FROM error_reports WHERE id = ?",
-    )
-      .bind(id)
-      .first();
-    if (!exists) throw new HttpError(404, "Error report not found");
-
-    await env.DB.prepare(
-      "UPDATE error_reports SET status = 'resolved', resolved_by = ?, resolved_at = ? WHERE id = ?",
-    )
-      .bind(user.user_id, nowIso(), id)
-      .run();
-
-    await safeWriteAuditLog(env, {
-      actorUserId: user.user_id,
-      action: "error_report.resolve",
-      targetType: "error_report",
-      targetId: id,
-      before: exists,
-      after: {
-        actor_role: user.role,
-        status: "resolved",
-        resolved_by: user.user_id,
-      },
-    });
-
-    return json({ ok: true }, 200, req, env);
-  });
+  const body = await readJson(req);
+  return updateReport(
+    env,
+    body.id,
+    "UPDATE error_reports SET status = 'resolved', resolved_at = ? WHERE id = ?",
+    nowIso(),
+  );
 }
