@@ -701,7 +701,6 @@ function renderReviewConsole() {
   const list = $("review-console-list");
   const note = $("review-console-note");
   if (!list || !note) return;
-  renderReviewConsoleExportAction();
   renderReviewConsoleTabCounts();
 
   if (state.reviewConsoleTab === "submissions") {
@@ -1084,269 +1083,6 @@ async function unholdCafe(id) {
   closeCafeForm(true);
 }
 
-const CAFE_REVIEW_EXPORT_HEADERS = [
-  "id",
-  "name",
-  "address",
-  "desc",
-  "lat",
-  "lng",
-  "signature",
-  "beanShop",
-  "instagram",
-  "category",
-  "status",
-  "oakerman_pick",
-  "manager_pick",
-  "updated_at",
-  "hidden_at",
-];
-const SUBMISSION_REVIEW_EXPORT_HEADERS = [
-  "id",
-  "user_id",
-  "username",
-  "name",
-  "address",
-  "desc",
-  "reason",
-  "signature",
-  "beanShop",
-  "instagram",
-  "category",
-  "status",
-  "oakerman_pick",
-  "manager_pick",
-  "created_at",
-];
-
-function csvCell(value) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
-}
-
-function csvList(value) {
-  return Array.isArray(value) ? value.join(",") : value || "";
-}
-
-function cafeReviewExportRow(cafe) {
-  return [
-    cafe.id,
-    cafe.name,
-    cafe.address,
-    cafe.desc,
-    cafe.lat,
-    cafe.lng,
-    csvList(cafe.signature),
-    cafe.beanShop || "",
-    cafe.instagram || "",
-    csvList(cafe.category),
-    cafe.status || "",
-    cafe.oakerman_pick ? "1" : "0",
-    cafe.manager_pick ? "1" : "0",
-    cafe.updated_at || "",
-    cafe.hidden_at || "",
-  ];
-}
-
-function submissionReviewExportRow(submission) {
-  return [
-    submission.id,
-    submission.user_id,
-    submission.username,
-    submission.name,
-    submission.address,
-    submission.desc,
-    submission.reason || "",
-    csvList(submission.signature),
-    submission.beanShop || "",
-    submission.instagram || "",
-    csvList(submission.category),
-    submission.status || "",
-    submission.oakerman_pick ? "1" : "0",
-    submission.manager_pick ? "1" : "0",
-    submission.created_at || "",
-  ];
-}
-
-function buildCsv(headers, rows) {
-  return [
-    headers.join(","),
-    ...rows.map((row) => row.map(csvCell).join(",")),
-  ].join("\n");
-}
-
-function downloadCsvFile(filename, csv) {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const anchor = document.createElement("a");
-  anchor.href = URL.createObjectURL(blob);
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(anchor.href);
-}
-
-function reviewExportFiles(
-  cafes = state.cafes,
-  submissions = state.submissions,
-) {
-  const activeCafes = cafes.filter((cafe) => !cafe.deleted_at);
-  return [
-    {
-      filename: "submissions_review_export.csv",
-      headers: SUBMISSION_REVIEW_EXPORT_HEADERS,
-      rows: submissions.map(submissionReviewExportRow),
-    },
-    {
-      filename: "candidate_review_export.csv",
-      headers: CAFE_REVIEW_EXPORT_HEADERS,
-      rows: activeCafes
-        .filter((cafe) => cafe.status === "candidate")
-        .map(cafeReviewExportRow),
-    },
-    {
-      filename: "hold_review_export.csv",
-      headers: CAFE_REVIEW_EXPORT_HEADERS,
-      rows: activeCafes
-        .filter((cafe) => cafe.status === "hidden" && cafe.hidden_at)
-        .map(cafeReviewExportRow),
-    },
-    {
-      filename: "approved_review_export.csv",
-      headers: CAFE_REVIEW_EXPORT_HEADERS,
-      rows: activeCafes
-        .filter((cafe) => cafe.status === "approved")
-        .map(cafeReviewExportRow),
-    },
-  ];
-}
-
-const REVIEW_EXPORT_ENDPOINTS = [
-  {
-    path: "/export-csv/submissions-review",
-    filename: "user_submissions_review_export.csv",
-    label: "제보 CSV",
-  },
-  {
-    path: "/export-csv/candidates-review",
-    filename: "candidates-review.csv",
-    label: "후보 CSV",
-  },
-  {
-    path: "/export-csv/hold-review",
-    filename: "hold-review.csv",
-    label: "보류 CSV",
-  },
-  {
-    path: "/export-csv/approved-review",
-    filename: "approved-review.csv",
-    label: "공개 CSV",
-  },
-];
-
-const REVIEW_CONSOLE_EXPORTS = {
-  submissions: REVIEW_EXPORT_ENDPOINTS[0],
-  candidates: REVIEW_EXPORT_ENDPOINTS[1],
-  hold: REVIEW_EXPORT_ENDPOINTS[2],
-  approved: REVIEW_EXPORT_ENDPOINTS[3],
-};
-
-async function downloadExportEndpoint(endpoint) {
-  const res = await api(endpoint.path);
-  const csv = await res.text();
-  if (!res.ok) {
-    throw new Error(csv || `${endpoint.filename} export failed`);
-  }
-  downloadCsvFile(endpoint.filename, csv);
-}
-
-function renderReviewConsoleExportAction() {
-  const button = $("review-console-export");
-  if (!button) return;
-
-  const endpoint = REVIEW_CONSOLE_EXPORTS[state.reviewConsoleTab];
-  button.textContent = endpoint?.label || "CSV";
-  button.disabled = !isAdmin() || !endpoint;
-  button.classList.toggle("hidden", !endpoint);
-}
-
-async function downloadReviewConsoleCsv() {
-  const endpoint = REVIEW_CONSOLE_EXPORTS[state.reviewConsoleTab];
-  if (!endpoint) return;
-  if (!isAdmin()) {
-    alert("CSV 다운로드는 admin만 가능합니다.");
-    return;
-  }
-
-  try {
-    $("csv-msg").textContent = `${endpoint.label} 다운로드 중...`;
-    await downloadExportEndpoint(endpoint);
-    $("csv-msg").textContent =
-      `${endpoint.label} 다운로드 완료: ${endpoint.filename}`;
-  } catch (error) {
-    $("csv-msg").textContent =
-      `${endpoint.label} 다운로드 실패: ${error.message}`;
-    alert(error.message);
-  }
-}
-
-async function downloadCsv() {
-  try {
-    $("csv-msg").textContent = "CSV 다운로드 중...";
-    await Promise.all(REVIEW_EXPORT_ENDPOINTS.map(downloadExportEndpoint));
-    $("csv-msg").textContent =
-      `CSV 다운로드 완료: ${REVIEW_EXPORT_ENDPOINTS.map((endpoint) => endpoint.filename).join(", ")}`;
-  } catch (error) {
-    $("csv-msg").textContent = `CSV 다운로드 실패: ${error.message}`;
-    alert(error.message);
-  }
-}
-
-async function downloadPublicCsv() {
-  const res = await api("/data");
-  const rows = await res.json();
-  if (!rows.length) {
-    alert("다운로드할 데이터가 없습니다.");
-    return;
-  }
-
-  const headers = [
-    "id",
-    "name",
-    "address",
-    "desc",
-    "lat",
-    "lng",
-    "signature",
-    "beanShop",
-    "instagram",
-    "category",
-    "oakerman_pick",
-    "manager_pick",
-  ];
-  const csvRows = rows.map((cafe) => [
-    cafe.id,
-    cafe.name,
-    cafe.address,
-    cafe.desc,
-    cafe.lat,
-    cafe.lng,
-    (cafe.signature || []).join(","),
-    cafe.beanShop || "",
-    cafe.instagram || "",
-    (cafe.category || []).join(","),
-    cafe.oakerman_pick ? "1" : "0",
-    cafe.manager_pick ? "1" : "0",
-  ]);
-  const csv = [
-    headers.join(","),
-    ...csvRows.map((row) => row.map(csvCell).join(",")),
-  ].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const anchor = document.createElement("a");
-  anchor.href = URL.createObjectURL(blob);
-  anchor.download = "kohee-cafes.csv";
-  anchor.click();
-  URL.revokeObjectURL(anchor.href);
-}
-
 function updateCsvFileName() {
   const file = $("csv-file").files[0];
   $("csv-file-name").textContent = file ? file.name : "선택된 파일 없음";
@@ -1427,44 +1163,6 @@ async function dryRunCsv() {
     $("csv-msg").textContent = `CSV 검증 실패: ${error.message}`;
     alert(error.message);
   }
-}
-
-async function resetCsv() {
-  if (state.me.role !== "admin") {
-    alert("CSV 초기화는 admin만 가능합니다.");
-    return;
-  }
-  const file = $("csv-file").files[0];
-  if (!file) {
-    alert("CSV 파일을 선택해 주세요.");
-    return;
-  }
-  const count = state.cafes.length;
-  if (
-    !confirm(`CSV 검증 후 현재 활성 카페 ${count}개를 교체합니다.\n계속할까요?`)
-  )
-    return;
-  const typed = prompt(
-    "정말 초기화하려면 아래의 '초기화'를 그대로 입력해 주세요.",
-    "",
-  );
-  if (typed !== "초기화") {
-    alert("초기화를 취소했습니다.");
-    return;
-  }
-
-  const text = await file.text();
-  const data = await jsonApi("/reset-csv", {
-    method: "POST",
-    headers: { "content-type": "text/plain; charset=utf-8" },
-    body: text,
-  });
-  $("csv-file").value = "";
-  updateCsvFileName();
-  $("csv-msg").textContent =
-    `CSV 초기화 완료: 삭제 ${data.deleted || 0} / 신규 ${data.added || 0} / 수정 ${data.updated || 0}`;
-  await loadCafes();
-  closeCafeForm(true);
 }
 
 async function setRole() {
@@ -1626,9 +1324,6 @@ async function init() {
   });
   $("cafe-search").addEventListener("input", renderCafeList);
   $("legacy-review-toggle").addEventListener("click", toggleLegacyReviewPanel);
-  $("review-console-export").addEventListener("click", () =>
-    downloadReviewConsoleCsv().catch((error) => alert(error.message)),
-  );
   $("new-cafe-btn").addEventListener("click", prepareNewCafe);
   $("save-cafe-btn").addEventListener("click", () =>
     saveCafe().catch((error) => alert(error.message)),
@@ -1636,13 +1331,9 @@ async function init() {
   $("delete-btn").addEventListener("click", () =>
     deleteCafe().catch((error) => alert(error.message)),
   );
-  $("csv-download").addEventListener("click", downloadCsv);
   $("csv-file").addEventListener("change", updateCsvFileName);
   $("csv-dry-run").addEventListener("click", dryRunCsv);
   $("csv-upload").addEventListener("click", uploadCsv);
-  $("csv-reset").addEventListener("click", () =>
-    resetCsv().catch((error) => alert(error.message)),
-  );
   $("role-set").addEventListener("click", () =>
     setRole().catch((error) => alert(error.message)),
   );

@@ -135,7 +135,6 @@ if (contract) {
     legacyHiddenDefinition: "status = 'hidden' AND hidden_at IS NULL",
     csvApprovedStagesAs: "candidate",
     csvHiddenStagesAs: "hidden_with_hidden_at",
-    resetCsvSafeError: "CSV reset failed",
   };
   for (const [k, v] of Object.entries(requiredInv)) {
     if (inv[k] === v) ok(`invariant matched: ${k}`);
@@ -200,12 +199,6 @@ if (/DEFAULT_IMPORTED_CAFE_STATUS\s*=\s*"candidate"/.test(csv)) {
     "CSV approved publishing risk: DEFAULT_IMPORTED_CAFE_STATUS is not candidate",
   );
 }
-mustInclude(
-  csv,
-  "CSV reset failed",
-  "CSV reset safe error message missing",
-  "CSV reset safe error message present",
-);
 
 const submissions = read("server/submissions.js");
 if (/INSERT INTO cafes[\s\S]*"candidate"/.test(submissions)) {

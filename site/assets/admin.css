@@ -345,7 +345,7 @@ input[type="file"]::file-selector-button {
   white-space: nowrap;
 }
 .csv-actions {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .csv-actions button {
   padding: 7px 5px;
@@ -448,15 +448,6 @@ input[type="file"]::file-selector-button {
 }
 .tab-count:empty {
   display: none;
-}
-.review-console-actions {
-  margin: 0 0 6px;
-}
-.review-console-actions button {
-  width: 100%;
-  min-height: 32px;
-  padding: 7px 8px;
-  font-size: 0.7rem;
 }
 .admin-status-msg {
   margin-top: 6px;

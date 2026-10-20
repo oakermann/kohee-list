@@ -12,8 +12,7 @@
     "holdDefinition": "status = 'hidden' AND hidden_at IS NOT NULL",
     "legacyHiddenDefinition": "status = 'hidden' AND hidden_at IS NULL",
     "csvApprovedStagesAs": "candidate",
-    "csvHiddenStagesAs": "hidden_with_hidden_at",
-    "resetCsvSafeError": "CSV reset failed"
+    "csvHiddenStagesAs": "hidden_with_hidden_at"
   },
   "lanes": {
     "PUBLIC_EXPOSURE": {

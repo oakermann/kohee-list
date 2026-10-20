@@ -3,7 +3,6 @@ import {
   cleanText,
   json,
   nowIso,
-  responseHeaders,
   requireAuth,
   requireRole,
   withGuard,
@@ -37,7 +36,7 @@ const ALLOWED_CAFE_STATUSES = new Set([
   "rejected",
 ]);
 const DEFAULT_IMPORTED_CAFE_STATUS = "candidate";
-const RESET_ROLLBACK_CAFE_COLUMNS =
+const DUPLICATE_CAFE_COLUMNS =
   "id, name, address, desc, lat, lng, signature, beanShop, instagram, category, oakerman_pick, status, hidden_at, hidden_by, deleted_at, deleted_by, delete_reason, updated_at";
 
 export function parseCsvLine(line) {
@@ -123,11 +122,6 @@ function validateHeaders(headers) {
   return idx;
 }
 
-function safeCsvErrorMessage(error) {
-  if (error instanceof HttpError) return error.message;
-  return "Invalid CSV row";
-}
-
 function validateRowShape(cols, headers) {
   if (cols.length !== headers.length) {
     throw new HttpError(
@@ -163,7 +157,7 @@ function validateRowBody(body) {
 
 async function findDuplicateCafe(env, name, address) {
   return env.DB.prepare(
-    `SELECT ${RESET_ROLLBACK_CAFE_COLUMNS}
+    `SELECT ${DUPLICATE_CAFE_COLUMNS}
      FROM cafes
      WHERE lower(trim(name)) = lower(trim(?)) AND lower(trim(address)) = lower(trim(?))
      LIMIT 1`,
@@ -261,8 +255,10 @@ async function analyzeCsv(raw, env, user) {
         });
       }
     } catch (err) {
+      // 행 검증 실패만 실패 행이다 — DB·코드 오류를 '잘못된 행' 으로 바꾸면 원인이 숨는다
+      if (!(err instanceof HttpError)) throw err;
       stats.failed += 1;
-      failedRows.push({ row: rowNumber, error: safeCsvErrorMessage(err) });
+      failedRows.push({ row: rowNumber, error: err.message });
     }
   }
 
@@ -366,338 +362,6 @@ async function applyCsvRowsOrThrow(env, user, rows) {
   }
 }
 
-function resetSnapshotFromCafe(row) {
-  if (!row?.id) return null;
-  return {
-    id: row.id,
-    name: row.name,
-    address: row.address,
-    desc: row.desc,
-    lat: row.lat,
-    lng: row.lng,
-    signature: row.signature,
-    beanShop: row.beanShop,
-    instagram: row.instagram,
-    category: row.category,
-    oakerman_pick: row.oakerman_pick,
-    status: row.status,
-    hidden_at: row.hidden_at,
-    hidden_by: row.hidden_by,
-    deleted_at: row.deleted_at,
-    deleted_by: row.deleted_by,
-    delete_reason: row.delete_reason,
-    updated_at: row.updated_at,
-  };
-}
-
-async function snapshotActiveCafeResetState(env) {
-  const rows = await env.DB.prepare(
-    `SELECT ${RESET_ROLLBACK_CAFE_COLUMNS}
-     FROM cafes
-     WHERE deleted_at IS NULL`,
-  ).all();
-  return (rows.results || []).map(resetSnapshotFromCafe).filter(Boolean);
-}
-
-function resetRollbackSnapshots(activeSnapshots, rows) {
-  const snapshots = new Map();
-  for (const snapshot of activeSnapshots) snapshots.set(snapshot.id, snapshot);
-  for (const row of rows) {
-    const snapshot = resetSnapshotFromCafe(row.existing);
-    if (snapshot) snapshots.set(snapshot.id, snapshot);
-  }
-  return [...snapshots.values()];
-}
-
-async function rollbackResetCsv(env, user, rows, snapshots) {
-  const rolledBackAt = nowIso();
-  for (const snapshot of snapshots) {
-    await env.DB.prepare(
-      `UPDATE cafes
-       SET name = ?, address = ?, desc = ?, lat = ?, lng = ?, signature = ?, beanShop = ?, instagram = ?, category = ?,
-        oakerman_pick = ?, status = ?, hidden_at = ?, hidden_by = ?,
-        deleted_at = ?, deleted_by = ?, delete_reason = ?, updated_at = ?
-       WHERE id = ?`,
-    )
-      .bind(
-        snapshot.name,
-        snapshot.address,
-        snapshot.desc,
-        snapshot.lat,
-        snapshot.lng,
-        snapshot.signature,
-        snapshot.beanShop,
-        snapshot.instagram,
-        snapshot.category,
-        snapshot.oakerman_pick,
-        snapshot.status,
-        snapshot.hidden_at,
-        snapshot.hidden_by,
-        snapshot.deleted_at,
-        snapshot.deleted_by,
-        snapshot.delete_reason,
-        snapshot.updated_at,
-        snapshot.id,
-      )
-      .run();
-  }
-
-  for (const row of rows) {
-    if (row.action !== "add" || !row.appliedId) continue;
-    await env.DB.prepare(
-      `UPDATE cafes
-       SET deleted_at = ?, deleted_by = ?, updated_at = ?
-       WHERE id = ? AND created_by = ?`,
-    )
-      .bind(
-        rolledBackAt,
-        user.user_id,
-        rolledBackAt,
-        row.appliedId,
-        user.user_id,
-      )
-      .run();
-  }
-}
-
-const REVIEW_EXPORT_COLUMNS = [
-  "cafe_id",
-  "name",
-  "address",
-  "desc",
-  "lat",
-  "lng",
-  "category",
-  "signature",
-  "beanShop",
-  "instagram",
-  "oakerman_pick",
-  "status",
-  "updated_at",
-];
-
-const HOLD_REVIEW_EXPORT_COLUMNS = [
-  ...REVIEW_EXPORT_COLUMNS,
-  "hidden_at",
-  "hidden_by",
-];
-
-const SUBMISSION_REVIEW_EXPORT_COLUMNS = [
-  "submission_id",
-  "submitted_at",
-  "submitter_name",
-  "submitter_contact",
-  "submitted_cafe_name",
-  "submitted_address",
-  "submitted_naver_map_url",
-  "submitted_reason",
-  "submitted_recommended_menu",
-  "submitted_tags",
-  "submission_status",
-  "linked_cafe_id",
-  "converted_status",
-  "admin_reply_status",
-  "admin_reply_message",
-  "internal_note",
-  "review_decision",
-  "recommended_status",
-  "review_memo",
-  "hold_reason",
-  "admin_check_required",
-  "duplicate_status",
-  "duplicate_with",
-  "duplicate_reason",
-  "normalized_name_suggested",
-  "normalized_address_suggested",
-  "normalized_naver_map_url_suggested",
-  "tags_suggested",
-  "recommended_menu_suggested",
-  "description_suggested",
-  "conversion_recommendation",
-  "public_leak_risk",
-];
-
-const CAFE_REVIEW_TEXT_COLUMNS = new Set([
-  "cafe_id",
-  "name",
-  "address",
-  "desc",
-  "category",
-  "signature",
-  "beanShop",
-  "instagram",
-  "status",
-  "hidden_by",
-]);
-
-function csvEscape(value) {
-  const textValue = String(value ?? "");
-  if (!/[",\n\r]/.test(textValue)) return textValue;
-  return `"${textValue.replace(/"/g, '""')}"`;
-}
-
-function csvReviewCell(value) {
-  const textValue = String(value ?? "");
-  return /^[=+\-@]/.test(textValue) ? `'${textValue}` : textValue;
-}
-
-function sanitizeCafeReviewRow(row) {
-  const output = { ...row };
-  for (const column of CAFE_REVIEW_TEXT_COLUMNS) {
-    output[column] = csvReviewCell(output[column]);
-  }
-  return output;
-}
-
-function toSubmissionReviewRow(row) {
-  const submittedTags = [row.category, row.signature]
-    .filter(Boolean)
-    .join(" | ");
-
-  return {
-    submission_id: row.id || "",
-    submitted_at: row.created_at || "",
-    submitter_name: csvReviewCell(row.username),
-    submitter_contact: "",
-    submitted_cafe_name: csvReviewCell(row.name),
-    submitted_address: csvReviewCell(row.address),
-    submitted_naver_map_url: "",
-    submitted_reason: csvReviewCell(row.reason),
-    submitted_recommended_menu: "",
-    submitted_tags: csvReviewCell(submittedTags),
-    submission_status: row.status || "",
-    linked_cafe_id: row.linked_cafe_id || "",
-    converted_status: row.linked_cafe_id ? "linked" : "",
-    admin_reply_status: row.reviewed_at ? "reviewed" : "pending",
-    admin_reply_message: csvReviewCell(row.reject_reason),
-    internal_note: "",
-    review_decision: "",
-    recommended_status: "",
-    review_memo: "",
-    hold_reason: "",
-    admin_check_required: "yes",
-    duplicate_status: "",
-    duplicate_with: "",
-    duplicate_reason: "",
-    normalized_name_suggested: "",
-    normalized_address_suggested: "",
-    normalized_naver_map_url_suggested: "",
-    tags_suggested: "",
-    recommended_menu_suggested: "",
-    description_suggested: csvReviewCell(row.desc),
-    conversion_recommendation: "",
-    public_leak_risk: "admin_review_required",
-  };
-}
-
-function toCsvBody(columns, rows) {
-  const lines = [columns.join(",")];
-  for (const row of rows) {
-    lines.push(columns.map((column) => csvEscape(row[column])).join(","));
-  }
-  return `${lines.join("\n")}\n`;
-}
-
-function csvResponse(req, env, filename, body) {
-  return new Response(body, {
-    status: 200,
-    headers: responseHeaders(req, env, {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="${filename}"`,
-    }),
-  });
-}
-
-async function exportReviewCsv(req, env, options) {
-  const user = await requireAuth(req, env);
-  requireRole(user, ["admin"]);
-
-  const rowsResult = await env.DB.prepare(options.sql).all();
-  const rows = (rowsResult?.results || []).map((row) => {
-    if (options.mapRow) return options.mapRow(row);
-    return sanitizeCafeReviewRow({
-      ...row,
-      cafe_id: row.id || "",
-      submission_id: row.id || "",
-      category: row.category || "",
-      signature: row.signature || "",
-    });
-  });
-
-  return csvResponse(
-    req,
-    env,
-    options.filename,
-    toCsvBody(options.columns, rows),
-  );
-}
-
-export async function exportCandidatesReviewCsv(req, env) {
-  return withGuard(req, env, async () =>
-    exportReviewCsv(req, env, {
-      filename: "candidates-review.csv",
-      columns: REVIEW_EXPORT_COLUMNS,
-      sql: `SELECT
-              id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
-              oakerman_pick, status, updated_at
-            FROM cafes
-            WHERE status = 'candidate' AND deleted_at IS NULL
-            ORDER BY updated_at DESC, id ASC`,
-    }),
-  );
-}
-
-export async function exportHoldReviewCsv(req, env) {
-  return withGuard(req, env, async () =>
-    exportReviewCsv(req, env, {
-      filename: "hold-review.csv",
-      columns: HOLD_REVIEW_EXPORT_COLUMNS,
-      sql: `SELECT
-              id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
-              oakerman_pick, status, updated_at, hidden_at, hidden_by
-            FROM cafes
-            WHERE status = 'hidden' AND deleted_at IS NULL AND hidden_at IS NOT NULL
-            ORDER BY hidden_at DESC, updated_at DESC, id ASC`,
-    }),
-  );
-}
-
-export async function exportApprovedReviewCsv(req, env) {
-  return withGuard(req, env, async () =>
-    exportReviewCsv(req, env, {
-      filename: "approved-review.csv",
-      columns: REVIEW_EXPORT_COLUMNS,
-      sql: `SELECT
-              id, name, address, desc, lat, lng, category, signature, beanShop, instagram,
-              oakerman_pick, status, updated_at
-            FROM cafes
-            WHERE status = 'approved' AND deleted_at IS NULL
-            ORDER BY updated_at DESC, id ASC`,
-    }),
-  );
-}
-
-export async function exportSubmissionsReviewCsv(req, env) {
-  return withGuard(req, env, async () =>
-    exportReviewCsv(req, env, {
-      filename: "user_submissions_review_export.csv",
-      columns: SUBMISSION_REVIEW_EXPORT_COLUMNS,
-      mapRow: toSubmissionReviewRow,
-      sql: `SELECT
-              s.id, s.user_id, u.username, s.name, s.address, s.desc, s.reason,
-              s.category, s.signature, s.beanShop, s.instagram,
-              s.oakerman_pick, s.status, s.created_at,
-              s.reviewed_at, s.reviewed_by, reviewer.username AS reviewed_by_username,
-              s.reject_reason, s.linked_cafe_id
-            FROM submissions s
-            JOIN users u ON u.id = s.user_id
-            LEFT JOIN users reviewer ON reviewer.id = s.reviewed_by
-            WHERE s.status = 'pending'
-            ORDER BY s.created_at DESC, s.id ASC`,
-    }),
-  );
-}
-
 export async function importCsv(req, env) {
   return withGuard(req, env, async () => {
     const user = await requireAuth(req, env);
@@ -733,85 +397,6 @@ export async function importCsv(req, env) {
         duplicateRows: analysis.duplicateRows,
         failed: analysis.failed,
         failedRows: analysis.failedRows,
-      },
-      200,
-      req,
-      env,
-    );
-  });
-}
-
-export async function resetCsv(req, env) {
-  return withGuard(req, env, async () => {
-    const user = await requireAuth(req, env);
-    requireRole(user, ["admin"]);
-
-    const raw = await req.text();
-    const analysis = await analyzeCsv(raw, env, user);
-    throwIfCsvValidationFailed(analysis);
-
-    let deleted = 0;
-    let deletedAt = "";
-    let applied = { added: 0, updated: 0, duplicated: 0 };
-    let rollbackSnapshots = [];
-    try {
-      const activeSnapshots = await snapshotActiveCafeResetState(env);
-      rollbackSnapshots = resetRollbackSnapshots(
-        activeSnapshots,
-        analysis.rows,
-      );
-
-      const countRow = await env.DB.prepare(
-        "SELECT COUNT(*) AS c FROM cafes WHERE deleted_at IS NULL",
-      ).first();
-      deleted = Number(countRow?.c || 0);
-      deletedAt = nowIso();
-
-      await env.DB.prepare(
-        `UPDATE cafes
-         SET deleted_at = ?, deleted_by = ?, updated_at = ?
-         WHERE deleted_at IS NULL`,
-      )
-        .bind(deletedAt, user.user_id, deletedAt)
-        .run();
-
-      applied = await applyCsvRowsOrThrow(env, user, analysis.rows);
-    } catch {
-      try {
-        if (rollbackSnapshots.length) {
-          await rollbackResetCsv(env, user, analysis.rows, rollbackSnapshots);
-        }
-      } catch {}
-      return json(
-        { ok: false, error: "CSV reset failed", code: "SERVER_ERROR" },
-        500,
-        req,
-        env,
-      );
-    }
-    await safeWriteAuditLog(env, {
-      actorUserId: user.user_id,
-      action: "csv.reset",
-      targetType: "cafes",
-      after: {
-        actor_role: user.role,
-        total: analysis.total,
-        deleted,
-        deleted_at: deletedAt,
-        deleted_by: user.user_id,
-        ...applied,
-        failed: analysis.failed,
-      },
-    });
-
-    return json(
-      {
-        ok: true,
-        total: analysis.total,
-        deleted,
-        ...applied,
-        duplicateRows: analysis.duplicateRows,
-        failed: analysis.failed,
       },
       200,
       req,

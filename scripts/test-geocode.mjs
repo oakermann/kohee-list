@@ -11,7 +11,6 @@ import {
 
 // Mock global Request/Response if not present (Node < 18 doesn't have it natively without --experimental-fetch)
 // We assume it's available or we can just mock them minimally for this test.
-// Wait, test-csv-export uses `new Request`, so it must be available globally.
 
 const originalFetch = global.fetch;
 
