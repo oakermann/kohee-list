@@ -516,41 +516,11 @@ function isValidUserCoord(lat, lng) {
   );
 }
 
-function setDistanceNote(modeData) {
+function setDistanceNote(text) {
   const note = $("distance-note");
   if (!note) return;
-
-  if (!modeData) {
-    note.style.display = "none";
-    note.replaceChildren();
-    return;
-  }
-
-  note.style.display = "block";
-  note.replaceChildren();
-
-  if (modeData.type === "home") {
-    note.append(`${modeData.label} 기준 거리`);
-  } else if (modeData.type === "gps") {
-    note.append(
-      modeData.accuracy > GEO_APPROX_THRESHOLD_M
-        ? "브라우저 위치 정확도가 낮아 거리가 대략적으로 보일 수 있습니다."
-        : "현재 위치 기준 거리 표시 중",
-    );
-  }
-
-  const link = document.createElement("a");
-  link.href = "#";
-  link.style.marginLeft = "8px";
-  link.style.textDecoration = "underline";
-  link.style.cursor = "pointer";
-  link.style.fontSize = "0.9em";
-  link.textContent = "내 동네 설정";
-  link.addEventListener("click", (e) => {
-    e.preventDefault();
-    promptAndSaveNeighborhood();
-  });
-  note.appendChild(link);
+  note.textContent = text || "";
+  note.style.display = text ? "block" : "none";
 }
 
 function clearDistances() {
@@ -558,7 +528,7 @@ function clearDistances() {
     delete cafe.dis;
   });
   lastPositionAccuracyM = null;
-  setDistanceNote(null);
+  setDistanceNote("");
 }
 
 function requestUserPosition() {
@@ -594,27 +564,15 @@ function applyUserPosition(pos) {
     throw new Error(`기기가 대략적인 위치(오차 ±${km}km)만 줬습니다.`);
   }
 
-  setDistanceNote({ type: "gps", accuracy: lastPositionAccuracyM });
+  setDistanceNote(
+    lastPositionAccuracyM > GEO_APPROX_THRESHOLD_M
+      ? "위치 정확도가 낮아 거리는 대략입니다."
+      : "현재 위치 기준 거리",
+  );
 
   data.forEach((cafe) => {
     cafe.dis = isValidCafeCoord(cafe)
       ? getDist(userLat, userLng, Number(cafe.lat), Number(cafe.lng))
-      : GEO_DISTANCE_LIMIT_KM;
-  });
-}
-
-function applyHomePosition(home) {
-  lastPositionAccuracyM = null;
-  setDistanceNote({ type: "home", label: home.label });
-
-  data.forEach((cafe) => {
-    cafe.dis = isValidCafeCoord(cafe)
-      ? getDist(
-          Number(home.lat),
-          Number(home.lng),
-          Number(cafe.lat),
-          Number(cafe.lng),
-        )
       : GEO_DISTANCE_LIMIT_KM;
   });
 }
@@ -625,50 +583,6 @@ function activateNearbyMode() {
   $("search").value = "";
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-async function promptAndSaveNeighborhood() {
-  const hasHome = !!getStorageValue("kohee-home");
-  const msg = hasHome
-    ? "동네 이름을 입력해 주세요 (예: 역삼동)\n(입력 없이 확인을 누르면 저장된 동네가 초기화됩니다):"
-    : "동네 이름을 입력해 주세요 (예: 역삼동):";
-
-  const q = prompt(msg);
-  if (q === null) return;
-
-  const label = q.trim();
-  if (!label) {
-    if (hasHome) {
-      localStorage.removeItem("kohee-home");
-      alert("저장된 동네가 초기화되었습니다. 현재 위치를 다시 사용합니다.");
-      exitNearbyMode();
-      render();
-    }
-    return;
-  }
-
-  try {
-    setNearbyLoading(true);
-    const res = await api("/geocode?q=" + encodeURIComponent(label));
-    const payload = await res.json().catch(() => ({}));
-    if (!res.ok || !isValidUserCoord(payload.lat, payload.lng)) {
-      alert(
-        "동네를 찾을 수 없습니다. 구 이름을 붙여 보세요 (예: 강남구 역삼동).",
-      );
-      return;
-    }
-    // 같은 이름 동네가 여럿이다 — 실제로 잡힌 곳을 보여 주고 확인받는다.
-    if (!confirm(`이곳이 맞나요?\n${payload.label}`)) return;
-
-    const homeData = { lat: payload.lat, lng: payload.lng, label };
-    setStorageValue("kohee-home", JSON.stringify(homeData));
-    applyHomePosition(homeData);
-    activateNearbyMode();
-  } catch (error) {
-    alert(`동네를 찾지 못했습니다: ${error.message}`);
-  } finally {
-    setNearbyLoading(false);
-  }
 }
 
 function setNearbyLoading(isLoading) {
@@ -693,20 +607,8 @@ function exitNearbyMode() {
   setNearbyActive(false);
 }
 
-function savedHome() {
-  try {
-    const home = JSON.parse(getStorageValue("kohee-home") || "null");
-    return home &&
-      isValidUserCoord(Number(home.lat), Number(home.lng)) &&
-      home.label
-      ? home
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-// 저장한 동네가 있으면 그게 기준이다(사용자가 고른 것). 없으면 GPS, 안 되면 이유를 말하고 동네를 묻는다.
+// 위치가 안 되면 이유를 말하고 검색으로 보낸다 — 동네 직접 입력은 컴퓨터에서 위치가 막혀 있던
+// 때(Permissions-Policy geolocation=())의 우회로였고, 원인을 지워 함께 지웠다.
 async function handleNearbyClick() {
   if (nearbyMode) {
     exitNearbyMode();
@@ -714,15 +616,10 @@ async function handleNearbyClick() {
     return;
   }
 
-  const home = savedHome();
-  if (home) {
-    applyHomePosition(home);
-    activateNearbyMode();
-    return;
-  }
-
   if (!navigator.geolocation) {
-    await promptAndSaveNeighborhood();
+    alert(
+      "이 브라우저는 위치를 지원하지 않습니다.\n카페명이나 주소로 검색해 주세요.",
+    );
     return;
   }
 
@@ -731,8 +628,7 @@ async function handleNearbyClick() {
     applyUserPosition(await requestUserPosition());
     activateNearbyMode();
   } catch (error) {
-    alert(`${geoErrorMessage(error)}\n동네 이름으로 찾겠습니다.`);
-    await promptAndSaveNeighborhood();
+    alert(`${geoErrorMessage(error)}\n카페명이나 주소로 검색해 주세요.`);
   } finally {
     setNearbyLoading(false);
   }
