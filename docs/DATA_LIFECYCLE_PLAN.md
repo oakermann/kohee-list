@@ -551,7 +551,7 @@ SELECT COUNT(*) FROM submissions WHERE linked_cafe_id IS NOT NULL;
 
 - `scripts/test-unit.mjs`
 - 별도 `tests/`가 도입된다면 `tests/cafe-lifecycle.test.mjs`
-- smoke 범위 확장이 필요하면 `scripts/smoke-test.ps1`
+- smoke 범위 확장이 필요하면 `scripts/smoke-check.mjs`
 
 ## 10. 단계별 실행 계획
 
@@ -694,7 +694,6 @@ DB / migration 작업 + 안정화 작업.
 [검증 기준]
 - npm run format:check
 - npm run verify:release
-- npm run check:deploy-sync
 - npm run test:unit
 - powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1
 - node scripts\detect-changed-areas.mjs --working-tree
@@ -715,7 +714,7 @@ GitHub Actions에서 D1 변경으로 자동 배포가 차단되는 것이 정상
 
 [보고 형식]
 1. 변경 요약
-2. preflight 결과
+2. `git status`·`git fetch` 결과
 3. 변경 파일
 4. 추가한 DB 필드
 5. public API 필터 결과

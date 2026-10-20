@@ -27,7 +27,7 @@
 
 - D1 전용 npm script는 없다.
 - migration 적용 script도 없다.
-- 검증 관련 script는 `preflight`, `format:check`, `verify:release`, `check:deploy-sync`, `test:unit`, `detect:changed`, `smoke:check`가 있다.
+- 검증 관련 script는 `format:check`, `verify:release`, `test:unit`, `detect:changed`, `smoke:check`가 있다.
 
 ## 2. 로컬 schema와 migrations 구성
 
@@ -284,7 +284,6 @@ soft delete + status migration 파일 1차 구현
 
 - `npm run format:check`
 - `npm run verify:release`
-- `npm run check:deploy-sync`
 - `npm run test:unit`
 - `powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1`
 - `node scripts\detect-changed-areas.mjs --working-tree`

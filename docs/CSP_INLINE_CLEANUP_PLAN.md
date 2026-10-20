@@ -51,7 +51,6 @@
 
 CSP를 조이기 전에 확인할 것:
 
-- `npm run check:deploy-sync`
 - `npm run test:unit`
 - `powershell -ExecutionPolicy Bypass -File .\scripts\check-syntax.ps1`
 - `npm run verify:release`
