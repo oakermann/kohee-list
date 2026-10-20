@@ -75,7 +75,8 @@ function getChangedFiles() {
 }
 
 function isFrontend(file) {
-  return file.startsWith("site/");
+  // `wrangler pages deploy site` also uploads functions/ from the working directory
+  return file.startsWith("site/") || file.startsWith("functions/");
 }
 
 function isWorker(file) {
