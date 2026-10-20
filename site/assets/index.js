@@ -569,6 +569,9 @@ function requestUserPosition() {
 
 function geoErrorMessage(error) {
   if (error?.code === 1) return "위치 권한이 꺼져 있습니다.";
+  // 컴퓨터는 GPS 가 없어 OS 위치 서비스(와이파이)에 기댄다 — 꺼져 있으면 여기로 온다.
+  if (error?.code === 2)
+    return "컴퓨터 위치 서비스가 꺼져 있습니다. (맥: 시스템 설정 > 개인정보 보호 및 보안 > 위치 서비스 / 윈도우: 설정 > 개인 정보 > 위치)";
   if (error?.code === 3) return "위치를 찾는 데 너무 오래 걸립니다.";
   return error?.message || "위치를 가져오지 못했습니다.";
 }
