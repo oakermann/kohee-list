@@ -277,7 +277,7 @@ soft delete + status migration 파일 1차 구현
 - 원격 D1 적용 금지
 - Cloudflare 로컬 배포 금지
 - 런타임 코드 수정 금지
-- `deleteCafe`/`resetCsv` 로직 수정 금지
+- `deleteCafe` 로직 수정 금지
 - public/admin API 로직 수정 금지
 
 검증 기준:

@@ -15,7 +15,7 @@ product validation, deploy safety, and D1/CSV/public-data guardrails.
   - Backend handlers split by domain
   - `shared.js`: common helpers, auth/session utilities, JSON/CORS helpers
   - `auth.js`: signup, login, logout, me
-  - `cafes.js`: public data, notice, cafe CRUD, CSV reset
+  - `cafes.js`: public data, notice, cafe CRUD
   - `submissions.js`: cafe submission flow
   - `errorReports.js`: error report flow and replies
   - `favorites.js`: favorite add/remove/list

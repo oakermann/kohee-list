@@ -28,7 +28,7 @@ change:
 
 - D1 schema or migrations
 - auth/session/security behavior
-- CSV import/reset behavior
+- CSV import behavior
 - public `/data` behavior
 - cafe lifecycle behavior
 - production deploy behavior
@@ -55,7 +55,7 @@ Cafe lifecycle:
 
 - New cafe-like records default to candidate/hold, not public.
 - Admin approval is required for public exposure.
-- CSV import/reset must not directly publish approved cafes.
+- CSV import must not directly publish approved cafes.
 - `status=approved` from CSV stages as candidate unless a separate admin
   approval path is used.
 - Hold rows are `status='hidden' AND hidden_at IS NOT NULL`.
@@ -84,23 +84,16 @@ Categories:
 
 ## 4. CSV And Review Workflow Policy
 
-CSV is a review workflow artifact, not a direct public overwrite mechanism.
+CSV is an import path only, never a direct public overwrite mechanism. Review
+happens in the admin console, not in exported CSV files.
 
-Required CSV concepts:
-
-- User submissions export remains separate from cafe review exports.
-- Candidate/hold/approved review exports preserve original fields and add
-  suggested/review fields.
-- Reviewed CSV upload must not auto-approve public records.
-- Protected fields must not be overwritten from review CSV: `id`,
-  `submission_id`, `created_at`, submitter fields, `admin_reply_message`,
-  `deleted_at`, and direct approved/public status.
-- Suggestions may be staged, not blindly applied.
-
-Review result fields should track review decision, recommended status, review
-memo, changed fields, hold reason, admin check requirement, original/suggested
-tags, category review notes, original/suggested menu, original/suggested
-description, duplicate status, public leak risk, and confidence note.
+- CSV reset (`/reset-csv`) and the candidate/hold/approved/submissions review
+  CSV exports were removed on 2026-10-20 (owner-approved cleanup).
+- CSV import (`/import-csv`, dry-run first) stores new rows as `candidate`.
+- CSV import must not auto-approve public records.
+- Protected fields must not be overwritten from CSV: `id`, `submission_id`,
+  `created_at`, submitter fields, `admin_reply_message`, `deleted_at`, and
+  direct approved/public status.
 
 ## 5. Deployment And D1 Safety
 
@@ -117,16 +110,13 @@ description, duplicate status, public leak risk, and confidence note.
 Current product candidates:
 
 1. KOHEE admin review console Phase 4 (Phase 2/3 landed; Phase 5 blocked by `#legacy-review-panel` element dependencies in `admin.html`).
-2. KOHEE submissions review CSV Phase 2 design/audit.
-3. Safer smoke-check split into --public, --admin, and --worker target groups (with --pages compatibility).
-4. Legacy manager compatibility cleanup planning.
+2. Safer smoke-check split into --public, --admin, and --worker target groups (with --pages compatibility).
+3. Legacy manager compatibility cleanup planning.
 
 HOLD/HIGH candidates:
 
 1. Remove manager from D1 schema role CHECK.
-2. Improve `resetCsv` atomicity with staging/transaction design.
-3. Design evidence DB with cafe evidence and category verification.
-4. Reviewed CSV apply/import workflow.
+2. Design evidence DB with cafe evidence and category verification.
 
 ## 7. Required Validation
 

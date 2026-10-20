@@ -50,7 +50,7 @@
       ]
     },
     "CSV_PIPELINE": {
-      "purpose": "CSV import, reset, rollback, review exports, and future reviewed import staging.",
+      "purpose": "CSV import (dry-run first, new rows stored as candidate).",
       "files": [
         "server/csv.js",
         "server/cafes.js",

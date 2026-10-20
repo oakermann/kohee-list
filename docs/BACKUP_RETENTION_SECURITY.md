@@ -9,7 +9,7 @@ D1 백업은 운영 데이터 손실 가능성이 있는 작업 전에 만든다
 필수 백업 시점:
 
 - D1 schema 또는 `migrations/**` 변경을 원격 D1에 적용하기 전
-- `deleteCafe`, `restoreCafe`, `resetCsv`, CSV import처럼 cafe lifecycle이나 대량 데이터를 바꾸는 Worker 변경 전
+- `deleteCafe`, `restoreCafe`, CSV import처럼 cafe lifecycle이나 대량 데이터를 바꾸는 Worker 변경 전
 - public/admin API의 데이터 노출 조건을 바꾸는 위험 작업 전
 - 권한, 인증, session, audit log처럼 운영 복구에 필요한 데이터를 다루는 Worker 변경 전
 - purge/archive 같은 영구 삭제 작업을 별도 승인해 실행하기 전
@@ -59,7 +59,7 @@ kohee-list-schema-YYYYMMDD-HHMMSS.sql
 백업 삭제 원칙:
 
 - 삭제 전에 같은 기간을 덮는 더 최신 백업이 있는지 확인한다.
-- migration, purge, resetCsv 관련 장애 조사가 열려 있으면 삭제하지 않는다.
+- migration, purge 관련 장애 조사가 열려 있으면 삭제하지 않는다.
 - 공유 드라이브나 외부 저장소에 올릴 경우 접근 권한을 최소화한다.
 
 ## 4. 백업 생성과 확인
@@ -112,7 +112,6 @@ KOHEE LIST의 기본 삭제는 복구 가능해야 한다.
 
 - 일반 `deleteCafe`는 row를 물리 삭제하지 않고 `deleted_at` 기반 soft delete로 처리한다.
 - public cafe API는 `status = 'approved'`이고 `deleted_at IS NULL`인 카페만 반환한다.
-- `resetCsv`는 기존 cafe row와 연결 데이터를 물리 삭제하지 않고 lifecycle 상태를 갱신한다.
 - restore는 같은 cafe row/id를 되살리는 방식으로 유지한다.
 - purge/hard delete는 기본 기능이 아니며 별도 위험 작업으로 분리한다.
 
