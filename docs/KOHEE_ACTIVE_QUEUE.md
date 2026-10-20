@@ -12,18 +12,21 @@ issue-close features here.
 
 ## Product Candidates
 
-### 1. Admin review console Phase 4 (Phase 2/3 Landed, Phase 5 Blocked)
+### 1. Admin console — rewritten 2026-10-21
 
 Risk: MEDIUM
 
-Scope:
+Done: `site/admin.html`/`admin.js`/`admin.css` rewritten as one tabbed console
+(대기 = pending submissions + candidates · 공개 · 숨김 = hold/imported
+hidden/rejected/deleted + rejected submissions · 오류 · 운영 = visits, notice,
+CSV, users). `#legacy-review-panel` is gone; CSV import/reset live in 운영 with
+the same endpoints. One dialog handles add/edit/submission review and fills
+lat/lng from the existing `/geocode` (Nominatim) with the matched label shown.
+The role panel was removed (server only accepts `user`, so it did nothing).
+No API/D1/CSV behavior changed.
 
-- Phase 2 (tab state & data routing) and Phase 3 (contextual CSV exports) have landed in `assets/admin.js` (`state.reviewConsoleTab`, `renderReviewConsoleTabCounts`, `renderReviewConsole`, `renderReviewConsoleExportAction`).
-- Phase 4 (row detail expansion / drawer) is the next open step.
-- Phase 5 (cleanup of old scattered boxes) is **BLOCKED and UNSAFE**: removing section `#legacy-review-panel` in `admin.html` (starting line 157) is blocked until the compact console directly owns the CSV and cafe list elements rather than hiding the fallback panel that owns them. `#legacy-review-panel` still contains live implementations for 11 elements bound in `assets/admin.js` (including CSV file input referenced 8 times, cafe list, cafe search, cafe count, CSV download, dry run, upload, and reset). Deleting `#legacy-review-panel` would orphan CSV import and reset workflows, which repository safety rules forbid changing.
-- Improve review-console UX.
-- Do not change API behavior unless separately approved.
-- Do not change D1/schema/auth/CSV/public `/data` behavior.
+Next (each needs owner approval): Kakao place search for coordinates (owner REST
+key, server change).
 
 ### 2. Submissions review CSV Phase 2 design
 
