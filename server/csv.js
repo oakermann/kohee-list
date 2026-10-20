@@ -1,18 +1,9 @@
 // CSV 가져오기 = 새 카페를 후보로 넣는 것뿐이다. 기존 카페는 절대 덮어쓰지 않는다
 // (옛 갱신 경로가 공개 카페를 후보로 내리고, CSV 에 없는 칸을 0·빈 값으로 덮었다).
-import {
-  HttpError,
-  json,
-  nowIso,
-  requireAuth,
-  requireRole,
-  withGuard,
-} from "./shared.js";
-import { normalizeCafePayload } from "./cafes.js";
-import { safeWriteAuditLog } from "./security.js";
+import { HttpError, json } from "./shared.js";
+import { insertCafeStatement, normalizeCafe } from "./cafes.js";
 
 const REQUIRED_HEADERS = ["name", "address", "desc"];
-const IMPORTED_CAFE_STATUS = "candidate";
 
 // RFC 4180: 따옴표 안의 쉼표·줄바꿈·"" 를 그대로 읽는다.
 export function parseCsv(text) {
@@ -63,7 +54,7 @@ function rowPayload(headers, cells) {
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
-  const payload = normalizeCafePayload({
+  return normalizeCafe({
     name: value("name"),
     address: value("address"),
     desc: value("desc"),
@@ -78,10 +69,6 @@ function rowPayload(headers, cells) {
       value("oakerman_pick").toLowerCase(),
     ),
   });
-  if (!payload.name || !payload.address || !payload.desc) {
-    throw new HttpError(400, "name/address/desc required", "VALIDATION_ERROR");
-  }
-  return payload;
 }
 
 async function analyzeCsv(raw, env) {
@@ -133,72 +120,27 @@ async function analyzeCsv(raw, env) {
   return { total: body.length, added, skipped, failedRows };
 }
 
-function insertCafe(env, user, payload, timestamp) {
-  return env.DB.prepare(
-    `INSERT INTO cafes(
-      id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, category,
-      oakerman_pick, status, created_by, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(
-    crypto.randomUUID(),
-    payload.name,
-    payload.address,
-    payload.desc,
-    payload.lat,
-    payload.lng,
-    payload.signature,
-    payload.beanShop,
-    payload.instagram,
-    payload.naver_url,
-    payload.category,
-    payload.oakerman_pick,
-    IMPORTED_CAFE_STATUS,
-    user.user_id,
-    timestamp,
-  );
-}
-
+// 넣는 행은 모두 후보(insertCafeStatement 기본값) — 공개는 어드민이 따로 한다.
 export async function importCsv(req, env) {
-  return withGuard(req, env, async () => {
-    const user = await requireAuth(req, env);
-    requireRole(user, ["admin"]);
-
-    const dryRun = new URL(req.url).searchParams.get("dryRun") === "1";
-    const { total, added, skipped, failedRows } = await analyzeCsv(
-      await req.text(),
-      env,
+  const dryRun = new URL(req.url).searchParams.get("dryRun") === "1";
+  const { total, added, skipped, failedRows } = await analyzeCsv(
+    await req.text(),
+    env,
+  );
+  const result = {
+    total,
+    added: added.length,
+    skipped,
+    failed: failedRows.length,
+    failedRows,
+  };
+  if (dryRun) return json({ ok: true, dryRun: true, ...result });
+  if (failedRows.length) throw new HttpError(400, "CSV validation failed");
+  // 한 묶음(batch) = 전부 들어가거나 하나도 안 들어간다.
+  if (added.length) {
+    await env.DB.batch(
+      added.map((cafe) => insertCafeStatement(env, cafe).statement),
     );
-    const result = {
-      total,
-      added: added.length,
-      skipped,
-      failed: failedRows.length,
-      failedRows,
-    };
-    if (dryRun)
-      return json({ ok: true, dryRun: true, ...result }, 200, req, env);
-    if (failedRows.length) {
-      throw new HttpError(400, "CSV validation failed", "VALIDATION_ERROR");
-    }
-
-    // 한 묶음(batch) = 전부 들어가거나 하나도 안 들어간다.
-    const timestamp = nowIso();
-    if (added.length) {
-      await env.DB.batch(
-        added.map((payload) => insertCafe(env, user, payload, timestamp)),
-      );
-    }
-    await safeWriteAuditLog(env, {
-      actorUserId: user.user_id,
-      action: "csv.import",
-      targetType: "cafes",
-      after: {
-        actor_role: user.role,
-        total,
-        added: added.length,
-        skipped: skipped.length,
-      },
-    });
-    return json({ ok: true, ...result }, 200, req, env);
-  });
+  }
+  return json({ ok: true, ...result });
 }

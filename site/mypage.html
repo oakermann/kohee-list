@@ -4,60 +4,46 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>마이페이지 | KOHEE LIST</title>
+    <title>찜·내 제보 | KOHEE LIST</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
     />
-    <link rel="stylesheet" href="./assets/base.css?v=20260721-7" />
-    <link rel="stylesheet" href="./assets/mypage.css?v=20260721-9" />
+    <link rel="stylesheet" href="./assets/base.css" />
+    <link rel="stylesheet" href="./assets/mypage.css" />
   </head>
   <body>
     <main class="page">
       <section class="hero">
-        <h1 class="hero-title">[ 마이페이지 ]</h1>
-        <div id="me" class="account-line">불러오는 중...</div>
-        <nav id="menu" class="action-strip"></nav>
+        <h1 class="hero-title">[ 찜·내 제보 ]</h1>
+        <div class="account-line">
+          로그인 없이 이 브라우저에 저장됩니다. 브라우저 데이터를 지우면 함께
+          사라집니다.
+        </div>
+        <nav class="action-strip">
+          <a class="mini-btn" href="index.html">메인</a>
+          <a class="mini-btn primary" href="submit.html">제보하기</a>
+        </nav>
       </section>
 
       <section class="section">
         <h2 class="section-head">찜한 카페</h2>
         <div class="section-rule"></div>
-        <div id="fav-list" class="section-body">
-          <div class="empty">찜 목록을 불러오는 중입니다.</div>
-        </div>
+        <div id="fav-list" class="section-body"></div>
       </section>
 
       <section class="section">
         <h2 class="section-head">내 제보</h2>
         <div class="section-rule"></div>
-        <div id="sub-list" class="section-body">
-          <div class="empty">제보 내역을 불러오는 중입니다.</div>
-        </div>
+        <div id="sub-list" class="section-body"></div>
       </section>
 
       <section class="section">
         <h2 class="section-head">내 오류 제보</h2>
         <div class="section-rule"></div>
-        <div id="error-list" class="section-body">
-          <div class="empty">오류 제보 내역을 불러오는 중입니다.</div>
-        </div>
-      </section>
-
-      <section class="section danger-section">
-        <h2 class="section-head">회원 탈퇴</h2>
-        <div class="section-rule"></div>
-        <div class="section-body">
-          <p class="danger-copy">
-            탈퇴 시 계정/로그인정보, 찜 목록, 내 제보 내역, 오류 제보 내역이
-            모두 삭제되며 복구할 수 없습니다.
-          </p>
-          <button id="delete-account-btn" class="mini-btn danger" type="button">
-            회원 탈퇴
-          </button>
-        </div>
+        <div id="error-list" class="section-body"></div>
       </section>
     </main>
 
@@ -65,73 +51,6 @@
       <a href="privacy.html">개인정보 처리방침</a>
     </footer>
 
-    <div id="modal-bg" class="overlay">
-      <div class="modal">
-        <div class="modal-meta">
-          <div id="m-tags"></div>
-          <button
-            id="btn-favorite"
-            class="fav-btn"
-            type="button"
-            aria-label="찜"
-          >
-            ★
-          </button>
-        </div>
-        <h2 id="m-name" class="modal-title"></h2>
-        <div id="m-desc" class="modal-copy"></div>
-        <div class="modal-actions">
-          <button id="btn-map" class="modal-btn" type="button">
-            📍 네이버 지도 보기
-          </button>
-          <button id="btn-share" class="modal-btn" type="button">
-            🔗 공유하기
-          </button>
-          <button id="btn-insta" class="modal-btn is-hidden" type="button">
-            📷 인스타 보기
-          </button>
-          <button id="btn-bean" class="modal-btn is-hidden" type="button">
-            🫘 원두 구매
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="delete-modal-bg" class="overlay">
-      <div class="modal">
-        <h2 id="delete-modal-title" class="modal-title">회원 탈퇴</h2>
-        <div class="modal-copy">
-          <div class="modal-copy-text">
-            탈퇴 시 계정/로그인정보, 찜 목록, 내 제보 내역, 오류 제보 내역이
-            모두 삭제되며 복구할 수 없습니다. 단, 이미 승인되어 목록에 공개된
-            카페 정보는 작성자 표시만 삭제된 채 유지됩니다.
-          </div>
-          <label class="delete-field">
-            <span class="delete-field-label">비밀번호 확인</span>
-            <input
-              id="delete-password"
-              type="password"
-              placeholder="비밀번호를 입력하세요"
-              autocomplete="current-password"
-            />
-          </label>
-          <div id="delete-msg" class="delete-msg"></div>
-        </div>
-        <div class="modal-actions">
-          <button id="delete-cancel-btn" class="modal-btn" type="button">
-            취소
-          </button>
-          <button
-            id="delete-confirm-btn"
-            class="modal-btn danger"
-            type="button"
-          >
-            탈퇴하기
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <script type="module" src="./assets/mypage.js?v=20260803-1"></script>
+    <script type="module" src="./assets/mypage.js"></script>
   </body>
 </html>

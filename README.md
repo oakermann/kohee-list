@@ -1,40 +1,16 @@
 # KOHEE LIST
 
-Cloudflare Pages + Workers + D1-based cafe curation platform for KOHEE LIST.
+카페 큐레이션 사이트 — https://kohee.pages.dev
 
-KOHEE LIST is a product repository. OAP is maintained separately.
+정본: [docs/KOHEE_MASTER_CONTEXT.md](docs/KOHEE_MASTER_CONTEXT.md) (데이터·사람·운영 콘솔·배포·로컬)
 
-This workspace keeps the live behavior intact while organizing the cafe product,
-product validation, deploy safety, and D1/CSV/public-data guardrails.
+```
+site/            화면(HTML·CSS·JS, _headers)
+functions/api/   Pages 함수 → server/app.js 로 넘김
+server/          API: app(입구)·routes·admin(잠금)·cafes·errorReports·csv·shared
+migrations/      D1 마이그레이션(손으로만 적용)  ·  schema.sql 전체 스키마
+scripts/         test-api(진짜 SQL)·test-site(화면 정적)·smoke-check(실사이트)·
+                 check-repo-safety·check-cafe-candidates(네이버 대조 도구)
+```
 
-## Structure
-
-- `worker.js`
-  - Cloudflare Workers entrypoint used by production
-- `server/`
-  - Backend handlers split by domain
-  - `shared.js`: common helpers, auth/session utilities, JSON/CORS helpers
-  - `auth.js`: signup, login, logout, me
-  - `cafes.js`: public data, notice, cafe CRUD
-  - `submissions.js`: cafe submission flow
-  - `errorReports.js`: error report flow and replies
-  - `favorites.js`: favorite add/remove/list
-  - `users.js`: user list and role changes
-  - `csv.js`: CSV import logic
-  - `routes.js`: route table
-- `site/`
-  - The only frontend copy: HTML pages, `_headers`, `assets/`. Served by the Worker
-    (`[assets]` in `wrangler.toml`) and by Pages (`wrangler pages deploy site`)
-- `site/assets/`
-  - `common.js`: API/auth/share/map/date/common UI helpers
-  - `index.js`, `login.js`, `submit.js`, `mypage.js`, `admin.js`
-- `functions/`
-  - Pages Functions (`/api` proxy)
-- `scripts/`
-  - Validation, safety audit, and smoke-check scripts
-- `schema.sql`
-  - Base D1 schema
-
-When a `site/assets/*` file changes, bump its `?v=` in every HTML page that loads it
-(`/assets/*` is cached immutable). If `common.js` changes, also bump the entry scripts
-that import it.
+`npm test` · `npm run format:check` · `npm run smoke:check`

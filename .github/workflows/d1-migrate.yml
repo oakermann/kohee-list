@@ -1,28 +1,19 @@
 name: D1 Migrate
 
-# Applies pending D1 migrations to the production database, by hand, on request.
-#
-# The deploy job deliberately refuses to ship a change that carries a migration
-# ("D1 migration requires manual review") and skips Pages and Worker with it. That
-# gate is right, but there was no way to perform the review step without a
-# Cloudflare credential on someone's laptop, so a merged migration simply sat
-# there and production silently fell a day behind the repo.
-#
-# This runs the same command a laptop would, using the token the repo already
-# holds, and it never fires on its own: dispatch only, and only when the input
-# literally says apply.
+# 운영 DB 마이그레이션은 손으로만: inspect 로 상태를 보고, 백업한 뒤 apply("apply" 입력)로 적용한다.
+# D1 은 30일 시점 복구(Time Travel)를 지원하지만, 큰 변경 전엔 wrangler d1 export 백업을 따로 받는다.
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "inspect reads the schema and the ledger; apply runs pending migrations"
+        description: "inspect = 적용 대기 목록과 표 목록 / apply = 대기 중인 마이그레이션 적용"
         required: true
         default: inspect
         type: choice
-        options: [inspect, reconcile, apply, backdata-dry, backdata-apply]
+        options: [inspect, apply]
       confirm:
-        description: 'Type "apply" to run pending migrations against production D1'
+        description: 'apply 하려면 "apply" 라고 적기'
         required: false
         default: ""
         type: string
@@ -36,82 +27,20 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
     steps:
-      - name: Refuse unless confirmed
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: Inspect
+        run: |
+          npx --yes wrangler@4 d1 migrations list kohee-list --remote
+          npx --yes wrangler@4 d1 execute kohee-list --remote \
+            --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+      - name: Apply
         if: inputs.mode == 'apply'
         run: |
           if [ "${{ inputs.confirm }}" != "apply" ]; then
-            echo "confirm input was not 'apply' - refusing"
-            exit 1
+            echo 'confirm 칸에 "apply" 가 없어 멈춤'; exit 1
           fi
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Check required secret
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "Missing GitHub Actions secret: CLOUDFLARE_API_TOKEN"
-            exit 1
-          fi
-
-      # Printed before anything is applied, so the log records what this run was
-      # about to change even if the apply step then fails.
-      - name: List pending migrations
-        run: npx --yes wrangler@4 d1 migrations list kohee-list --remote
-
-      # Fixed read-only queries, not an SQL console. Production schema has drifted
-      # ahead of the ledger before -- 0006 failed with "duplicate column name"
-      # although the ledger called it pending -- and guessing at that state is how
-      # a migration run turns into an outage.
-      - name: Inspect schema and ledger
-        if: inputs.mode == 'inspect'
-        run: |
-          npx --yes wrangler@4 d1 execute kohee-list --remote \
-            --command "SELECT name FROM pragma_table_info('cafes') ORDER BY cid"
-          npx --yes wrangler@4 d1 execute kohee-list --remote \
-            --command "SELECT name, applied_at FROM d1_migrations ORDER BY id"
-          npx --yes wrangler@4 d1 execute kohee-list --remote \
-            --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-          # The backdata move writes desc and region in one statement, so a cleaned
-          # description is good evidence the region landed. Evidence is not
-          # verification, and no export surfaces these columns.
-          npx --yes wrangler@4 d1 execute kohee-list --remote \
-            --command "SELECT count(*) AS with_region FROM cafes WHERE region <> ''"
-          npx --yes wrangler@4 d1 execute kohee-list --remote \
-            --command "SELECT name, region, region_distance_m FROM cafes WHERE region <> '' ORDER BY name LIMIT 5"
-
-      # 0006 through 0009 are present in the database and absent from the ledger:
-      # cafes has the column 0006 adds and the table 0009 creates exists, so they
-      # ran and were never recorded. Applying without this first fails on 0006 with
-      # a duplicate column, which is exactly what happened on the first attempt.
-      # Fixed statements, one per known migration, and idempotent.
-      - name: Reconcile the ledger
-        if: inputs.mode == 'reconcile'
-        run: |
-          for m in 0006_cafe_naver_url 0007_consent 0008_scrub_audit_history 0009_visit_stats; do
-            npx --yes wrangler@4 d1 execute kohee-list --remote \
-              --command "INSERT OR IGNORE INTO d1_migrations (name) VALUES ('${m}.sql')"
-          done
-          npx --yes wrangler@4 d1 execute kohee-list --remote \
-            --command "SELECT name, applied_at FROM d1_migrations ORDER BY id"
-
-      - name: Apply migrations
-        if: inputs.mode == 'apply'
-        run: npx --yes wrangler@4 d1 migrations apply kohee-list --remote
-      # The desc-to-backdata move runs here rather than on a laptop: the script
-      # shells out to npx, which Node refuses to execFile on Windows, and forcing
-      # a shell would put SQL through it.
-      - name: Move desc distance to backdata (dry run)
-        if: inputs.mode == 'backdata-dry'
-        run: node scripts/move-desc-distance-to-backdata.mjs
-
-      - name: Move desc distance to backdata (apply)
-        if: inputs.mode == 'backdata-apply'
-        run: node scripts/move-desc-distance-to-backdata.mjs --apply
+          npx --yes wrangler@4 d1 migrations apply kohee-list --remote

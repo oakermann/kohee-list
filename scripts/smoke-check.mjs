@@ -1,21 +1,10 @@
-import process from "node:process";
+// 배포 뒤 실제 사이트 확인: 페이지가 뜨고, 공개 목록은 공개 칸만 내보내고, 어드민 경로는 잠겨 있다.
+//   node scripts/smoke-check.mjs            (기본 https://kohee.pages.dev)
+//   SITE_URL=http://127.0.0.1:8788 node scripts/smoke-check.mjs
+import assert from "node:assert/strict";
 
-const PAGES_URL = process.env.PAGES_URL || "https://kohee.pages.dev";
-const PAGES_ADMIN_URL =
-  process.env.PAGES_ADMIN_URL || new URL("/admin.html", PAGES_URL).toString();
-const WORKER_URL =
-  process.env.WORKER_URL || "https://kohee-list.gabefinder.workers.dev";
-const WORKER_HEALTH_URL =
-  process.env.WORKER_HEALTH_URL || new URL("/health", WORKER_URL).toString();
-const WORKER_HEALTH_DB_URL =
-  process.env.WORKER_HEALTH_DB_URL ||
-  new URL("/health/db", WORKER_URL).toString();
-const WORKER_VERSION_URL =
-  process.env.WORKER_VERSION_URL || new URL("/version", WORKER_URL).toString();
-const WORKER_DATA_URL =
-  process.env.WORKER_DATA_URL || new URL("/data", WORKER_URL).toString();
-
-const PUBLIC_CAFE_KEYS = new Set([
+const SITE = process.env.SITE_URL || "https://kohee.pages.dev";
+const PUBLIC_KEYS = [
   "id",
   "name",
   "address",
@@ -31,209 +20,48 @@ const PUBLIC_CAFE_KEYS = new Set([
   "category",
   "oakerman_pick",
   "updated_at",
-]);
+].sort();
 
-const FORBIDDEN_PUBLIC_KEYS = new Set([
-  "memo",
-  "approved_by",
-  "created_by",
-  "deleted_at",
-  "deleted_by",
-  "delete_reason",
-  "hidden_by",
-  "internalMemo",
-  "manager_pick",
-  "rejected_by",
-  "selectionReason",
-  "sourceUrls",
-  "submitter",
-]);
-
-function hasArg(name) {
-  return process.argv.includes(name);
-}
-
-function printHelp() {
-  console.log(`Usage: node scripts/smoke-check.mjs [--public] [--admin] [--worker] [--pages]
-
-Options:
-  --public  Check public page and public data URLs.
-  --admin   Check admin page URL.
-  --worker  Check Worker health, DB health, version, and public data URLs.
-  --pages   Check public and admin groups (--public plus --admin).
-  --help    Show this help.
-
-If no target is provided, public, admin, and worker checks are all run.`);
-}
-
-async function retry(name, task, attempts = 3) {
-  let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      return await task();
-    } catch (error) {
-      lastError = error;
-      console.warn(
-        `[smoke] ${name} failed (${attempt}/${attempts}): ${error.message}`,
-      );
-      if (attempt < attempts) {
-        await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
-      }
-    }
+async function get(path) {
+  // 배포 직후엔 잠깐 옛 판이 보일 수 있어 몇 번 다시 묻는다.
+  let last;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    last = await fetch(new URL(path, SITE), { redirect: "follow" });
+    if (last.status < 500) return last;
+    await new Promise((r) => setTimeout(r, 3000));
   }
-  throw lastError;
+  return last;
 }
 
-async function checkPublicPage() {
-  await retry("Pages", async () => {
-    const response = await fetch(PAGES_URL, { redirect: "follow" });
-    if (!response.ok) {
-      throw new Error(`Pages returned HTTP ${response.status}`);
-    }
-    const body = await response.text();
-    if (!body.includes("KOHEE")) {
-      throw new Error("Pages HTML did not include KOHEE marker text");
-    }
-    console.log(`[smoke] Pages ok: ${PAGES_URL}`);
-  });
+for (const [path, script] of [
+  ["/", "index.js"],
+  ["/admin", "admin.js"],
+  ["/submit", "submit.js"],
+  ["/mypage", "mypage.js"],
+]) {
+  const res = await get(path);
+  assert.equal(res.status, 200, `${path} status`);
+  assert.ok((await res.text()).includes(script), `${path} serves ${script}`);
 }
 
-async function checkAdminPage() {
-  await retry("Pages admin", async () => {
-    const response = await fetch(PAGES_ADMIN_URL, { redirect: "follow" });
-    if (!response.ok) {
-      throw new Error(`Pages admin returned HTTP ${response.status}`);
-    }
-    const body = await response.text();
-    if (!body.includes("admin.js")) {
-      throw new Error("Pages admin HTML did not include admin script marker");
-    }
-    console.log(`[smoke] Pages admin ok: ${PAGES_ADMIN_URL}`);
-  });
+const data = await get("/api/data");
+assert.equal(data.status, 200);
+const cafes = await data.json();
+assert.ok(Array.isArray(cafes) && cafes.length > 0, "public data has cafes");
+for (const cafe of cafes) {
+  assert.deepEqual(
+    Object.keys(cafe).sort(),
+    PUBLIC_KEYS,
+    `public keys of ${cafe.id}`,
+  );
 }
 
-async function checkWorkerHealth() {
-  await retry("Worker health", async () => {
-    const response = await fetch(WORKER_HEALTH_URL, { redirect: "follow" });
-    if (!response.ok) {
-      throw new Error(`Worker health returned HTTP ${response.status}`);
-    }
-    const payload = await response.json().catch(() => ({}));
-    if (payload.ok !== true) {
-      throw new Error("Worker health did not return ok=true");
-    }
-    console.log(`[smoke] Worker health ok: ${WORKER_HEALTH_URL}`);
-  });
+for (const path of [
+  "/api/cafes",
+  "/api/error-reports",
+  "/api/geocode?q=서울",
+]) {
+  assert.equal((await get(path)).status, 401, `${path} must be admin-only`);
 }
 
-async function checkWorkerDb() {
-  await retry("Worker DB health", async () => {
-    const response = await fetch(WORKER_HEALTH_DB_URL, { redirect: "follow" });
-    const payload = await response.json().catch(() => ({}));
-    const isOk = response.ok && payload.ok === true && payload.db === "ok";
-    const isSafeUnavailable =
-      response.status === 503 &&
-      payload.ok === false &&
-      payload.code === "DB_UNAVAILABLE";
-    if (!isOk && !isSafeUnavailable) {
-      throw new Error(
-        `Worker DB health returned unsafe status ${response.status}`,
-      );
-    }
-    console.log(`[smoke] Worker DB health safe: ${WORKER_HEALTH_DB_URL}`);
-  });
-}
-
-async function checkWorkerVersion() {
-  await retry("Worker version", async () => {
-    const response = await fetch(WORKER_VERSION_URL, { redirect: "follow" });
-    if (!response.ok) {
-      throw new Error(`Worker version returned HTTP ${response.status}`);
-    }
-    const payload = await response.json().catch(() => ({}));
-    if (
-      payload.ok !== true ||
-      payload.service !== "kohee-list" ||
-      typeof payload.version !== "string" ||
-      typeof payload.deployCheck !== "string"
-    ) {
-      throw new Error("Worker version returned unsafe shape");
-    }
-    console.log(`[smoke] Worker version ok: ${WORKER_VERSION_URL}`);
-  });
-}
-
-async function checkPublicData() {
-  await retry("Worker public data", async () => {
-    const response = await fetch(WORKER_DATA_URL, { redirect: "follow" });
-    if (!response.ok) {
-      throw new Error(`Worker data returned HTTP ${response.status}`);
-    }
-    const payload = await response.json().catch(() => null);
-    if (!Array.isArray(payload)) {
-      throw new Error("Worker data did not return a public cafe array");
-    }
-    const sample = payload[0];
-    if (sample && typeof sample === "object") {
-      for (const key of Object.keys(sample)) {
-        if (FORBIDDEN_PUBLIC_KEYS.has(key) || !PUBLIC_CAFE_KEYS.has(key)) {
-          throw new Error(`Worker data exposed non-public key: ${key}`);
-        }
-      }
-    }
-    console.log(`[smoke] Worker public data ok: ${WORKER_DATA_URL}`);
-  });
-}
-
-async function checkPublic() {
-  await checkPublicPage();
-  await checkPublicData();
-}
-
-async function checkAdmin() {
-  await checkAdminPage();
-}
-
-async function checkWorker() {
-  await checkWorkerHealth();
-  await checkWorkerDb();
-  await checkWorkerVersion();
-  await checkPublicData();
-}
-
-if (hasArg("--help")) {
-  printHelp();
-  process.exit(0);
-}
-
-const hasPublicArg = hasArg("--public");
-const hasAdminArg = hasArg("--admin");
-const hasWorkerArg = hasArg("--worker");
-const hasPagesArg = hasArg("--pages");
-
-const noTarget = !hasPublicArg && !hasAdminArg && !hasWorkerArg && !hasPagesArg;
-
-const shouldCheckPublic = hasPublicArg || hasPagesArg || noTarget;
-const shouldCheckAdmin = hasAdminArg || hasPagesArg || noTarget;
-const shouldCheckWorker = hasWorkerArg || noTarget;
-
-let activeGroup = "";
-
-try {
-  if (shouldCheckPublic) {
-    activeGroup = "public";
-    await checkPublic();
-  }
-  if (shouldCheckAdmin) {
-    activeGroup = "admin";
-    await checkAdmin();
-  }
-  if (shouldCheckWorker) {
-    activeGroup = "worker";
-    await checkWorker();
-  }
-  console.log("[smoke] checks passed");
-} catch (error) {
-  console.error(`[smoke] ${activeGroup || "check"} failed: ${error.message}`);
-  process.exitCode = 1;
-}
+console.log(`[smoke] ok ${SITE} (${cafes.length} public cafes)`);

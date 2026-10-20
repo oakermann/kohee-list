@@ -1,18 +1,5 @@
-// The site is served from kohee.pages.dev and the API from a workers.dev host, so the
-// session cookie was third-party. Safari blocks those outright, which is why login worked
-// in Chrome and silently failed on iPhone and iPad. Both hosts are on the Public Suffix
-// List, so no Domain attribute can bridge them -- the API has to answer on this origin.
-//
-// Everything is passed through untouched. Cookie and x-csrf-token must arrive at the API
-// as sent, Origin must stay this site so the API's own origin check still recognises it,
-// and the upstream response is returned as-is so Set-Cookie survives. The browser then
-// stores that cookie against kohee.pages.dev, first-party, which is the entire point.
-const API_ORIGIN = "https://kohee-list.gabefinder.workers.dev";
+// 사이트와 API 가 같은 주소(kohee.pages.dev)에서 같은 곳에서 돈다 — 워커로 다시 보내지 않으니
+// 쿠키는 1자 쿠키이고, DB 는 이 Pages 프로젝트에 직접 묶인다(wrangler.toml).
+import { handle } from "../../server/app.js";
 
-export async function onRequest(context) {
-  const { request } = context;
-  const url = new URL(request.url);
-  const upstream = new URL(url.pathname.replace(/^\/api/, "") + url.search, API_ORIGIN);
-
-  return fetch(new Request(upstream, request));
-}
+export const onRequest = ({ request, env }) => handle(request, env);

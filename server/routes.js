@@ -1,147 +1,61 @@
-import {
-  health,
-  healthDb,
-  json,
-  requireAuth,
-  requireRole,
-  versionInfo,
-  withGuard,
-} from "./shared.js";
-import { login, logout, me, signup } from "./auth.js";
-import { deleteAccount } from "./account.js";
+import { adminLogin, adminLogout, adminMe, adminOnly } from "./admin.js";
 import {
   addCafe,
-  approveCafe,
   deleteCafe,
   editCafe,
+  geocode,
   getData,
   getNotice,
-  holdCafe,
   listCafes,
+  mySubmissions,
+  publishCafe,
+  purgeCafe,
   restoreCafe,
   setNotice,
-  unholdCafe,
-} from "./cafes.js";
-import {
-  approveSubmission,
-  getSubmissions,
-  mySubmissions,
-  rejectSubmission,
   submitCafe,
-} from "./submissions.js";
+} from "./cafes.js";
+import { importCsv } from "./csv.js";
 import {
-  getErrorReports,
+  listErrorReports,
   myErrorReports,
   replyErrorReport,
   resolveErrorReport,
   submitErrorReport,
 } from "./errorReports.js";
-import { getFavorites, getGeocode, toggleFavorite } from "./favorites.js";
-import { getVisitStats } from "./stats.js";
-import { importCsv } from "./csv.js";
 
-const USER_FACING_OPERATOR_LABEL = "운영진";
-
-function adminOnly(handler) {
-  return (req, env) =>
-    withGuard(req, env, async () => {
-      const user = await requireAuth(req, env);
-      requireRole(user, ["admin"]);
-      return handler(req, env);
-    });
-}
-
-function redactOperatorFields(item) {
-  const reviewed = !!(item.reviewed_by || item.reviewed_by_username);
-  const replied = !!(item.replied_by || item.replied_by_username);
-  const resolved = !!(item.resolved_by || item.resolved_by_username);
-  return {
-    ...item,
-    reviewed_by: null,
-    reviewed_by_username: reviewed ? USER_FACING_OPERATOR_LABEL : null,
-    replied_by: null,
-    replied_by_username: replied ? USER_FACING_OPERATOR_LABEL : null,
-    resolved_by: null,
-    resolved_by_username: resolved ? USER_FACING_OPERATOR_LABEL : null,
-  };
-}
-
-function redactUserFacingOperators(handler) {
-  return async (req, env) => {
-    const response = await handler(req, env);
-    if (!response.ok) return response;
-
-    let payload;
-    try {
-      payload = await response.clone().json();
-    } catch {
-      return response;
-    }
-
-    if (!Array.isArray(payload?.items)) return response;
-    return json(
-      { ...payload, items: payload.items.map(redactOperatorFields) },
-      response.status,
-      req,
-      env,
-    );
-  };
-}
-
-export const AUTH_ROUTES = [
-  ["POST", "/signup", signup],
-  ["POST", "/login", login],
-  ["POST", "/logout", logout],
-  ["GET", "/me", me],
-];
-
-export const PUBLIC_ROUTES = [
-  ["GET", "/health", health],
-  ["GET", "/health/db", healthDb],
-  ["GET", "/version", versionInfo],
+const PUBLIC_ROUTES = [
   ["GET", "/data", getData],
   ["GET", "/notice", getNotice],
-];
-
-export const USER_ROUTES = [
   ["POST", "/submit", submitCafe],
-  ["GET", "/my-submits", redactUserFacingOperators(mySubmissions)],
-  ["GET", "/my-error-reports", redactUserFacingOperators(myErrorReports)],
+  ["GET", "/my-submits", mySubmissions],
   ["POST", "/error-report", submitErrorReport],
-  ["GET", "/favorites", getFavorites],
-  ["POST", "/favorite", toggleFavorite],
-  ["POST", "/delete-account", deleteAccount],
+  ["GET", "/my-error-reports", myErrorReports],
+  ["POST", "/admin/login", adminLogin],
+  ["POST", "/admin/logout", adminLogout],
+  ["GET", "/admin/me", adminMe],
 ];
 
-export const ADMIN_OPERATION_ROUTES = [
-  ["GET", "/submissions", adminOnly(getSubmissions)],
-  ["GET", "/error-reports", adminOnly(getErrorReports)],
-  ["POST", "/reply-error-report", adminOnly(replyErrorReport)],
-  ["POST", "/resolve-error-report", adminOnly(resolveErrorReport)],
-  ["POST", "/approve", adminOnly(approveSubmission)],
-  ["POST", "/reject", adminOnly(rejectSubmission)],
-  ["GET", "/cafes", adminOnly(listCafes)],
-  ["GET", "/stats/visits", adminOnly(getVisitStats)],
-  // 주소→좌표(Nominatim, 초당 1회 정책) — 어드민 좌표 채우기만 쓴다. 공개로 두면 남이 막히게 할 수 있다.
-  ["GET", "/geocode", adminOnly(getGeocode)],
-  ["POST", "/add", adminOnly(addCafe)],
-  ["POST", "/edit", adminOnly(editCafe)],
-  ["POST", "/delete", adminOnly(deleteCafe)],
-  ["POST", "/restore", adminOnly(restoreCafe)],
-  ["POST", "/import-csv", adminOnly(importCsv)],
-];
-
-export const ADMIN_ROUTES = [
+const ADMIN_ROUTES = [
+  ["GET", "/cafes", listCafes],
+  ["POST", "/add", addCafe],
+  ["POST", "/edit", editCafe],
+  ["POST", "/publish", publishCafe],
+  ["POST", "/delete", deleteCafe],
+  ["POST", "/restore", restoreCafe],
+  ["POST", "/purge", purgeCafe],
   ["POST", "/notice", setNotice],
-  ["POST", "/approve-cafe", approveCafe],
-  ["POST", "/hold-cafe", holdCafe],
-  ["POST", "/unhold-cafe", unholdCafe],
+  ["POST", "/import-csv", importCsv],
+  ["GET", "/geocode", geocode],
+  ["GET", "/error-reports", listErrorReports],
+  ["POST", "/reply-error-report", replyErrorReport],
+  ["POST", "/resolve-error-report", resolveErrorReport],
 ];
 
 export const ROUTES = [
-  ...AUTH_ROUTES,
   ...PUBLIC_ROUTES,
-  ...USER_ROUTES,
-  ...ADMIN_OPERATION_ROUTES,
-  ...ADMIN_ROUTES,
+  ...ADMIN_ROUTES.map(([method, path, handler]) => [
+    method,
+    path,
+    adminOnly(handler),
+  ]),
 ];

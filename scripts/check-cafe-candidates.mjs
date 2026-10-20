@@ -3,8 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-const NAVER_LOCAL_SEARCH_URL =
-  "https://openapi.naver.com/v1/search/local.json";
+const NAVER_LOCAL_SEARCH_URL = "https://openapi.naver.com/v1/search/local.json";
 
 export function normalizeName(name) {
   if (!name) return "";
@@ -68,7 +67,7 @@ export function checkRegionMatch(expectedRegion, addressData) {
   return words.some(
     (word) =>
       addressText.includes(word) ||
-      (REGION_ALIASES[word] && addressText.includes(REGION_ALIASES[word]))
+      (REGION_ALIASES[word] && addressText.includes(REGION_ALIASES[word])),
   );
 }
 
@@ -77,7 +76,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function queryNaver(candidate, clientId, clientSecret) {
   if (!clientId || !clientSecret) return null;
 
-  const candidateName = typeof candidate === "string" ? candidate : candidate.name;
+  const candidateName =
+    typeof candidate === "string" ? candidate : candidate.name;
   const candidateKo = typeof candidate === "object" ? candidate.name_ko : null;
 
   const queriesToTry = [];
@@ -103,7 +103,11 @@ export async function queryNaver(candidate, clientId, clientSecret) {
         continue;
       }
       const data = await res.json();
-      if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
+      if (
+        !data.items ||
+        !Array.isArray(data.items) ||
+        data.items.length === 0
+      ) {
         continue;
       }
 
@@ -111,7 +115,9 @@ export async function queryNaver(candidate, clientId, clientSecret) {
         const rawTitle = item.title || "";
         const placeName = rawTitle.replace(/<[^>]*>/g, "");
         const matchesMain = matchName(candidateName, placeName);
-        const matchesKo = candidateKo ? matchName(candidateKo, placeName) : false;
+        const matchesKo = candidateKo
+          ? matchName(candidateKo, placeName)
+          : false;
 
         if (matchesMain || matchesKo) {
           const roadAddr = item.roadAddress || item.address || "N/A";
@@ -139,7 +145,13 @@ export async function queryNaver(candidate, clientId, clientSecret) {
   return null;
 }
 
-export function buildReport({ candidatesCount, found, doubtful, couldNotCheck, notFound }) {
+export function buildReport({
+  candidatesCount,
+  found,
+  doubtful,
+  couldNotCheck,
+  notFound,
+}) {
   let report = `# Cafe Candidate Search Report\n\n`;
 
   if (couldNotCheck.length > 0) {
@@ -211,8 +223,12 @@ export async function runCandidateCheck() {
   const clientId = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    console.error("[ERROR] NAVER_CLIENT_ID or NAVER_CLIENT_SECRET environment variable is missing.");
-    console.error("Please set NAVER_CLIENT_ID and NAVER_CLIENT_SECRET environment variables to run cafe candidate check.");
+    console.error(
+      "[ERROR] NAVER_CLIENT_ID or NAVER_CLIENT_SECRET environment variable is missing.",
+    );
+    console.error(
+      "Please set NAVER_CLIENT_ID and NAVER_CLIENT_SECRET environment variables to run cafe candidate check.",
+    );
     process.exitCode = 1;
     return;
   }

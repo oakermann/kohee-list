@@ -3,25 +3,19 @@ import {
   CAT_MAP,
   api,
   buildNaverMapUrls,
-  cleanParts,
-  clearAuthToken,
+  favoriteIds,
   getCity,
-  getStorageValue,
   openNaverMapForCafe,
   safeHttpUrl,
-  setStorageValue,
   shareCafe,
-  storeCsrfFromPayload,
-} from "./common.js?v=20260803-1";
+  toggleFavorite,
+} from "./common.js";
 
 let data = [];
 let selectedCategory = null;
 let nearbyMode = false;
-let currentUser = null;
-let favoriteIds = new Set();
 let openModalCafeId = "";
 
-const FAVORITE_SYNC_KEY = "kohee-favorites-sync";
 // 한 번만 묻는다: 정밀 GPS 는 실내·PC 에서 오래 걸리고, 1분 안 위치는 다시 쓴다.
 const GEO_OPTIONS = {
   enableHighAccuracy: false,
@@ -36,15 +30,7 @@ const GEO_DISTANCE_LIMIT_KM = 9999;
 // Tune this single value to widen/narrow the nearby search.
 const GEO_NEARBY_RADIUS_KM = 20;
 
-let lastFavoriteSync = "";
 let lastPositionAccuracyM = null;
-
-function safeText(value) {
-  const text = String(value || "").trim();
-  return text.toLowerCase() === "undefined" || text.toLowerCase() === "null"
-    ? ""
-    : text;
-}
 
 async function shareCafeMap(cafe) {
   const text = `[코히 리스트] ${cafe.name}\n주소: ${cafe.address}`;
@@ -74,7 +60,7 @@ async function shareCafeMap(cafe) {
 }
 
 function cafeCategories(cafe) {
-  return cleanParts(cafe.category).filter((tag) => CAT_MAP[tag]);
+  return cafe.category.filter((tag) => CAT_MAP[tag]);
 }
 
 function cafeTags(cafe) {
@@ -121,92 +107,16 @@ function appendTags(container, cafe) {
 }
 
 function signatureText(values) {
-  const parts = cleanParts(values);
-  return parts.length ? parts.join(", ") : "";
-}
-
-function getFavoriteSyncStamp() {
-  return getStorageValue(FAVORITE_SYNC_KEY);
-}
-
-function touchFavoriteSync() {
-  const stamp = String(Date.now());
-  lastFavoriteSync = stamp;
-  setStorageValue(FAVORITE_SYNC_KEY, stamp);
-}
-
-async function syncFavoritesIfNeeded() {
-  const stamp = getFavoriteSyncStamp();
-  if (stamp === lastFavoriteSync) return;
-  lastFavoriteSync = stamp;
-  await loadFavorites();
-}
-
-function isFavorite(cafeId) {
-  return favoriteIds.has(String(cafeId));
+  return values.join(", ");
 }
 
 function updateFavoriteButton(cafeId = openModalCafeId) {
   const btn = $("btn-favorite");
   if (!btn) return;
-  if (!cafeId) {
-    btn.style.display = "none";
-    return;
-  }
-
-  const favored = isFavorite(cafeId);
-  btn.style.display = "inline-flex";
+  const favored = favoriteIds().has(cafeId);
+  btn.style.display = cafeId ? "inline-flex" : "none";
   btn.textContent = favored ? "★" : "☆";
   btn.classList.toggle("is-on", favored);
-}
-
-async function loadFavorites() {
-  if (!currentUser) {
-    favoriteIds = new Set();
-    lastFavoriteSync = getFavoriteSyncStamp();
-    updateFavoriteButton();
-    return;
-  }
-
-  try {
-    const res = await api("/favorites");
-    if (!res.ok) throw new Error();
-    const payload = await res.json();
-    favoriteIds = new Set(
-      (payload.items || []).map((item) => String(item.cafe?.id || "")),
-    );
-  } catch {
-    favoriteIds = new Set();
-  }
-
-  lastFavoriteSync = getFavoriteSyncStamp();
-  updateFavoriteButton();
-}
-
-async function toggleFavorite(cafeId) {
-  if (!currentUser) {
-    if (confirm("로그인이 필요합니다. 로그인 페이지로 이동할까요?")) {
-      location.href = "login.html";
-    }
-    return;
-  }
-
-  const action = isFavorite(cafeId) ? "remove" : "add";
-  const res = await api("/favorite", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ cafe_id: cafeId, action }),
-  });
-  const payload = await res.json().catch(() => ({}));
-  storeCsrfFromPayload(payload);
-  if (!res.ok || !payload.ok)
-    throw new Error(payload.error || "찜 처리에 실패했습니다.");
-
-  if (payload.favored) favoriteIds.add(String(cafeId));
-  else favoriteIds.delete(String(cafeId));
-
-  updateFavoriteButton(cafeId);
-  touchFavoriteSync();
 }
 
 function formatDistance(distanceKm) {
@@ -232,7 +142,7 @@ function centerMessage(message, subMessage = "") {
 function createCafeCard(cafe) {
   const card = document.createElement("div");
   card.className = "cafe-card";
-  card.dataset.cafeId = safeText(cafe.id);
+  card.dataset.cafeId = cafe.id;
 
   const meta = document.createElement("div");
   meta.className = "meta-row";
@@ -259,11 +169,11 @@ function createCafeCard(cafe) {
   if (metaRight.childElementCount) meta.appendChild(metaRight);
 
   const title = document.createElement("h4");
-  title.textContent = safeText(cafe.name);
+  title.textContent = cafe.name;
 
   const desc = document.createElement("p");
   desc.className = "cafe-desc";
-  desc.textContent = safeText(cafe.desc);
+  desc.textContent = cafe.desc;
   const signature = signatureText(cafe.signature);
   if (signature) {
     desc.append(" ");
@@ -275,7 +185,7 @@ function createCafeCard(cafe) {
 
   const address = document.createElement("p");
   address.className = "address-full";
-  address.textContent = safeText(cafe.address);
+  address.textContent = cafe.address;
 
   card.append(meta, title, desc, address);
   return card;
@@ -289,7 +199,7 @@ function renderModalDescription(desc, signature) {
   const wrap = $("m-desc");
   wrap.replaceChildren();
 
-  const copy = safeText(desc);
+  const copy = desc;
   const signatureValue = signatureText(signature);
 
   if (copy) {
@@ -329,18 +239,11 @@ async function loadData() {
     const response = await api("/data");
     if (!response.ok) throw new Error();
     const rows = await response.json();
-    data = Array.isArray(rows)
-      ? rows.map((cafe) => ({
-          ...cafe,
-          id: safeText(cafe.id),
-          name: safeText(cafe.name),
-          address: safeText(cafe.address),
-          desc: safeText(cafe.desc),
-          category: cafeCategories(cafe),
-          signature: cleanParts(cafe.signature),
-        }))
-      : [];
+    data = rows;
     render();
+    // 마이페이지 찜 목록이 index.html?cafe=<id> 로 연다.
+    const linked = new URLSearchParams(location.search).get("cafe");
+    if (linked) openModal(linked);
   } catch {
     renderCenterMessage([
       "데이터를 불러오지 못했습니다.",
@@ -360,7 +263,7 @@ async function loadData() {
 // 이 정확히 일치하는 카페가 맨 위에 모이고, "서울"을 치면 서울역 카페들이 나머지 서울
 // 카페보다 앞에 온다.
 function matchScore(cafe, query) {
-  const lower = (value) => safeText(value).toLowerCase();
+  const lower = (value) => value.toLowerCase();
   const region = lower(cafe.region);
   if (region && region === query) return 5; // 서울역 == 서울역
   if (lower(cafe.name).includes(query)) return 4;
@@ -642,15 +545,16 @@ function openModal(cafeId) {
   appendTags($("m-tags"), cafe);
   if (cafe.oakerman_pick) $("m-tags").prepend(makePickBadge());
   updateFavoriteButton(cafe.id);
-  setButtonAction("btn-favorite", async () => {
+  setButtonAction("btn-favorite", () => {
     try {
-      await toggleFavorite(cafe.id);
+      toggleFavorite(cafe.id);
+      updateFavoriteButton(cafe.id);
     } catch (error) {
       alert(error.message);
     }
   });
 
-  $("m-name").textContent = safeText(cafe.name);
+  $("m-name").textContent = cafe.name;
   renderModalDescription(cafe.desc, cafe.signature);
 
   setButtonAction("btn-map", () => openNaverMapForCafe(cafe));
@@ -701,66 +605,6 @@ async function loadNotice() {
   }
 }
 
-async function loadMe() {
-  try {
-    const res = await api("/me");
-    if (!res.ok) throw new Error();
-    const payload = await res.json();
-    storeCsrfFromPayload(payload);
-    currentUser = payload.user || null;
-  } catch {
-    currentUser = null;
-  }
-
-  await loadFavorites();
-  renderAuthMenu();
-}
-
-function renderAuthMenu() {
-  const menu = $("auth-menu");
-  if (!menu) return;
-
-  if (!currentUser) {
-    menu.className = "auth-menu is-guest";
-    menu.replaceChildren();
-    appendAuthLink(menu, "login.html", "로그인");
-    appendAuthLink(menu, "submit.html", "제보하기");
-    appendAuthLink(menu, "mypage.html", "마이페이지");
-    return;
-  }
-
-  menu.className = "auth-menu is-logged-in";
-  menu.replaceChildren();
-
-  const logoutButton = document.createElement("button");
-  logoutButton.id = "logout-menu-btn";
-  logoutButton.type = "button";
-  logoutButton.textContent = "로그아웃";
-  logoutButton.addEventListener("click", logout);
-  menu.appendChild(logoutButton);
-  appendAuthLink(menu, "submit.html", "제보하기");
-  appendAuthLink(menu, "mypage.html", "마이페이지");
-}
-
-function appendAuthLink(menu, href, text) {
-  const link = document.createElement("a");
-  link.className = "auth-link";
-  link.href = href;
-  link.textContent = text;
-  menu.appendChild(link);
-}
-
-async function logout() {
-  try {
-    await api("/logout", { method: "POST" });
-  } catch {}
-  clearAuthToken();
-  currentUser = null;
-  favoriteIds = new Set();
-  updateFavoriteButton();
-  renderAuthMenu();
-}
-
 Object.entries(CAT_MAP).forEach(([key, label]) => {
   const tab = document.createElement("button");
   tab.className = "tab";
@@ -793,17 +637,5 @@ $("list").addEventListener("click", (event) => {
   openModal(card.dataset.cafeId);
 });
 
-window.addEventListener("storage", (event) => {
-  if (event.key !== FAVORITE_SYNC_KEY) return;
-  lastFavoriteSync = event.newValue || "";
-  loadFavorites().catch(() => {});
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) return;
-  syncFavoritesIfNeeded().catch(() => {});
-});
-
 loadData();
 loadNotice();
-loadMe();

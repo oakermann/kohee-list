@@ -1,8 +1,4 @@
-export const API_BASE =
-  window.__API_BASE__ || "/api";
-const CSRF_STORAGE_KEY = "kohee_csrf_token";
-let csrfTokenMemory = "";
-
+// 모든 화면이 쓰는 것: API 호출, 브라우저 표·찜(로그인 없음), 날짜, 네이버 지도·공유.
 export const CAT_MAP = {
   espresso: "에스프레소",
   drip: "드립",
@@ -13,184 +9,97 @@ export const CAT_MAP = {
 
 export const $ = (id) => document.getElementById(id);
 
-export function esc(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+export function api(path, options = {}) {
+  return fetch(`/api${path}`, { credentials: "same-origin", ...options });
 }
 
-export function cleanParts(values) {
-  const arr = Array.isArray(values) ? values : [values];
-  return arr
-    .flatMap((value) => String(value || "").split(/[|,]/))
-    .map((value) => value.trim())
-    .filter(
-      (value) =>
-        value &&
-        value.toLowerCase() !== "undefined" &&
-        value.toLowerCase() !== "null",
+const ERROR_MESSAGES = {
+  AUTH_REQUIRED: "어드민 로그인이 필요합니다.",
+  INVALID_CREDENTIALS: "비밀번호가 맞지 않습니다.",
+  VALIDATION_ERROR: "입력값을 다시 확인해 주세요.",
+  NOT_FOUND: "요청한 항목을 찾을 수 없습니다.",
+  RATE_LIMITED: "오늘 받을 수 있는 제보가 다 찼습니다. 내일 다시 보내 주세요.",
+  COORDS_REQUIRED: "좌표(위도·경도)가 있어야 공개할 수 있습니다.",
+};
+
+export async function jsonApi(path, options = {}) {
+  const res = await api(path, options);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    const error = new Error(
+      ERROR_MESSAGES[data.code] || data.error || "요청에 실패했습니다.",
     );
+    error.code = data.code || "";
+    throw error;
+  }
+  return data;
 }
 
-export function clearAuthToken() {
-  try {
-    // Remove legacy bearer-token storage from older builds.
-    localStorage.removeItem("kohee_auth_token");
-  } catch {}
-  clearCsrfToken();
+export function postJson(path, body) {
+  return jsonApi(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
-export function getStorageValue(key) {
+function storageGet(key) {
   try {
-    return localStorage.getItem(key) || "";
+    return localStorage.getItem(key);
   } catch {
-    return "";
+    return null;
   }
 }
 
-export function setStorageValue(key, value) {
+function storageSet(key, value) {
   try {
     localStorage.setItem(key, value);
-  } catch {}
-}
-
-export function getCookie(key) {
-  const parts = document.cookie.split(";").map((value) => value.trim());
-  for (const part of parts) {
-    if (!part.includes("=")) continue;
-    const [cookieKey, ...rest] = part.split("=");
-    if (cookieKey === key) return decodeURIComponent(rest.join("="));
+    return true;
+  } catch {
+    return false;
   }
-  return "";
 }
 
-export const getCookieValue = getCookie;
+// 이 브라우저의 무작위 표 — 로그인 대신 '내 제보·답변'을 찾는 열쇠. 지우면 내역 보기만 사라진다.
+export function clientId() {
+  let id = storageGet("kohee-client-id");
+  if (!id) {
+    id = crypto.randomUUID();
+    storageSet("kohee-client-id", id);
+  }
+  return id;
+}
+
+// 찜은 이 브라우저에만 저장한다.
+export function favoriteIds() {
+  try {
+    return new Set(JSON.parse(storageGet("kohee-favorites") || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+export function toggleFavorite(cafeId) {
+  const ids = favoriteIds();
+  if (ids.has(cafeId)) ids.delete(cafeId);
+  else ids.add(cafeId);
+  if (!storageSet("kohee-favorites", JSON.stringify([...ids]))) {
+    throw new Error(
+      "이 브라우저는 찜을 저장할 수 없습니다(사생활 보호 모드 등).",
+    );
+  }
+  return ids.has(cafeId);
+}
 
 export function safeHttpUrl(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
   try {
-    const url = new URL(raw);
+    const url = new URL(String(value || "").trim());
     return url.protocol === "http:" || url.protocol === "https:"
       ? url.toString()
       : "";
   } catch {
     return "";
   }
-}
-
-export function setCsrfToken(token) {
-  csrfTokenMemory = String(token || "");
-  try {
-    if (csrfTokenMemory)
-      localStorage.setItem(CSRF_STORAGE_KEY, csrfTokenMemory);
-    else localStorage.removeItem(CSRF_STORAGE_KEY);
-  } catch {}
-}
-
-export function getCsrfToken() {
-  try {
-    const stored = localStorage.getItem(CSRF_STORAGE_KEY) || "";
-    if (stored) {
-      csrfTokenMemory = stored;
-      return stored;
-    }
-  } catch {}
-  return csrfTokenMemory || getCookie("kohee_csrf");
-}
-
-export function clearCsrfToken() {
-  csrfTokenMemory = "";
-  try {
-    localStorage.removeItem(CSRF_STORAGE_KEY);
-  } catch {}
-}
-
-export function storeCsrfFromPayload(payload) {
-  if (payload?.csrfToken) setCsrfToken(payload.csrfToken);
-}
-
-export function isUnsafeMethod(method) {
-  return !["GET", "HEAD", "OPTIONS"].includes(
-    String(method || "GET").toUpperCase(),
-  );
-}
-
-export async function api(path, options = {}) {
-  const headers = new Headers(options.headers || {});
-  const method = options.method || "GET";
-  if (isUnsafeMethod(method)) {
-    const csrfToken = getCsrfToken();
-    if (csrfToken && !headers.has("x-csrf-token")) {
-      headers.set("x-csrf-token", csrfToken);
-    }
-  }
-
-  return fetch(API_BASE + path, {
-    ...options,
-    credentials: "include",
-    headers,
-  });
-}
-
-export function apiErrorMessage(data = {}) {
-  const messages = {
-    AUTH_REQUIRED: "로그인이 필요합니다. 다시 로그인해 주세요.",
-    FORBIDDEN: "접근 권한이 없습니다.",
-    INVALID_CREDENTIALS: "아이디 또는 비밀번호가 올바르지 않습니다.",
-    VALIDATION_ERROR: "입력값을 다시 확인해 주세요.",
-    NOT_FOUND: "요청한 항목을 찾을 수 없습니다.",
-    DUPLICATE: "이미 등록된 항목입니다.",
-    RATE_LIMITED: "시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
-    CSRF_REQUIRED: "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.",
-    CSRF_INVALID: "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.",
-    COORDS_REQUIRED:
-      "위도/경도(좌표)를 입력해 주세요. '내 주변' 거리 기능에 필요합니다.",
-    FORBIDDEN_ORIGIN: "허용되지 않은 접속 경로입니다.",
-    FIRST_ADMIN_CODE_NOT_CONFIGURED:
-      "최초 관리자 코드가 서버에 설정되지 않았습니다.",
-    FIRST_ADMIN_CODE_REQUIRED: "최초 관리자 코드가 필요합니다.",
-    FIRST_ADMIN_CODE_INVALID: "최초 관리자 코드가 올바르지 않습니다.",
-    CONSENT_REQUIRED: "개인정보 처리방침에 동의해야 회원가입할 수 있습니다.",
-  };
-
-  return messages[data.code] || data.error || "요청에 실패했습니다.";
-}
-
-export async function jsonApi(path, options = {}) {
-  const res = await api(path, options);
-  const data = await res.json().catch(() => ({}));
-  storeCsrfFromPayload(data);
-  if (!res.ok || data.ok === false) {
-    const error = new Error(apiErrorMessage(data));
-    error.code = data.code || "";
-    error.status = res.status;
-    throw error;
-  }
-  return data;
-}
-
-export function roleLabel(role) {
-  return { user: "일반 유저", admin: "관리자" }[role] || "일반 유저";
-}
-
-export function statusLabel(status) {
-  return (
-    {
-      pending: "검토중",
-      candidate: "후보",
-      approved: "승인",
-      hidden: "숨김",
-      rejected: "반려",
-    }[status] || status
-  );
-}
-
-export function errorStatusLabel(status) {
-  return { open: "확인 대기", resolved: "처리 완료" }[status] || status;
 }
 
 export function formatDate(value, includeTime = false) {
@@ -324,25 +233,6 @@ export function openNaverMapForCafe(cafe) {
   }
 
   window.open(webUrl, "_blank", "noopener");
-}
-
-export function modalDescHtml(desc, signature) {
-  const signatureParts = cleanParts(signature);
-  const descHtml = desc
-    ? `<div class="modal-copy-text">${esc(desc)}</div>`
-    : "";
-  const signatureHtml = signatureParts.length
-    ? `
-      <div class="modal-signature">
-        <div class="modal-signature-label">대표메뉴</div>
-        <div class="modal-signature-value">${signatureParts.map((value) => esc(value)).join(", ")}</div>
-      </div>
-    `
-    : "";
-
-  return descHtml || signatureHtml
-    ? `${descHtml}${signatureHtml}`
-    : `<div class="modal-copy-empty">소개가 아직 없습니다.</div>`;
 }
 
 export async function shareCafe(cafe, fallbackUrl = location.href) {

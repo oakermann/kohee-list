@@ -1,76 +1,10 @@
-# KOHEE LIST Agent Contract
+# KOHEE LIST — 작업 규칙
 
-KOHEE LIST is a product repository. OAP is maintained separately.
+먼저 `docs/KOHEE_MASTER_CONTEXT.md` 를 읽는다.
 
-Purpose: keep work scoped to the KOHEE cafe product, its product safety checks,
-and its deploy/D1 guardrails.
-
-## Read First
-
-Before changing repository behavior, read:
-
-1. `docs/KOHEE_MASTER_CONTEXT.md`
-2. `kohee.contract.json`
-3. `README.md`
-4. Any product document directly related to the task
-
-## Product Boundary
-
-Do not change product runtime behavior unless the user explicitly asks for that
-specific product change.
-
-Hard no-change areas unless explicitly approved:
-
-- `server/**`
-- `site/**`
-- `migrations/**`
-- `schema.sql`
-- `worker.js`
-- auth/session behavior
-- D1 behavior
-- CSV import behavior
-- public `/data` behavior
-- cafe lifecycle behavior
-- Cloudflare deploy behavior
-- secrets or production config
-
-## Keep
-
-- KOHEE product code
-- KOHEE product tests
-- deploy safety checks
-- D1 migration blocking
-- CSV/public data/lifecycle safety checks
-- smoke checks
-
-Expected validation commands for product-safe repository work:
-
-```text
-npm run test:unit
-npm run verify:release
-git diff --check
-```
-
-Use `npm run audit:kohee` when product invariants or governance references are
-touched.
-
-## Core Rules
-
-- Preserve public cafe exposure rules.
-- Preserve candidate-first CSV import behavior.
-- Preserve admin/user role boundaries.
-- Preserve manual-review treatment for D1/schema/migrations.
-- Do not add unattended worker, auto-merge, branch deletion, or issue-close
-  features in this repository.
-- Keep reports concise and evidence-based.
-
-## Report Format
-
-Use:
-
-```text
-Status
-Blocker
-Next action
-Evidence
-```
+- 공개 조건(`approved AND deleted_at IS NULL`)과 공개 응답 칸을 바꾸지 않는다 — `scripts/test-api.mjs` 가 지킨다.
+- 회원·세션·IP·쿠키 추적을 다시 들이지 않는다. 이용자 식별은 브라우저 표(`client_id`)뿐.
+- DB 구조는 `migrations/` 로만, 운영 적용은 백업 뒤 손으로(`d1-migrate.yml`). 자동 적용 금지.
+- 백업·DB 덤프·비밀값을 커밋하지 않는다(`npm run check:repo-safety`).
+- 배포는 main 합침 = 자동(`deploy.yml`). 로컬에서 운영 배포는 오너가 시킬 때만.
+- 검증: `npm test`, `npm run format:check`, `git diff --check`. 화면을 바꿨으면 `wrangler pages dev` 로 띄워 눌러 본다.

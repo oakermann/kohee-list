@@ -77,8 +77,7 @@ button:not(:disabled):active,
   transform: translate(1px, 1px);
   box-shadow: none;
 }
-button.primary,
-.tabs button.active {
+button.primary {
   background: var(--line);
   color: var(--bg);
 }
@@ -108,29 +107,52 @@ textarea {
   grid-template-columns: 1fr 1fr;
 }
 
-/* 탭 */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  position: sticky;
-  top: 0;
-  z-index: 1;
+/* 운영 첫 화면: 칸 고르기 */
+.hub {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tile {
+  border: var(--thick) solid var(--line);
   background: var(--bg);
-  padding: 6px 0;
-}
-.tabs button {
-  flex: 1 1 auto;
-  padding: 8px 6px;
-  gap: 3px;
-  white-space: nowrap;
-}
-.item.tappable {
+  box-shadow: var(--shadow);
+  min-height: 84px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  font-size: var(--fs-md);
+  font-weight: 900;
+  text-decoration: none;
   cursor: pointer;
 }
-.tabs span {
+.tile b {
+  font-size: var(--fs-xl);
   font-variant-numeric: tabular-nums;
-  opacity: 0.7;
+}
+.tile small {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.view-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.view-head h2 {
+  flex: 1;
+  border: 0;
+  padding: 0;
+  text-align: left;
+}
+.pane {
+  display: grid;
+  gap: 6px;
+}
+button.warn {
+  border-style: dashed;
 }
 .list-tools {
   display: flex;
@@ -174,11 +196,6 @@ textarea {
   padding: 14px;
 }
 
-/* 운영 탭 */
-.ops {
-  display: grid;
-  gap: 12px;
-}
 .file-pick {
   overflow: hidden;
 }
@@ -246,67 +263,4 @@ dialog form {
   font-size: var(--fs-xs);
   font-weight: 800;
   opacity: 0.72;
-}
-
-/* 방문자 — 세 숫자 다음 날마다 막대(가장 바쁜 날 기준) */
-.visit-tiles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.visit-tile {
-  border: var(--thin) solid var(--border);
-  padding: 8px;
-}
-.visit-tile .label,
-.visit-tile .sub {
-  display: block;
-  font-size: var(--fs-xs);
-  font-weight: 800;
-  color: var(--muted);
-}
-.visit-tile .value {
-  display: block;
-  font-size: var(--fs-lg);
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-.visit-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-.visit-table td {
-  padding: 4px 0;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  border-bottom: 1px solid var(--soft);
-  white-space: nowrap;
-}
-.visit-table .day,
-.visit-table .hits {
-  color: var(--muted);
-}
-.visit-table .bar-cell {
-  width: 100%;
-  padding: 0 10px;
-}
-.visit-bar {
-  height: 10px;
-  background: var(--soft);
-  border: 1px solid var(--border);
-}
-.visit-bar > span {
-  display: block;
-  height: 100%;
-  background: var(--point);
-}
-.visit-table .num,
-.visit-table .hits {
-  text-align: right;
-  padding-left: 8px;
-}
-.visit-empty {
-  font-size: var(--fs-sm);
-  color: var(--muted);
 }
