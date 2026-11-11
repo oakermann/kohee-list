@@ -1,4 +1,4 @@
-// 카페 제보·오류 제보 — 로그인 없이, 이 브라우저의 표(client_id)를 붙여 보낸다.
+// Cafe reports and error reports — no login; sent with this browser's token (client_id).
 import { $, clientId, postJson } from "./common.js";
 
 function checkedCategories() {

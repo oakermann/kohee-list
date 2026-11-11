@@ -1,5 +1,5 @@
-# Pages 프로젝트 하나가 사이트(site/)와 API(functions/api → server/)를 함께 낸다. 워커는 없다.
-# 비밀값: ADMIN_PASSWORD (wrangler pages secret put ADMIN_PASSWORD --project-name kohee)
+# One Pages project serves the site (site/) and the API (functions/api → server/) together. No worker.
+# Secret: ADMIN_PASSWORD (wrangler pages secret put ADMIN_PASSWORD --project-name kohee)
 name = "kohee"
 compatibility_date = "2026-04-22"
 pages_build_output_dir = "site"

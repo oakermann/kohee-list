@@ -1,4 +1,4 @@
-# KOHEE 위험 파일 — 오너 검토
+# KOHEE risky files — owner review
 /server/** @oakermann
 /functions/** @oakermann
 /schema.sql @oakermann

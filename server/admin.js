@@ -1,6 +1,6 @@
-// 어드민 잠금 = 비밀번호 하나(Pages 비밀값 ADMIN_PASSWORD). 사용자·세션 테이블이 없다.
-// 로그인하면 '만료시각.서명' 쿠키를 준다 — 서명 열쇠가 비밀번호라 비밀번호를 바꾸면 모든 쿠키가 무효.
-// SameSite=Strict 라 다른 사이트에서 온 요청에는 쿠키가 실리지 않는다(CSRF 토큰 불필요).
+// Admin lock = one password (Pages secret ADMIN_PASSWORD). No user or session tables.
+// Login gives an 'expiry.signature' cookie — the signing key is the password, so changing the password invalidates every cookie.
+// SameSite=Strict, so requests from other sites carry no cookie (no CSRF token needed).
 import {
   HttpError,
   getCookie,
@@ -54,7 +54,7 @@ export async function adminLogin(req, env) {
   if (!env.ADMIN_PASSWORD)
     throw new HttpError(500, "ADMIN_PASSWORD is not configured");
   const { password } = await readJson(req);
-  // 해시끼리 비교 — 길이가 달라도 같은 시간에 끝난다.
+  // Compare hashes — finishes in the same time even if lengths differ.
   const ok = safeEqual(
     await sha256Hex(String(password ?? "")),
     await sha256Hex(env.ADMIN_PASSWORD),

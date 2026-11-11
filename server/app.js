@@ -1,4 +1,4 @@
-// API 입구 하나: Pages 함수(functions/api)가 요청을 그대로 넘긴다. 경로의 /api 는 떼고 찾는다.
+// Single API entry: the Pages function (functions/api) passes requests as is. The /api prefix is stripped for lookup.
 import { HttpError, json } from "./shared.js";
 import { ROUTES } from "./routes.js";
 

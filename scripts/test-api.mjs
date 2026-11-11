@@ -1,4 +1,4 @@
-// API 시험: 진짜 스키마(schema.sql)를 node:sqlite 에 띄우고 진짜 SQL 로 돌린다(D1 대역).
+// API tests: load the real schema (schema.sql) into node:sqlite and run the real SQL (D1 stand-in).
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
@@ -77,7 +77,7 @@ const cafe = (over = {}) => ({
 const row = (id) =>
   env.DB.raw.prepare("SELECT * FROM cafes WHERE id = ?").get(id);
 
-// ---- 어드민 잠금 ----
+// ---- admin lock ----
 {
   assert.equal(
     (await call("GET", "/cafes", undefined, { cookie: "" })).status,
@@ -101,7 +101,7 @@ const row = (id) =>
   assert.match(setCookie, /HttpOnly; Secure; SameSite=Strict/);
   adminCookie = setCookie.split(";")[0];
   assert.equal((await call("GET", "/admin/me")).body.admin, true);
-  // 서명을 바꾸거나 기한이 지난 쿠키는 어드민이 아니다.
+  // A cookie with a changed signature or past its expiry is not admin.
   const [, value] = adminCookie.split("=");
   const [expiresAt, mac] = value.split(".");
   const tampered = `kohee_admin=${Number(expiresAt) + 1}.${mac}`;
@@ -117,7 +117,7 @@ const row = (id) =>
   );
 }
 
-// ---- 제보(로그인 없음) → 후보 → 공개 → 내리기 → 되살리기 → 완전 삭제 ----
+// ---- report (no login) → candidate → publish → unpublish → restore → delete for good ----
 {
   assert.equal(
     (await call("POST", "/submit", cafe())).status,
@@ -131,7 +131,7 @@ const row = (id) =>
   });
   assert.equal(submitted.status, 201);
   const id = submitted.body.id;
-  // 제보는 좌표를 받지 않는다(어드민이 채운다) — 사용자가 보낸 lat/lng 는 버려진다.
+  // Reports take no coordinates (the admin fills them) — lat/lng sent by users are discarded.
   assert.equal(row(id).lat, 0);
   assert.equal(row(id).status, "candidate");
   assert.equal(row(id).client_id, CLIENT);
@@ -160,7 +160,7 @@ const row = (id) =>
   const data = await call("GET", "/data");
   assert.equal(data.body.length, 1);
   assert.match(data.headers.get("cache-control"), /max-age=60/);
-  // 공개 응답에 운영 메모·제보자 표·제보 사유가 새지 않는다.
+  // Public responses leak no ops memo, reporter token or report reason.
   for (const key of [
     "memo",
     "client_id",
@@ -171,7 +171,7 @@ const row = (id) =>
   ]) {
     assert.equal(key in data.body[0], false, `public leak: ${key}`);
   }
-  // 공개 중인 카페는 좌표를 지운 채 저장할 수 없다.
+  // A published cafe cannot be saved with its coordinates cleared.
   assert.equal(
     (await call("POST", "/edit", { id, ...cafe({ lat: 0 }) })).body.code,
     "COORDS_REQUIRED",
@@ -202,7 +202,7 @@ const row = (id) =>
   assert.equal(row(id), undefined);
 }
 
-// ---- 하루 상한(로그인·IP 없이 도배 막기) ----
+// ---- daily cap (stops flooding without login or IP) ----
 {
   const since = new Date().toISOString();
   for (let i = 0; i < SUBMIT_DAILY_CAP; i += 1) {
@@ -217,7 +217,7 @@ const row = (id) =>
   env.DB.raw.exec("DELETE FROM cafes WHERE id LIKE 'cap-%'");
 }
 
-// ---- CSV: 새 카페만 후보로, 주소가 겹치면 건너뜀, 틀린 행이 있으면 아무것도 안 넣음 ----
+// ---- CSV: only new cafes as candidates, skip if the address overlaps, insert nothing if any row is invalid ----
 {
   assert.deepEqual(parseCsv('h1,h2\r\n"two\nlines","a ""q"""\n\n'), [
     ["h1", "h2"],
@@ -253,7 +253,7 @@ const row = (id) =>
   assert.equal(imported.desc, "여러\n줄");
 }
 
-// ---- 오류 제보: 로그인 없이, 답변은 같은 줄에 ----
+// ---- error reports: no login, answers on the same row ----
 {
   const sent = await call(
     "POST",
@@ -285,7 +285,7 @@ const row = (id) =>
   );
 }
 
-// ---- 공지·헤더·없는 경로·좌표 찾기 ----
+// ---- notices, headers, unknown paths, coordinate lookup ----
 {
   await call("POST", "/notice", undefined, { raw: "가을 공지" });
   assert.equal((await call("GET", "/notice")).body, "가을 공지");

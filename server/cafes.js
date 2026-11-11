@@ -1,7 +1,7 @@
-// 카페 한 표에 공개·후보·제보가 다 산다.
-//   공개 = status 'approved' AND deleted_at IS NULL  (사이트에 보이는 유일한 조건)
-//   후보 = status 'candidate' — 어드민 등록·CSV·사용자 제보(client_id 있음)
-//   내림 = deleted_at 있음 — 버린 제보·내린 카페. 되살리면 원래 상태로.
+// Public cafes, candidates and reports all live in one cafe table.
+//   public = status 'approved' AND deleted_at IS NULL  (the only condition for showing on the site)
+//   candidate = status 'candidate' — admin entries, CSV, user reports (with client_id)
+//   removed = deleted_at set — discarded reports, unpublished cafes. Restoring returns the original status.
 import {
   HttpError,
   cleanClientId,
@@ -16,7 +16,7 @@ import {
 } from "./shared.js";
 
 export const CATEGORIES = ["espresso", "drip", "decaf", "instagram", "dessert"];
-// 로그인이 없으니 도배는 사이트 전체 하루 상한으로 막는다 — 제보는 어차피 어드민이 공개해야 보인다.
+// No login, so flooding is stopped by a site-wide daily cap — reports only show once the admin publishes them anyway.
 export const SUBMIT_DAILY_CAP = 30;
 
 const PUBLIC_COLUMNS =
@@ -63,7 +63,7 @@ export function parseCategories(value) {
   return categories;
 }
 
-// 좌표 0 인 카페는 '내 주변'에서 조용히 빠진다 — 공개 전에 막는다.
+// Cafes with coordinate 0 silently drop out of 'near me' — block it before publishing.
 export function hasValidCoords({ lat, lng }) {
   const la = Number(lat);
   const lo = Number(lng);
@@ -146,7 +146,7 @@ async function findCafe(env, id) {
   return cafe;
 }
 
-// ---- 공개 ----
+// ---- public ----
 
 export async function getData(_req, env) {
   const rows = await env.DB.prepare(
@@ -223,7 +223,7 @@ export async function mySubmissions(req, env) {
   return json({ ok: true, items });
 }
 
-// ---- 어드민 ----
+// ---- admin ----
 
 export async function listCafes(_req, env) {
   const rows = await env.DB.prepare(
@@ -280,7 +280,7 @@ export async function publishCafe(req, env) {
   return json({ ok: true });
 }
 
-// 버리기(제보)·내리기(공개 카페) 둘 다 여기. 사유는 제보자의 '내 제보'에 보인다.
+// Both discarding (reports) and unpublishing (public cafes) happen here. The reason shows in the reporter's 'my reports'.
 export async function deleteCafe(req, env) {
   const body = await readJson(req);
   const cafe = await findCafe(env, body.id);
@@ -303,7 +303,7 @@ export async function restoreCafe(req, env) {
   return json({ ok: true });
 }
 
-// 영구 삭제는 내린 카페만 — 공개 중인 카페를 한 번에 지우는 길을 두지 않는다.
+// Permanent deletion only for unpublished cafes — there is no path that deletes a public cafe in one step.
 export async function purgeCafe(req, env) {
   const cafe = await findCafe(env, (await readJson(req)).id);
   if (!cafe.deleted_at)
@@ -321,7 +321,7 @@ export async function setNotice(req, env) {
   return json({ ok: true });
 }
 
-// 주소→좌표(Nominatim, 초당 1회 정책) — 어드민 좌표 채우기만 쓴다.
+// Address → coordinates (Nominatim, 1 request/s policy) — used only by the admin coordinate fill.
 export async function geocode(req) {
   const q = cleanText(new URL(req.url).searchParams.get("q"), 80);
   if (q.length < 2) throw new HttpError(400, "Query too short");

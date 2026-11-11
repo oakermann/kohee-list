@@ -58,7 +58,7 @@ h1 {
   margin-top: calc(var(--thick) * -1);
 }
 
-/* ==================== 갤럭시 완전 최적화 ==================== */
+/* ==================== Galaxy full optimisation ==================== */
 .search-row {
   display: flex;
   gap: 9px;
@@ -551,7 +551,7 @@ footer {
   margin-bottom: 15px;
 }
 
-/* 탭 / 내주변 버튼 호버·누름 (mono) */
+/* tab / near-me button hover and press (mono) */
 .tab {
   transition:
     background 0.05s ease,

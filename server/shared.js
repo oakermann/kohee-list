@@ -1,4 +1,4 @@
-// 응답·입력 다듬기·오류 — 모든 핸들러가 쓰는 것만 둔다.
+// Responses, input tidying, errors — only what every handler uses.
 const API_HEADERS = {
   "content-type": "application/json; charset=utf-8",
   "content-security-policy":
@@ -7,7 +7,7 @@ const API_HEADERS = {
   "x-frame-options": "DENY",
   "referrer-policy": "no-referrer",
 };
-// 공개 카페 목록만 1분 캐시 — 나머지(어드민·내 제보)는 매번 새로.
+// Only the public cafe list is cached for 1 minute — everything else (admin, my reports) is fresh each time.
 const PUBLIC_CACHE = "public, max-age=60";
 
 export class HttpError extends Error {
@@ -86,7 +86,7 @@ export function parseJsonArray(value) {
   }
 }
 
-// 브라우저가 만든 무작위 표 — 로그인 없이 '내 제보'를 찾는 열쇠.
+// Random token made by the browser — the key for finding 'my reports' without login.
 export function cleanClientId(value) {
   const id = cleanText(value, 80);
   if (!/^[A-Za-z0-9-]{16,80}$/.test(id)) {

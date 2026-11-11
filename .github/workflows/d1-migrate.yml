@@ -1,7 +1,7 @@
 name: D1 Migrate
 
-# 운영 DB 마이그레이션은 손으로만: inspect 로 상태를 보고, 백업한 뒤 apply("apply" 입력)로 적용한다.
-# D1 은 30일 시점 복구(Time Travel)를 지원하지만, 큰 변경 전엔 wrangler d1 export 백업을 따로 받는다.
+# Production DB migrations by hand only: check state with inspect, back up, then apply (type "apply").
+# D1 supports 30-day point-in-time recovery (Time Travel), but take a separate wrangler d1 export backup before big changes.
 
 on:
   workflow_dispatch:

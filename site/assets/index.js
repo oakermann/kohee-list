@@ -16,7 +16,7 @@ let selectedCategory = null;
 let nearbyMode = false;
 let openModalCafeId = "";
 
-// 한 번만 묻는다: 정밀 GPS 는 실내·PC 에서 오래 걸리고, 1분 안 위치는 다시 쓴다.
+// Ask only once: precise GPS is slow indoors and on PCs, and a location less than 1 minute old is reused.
 const GEO_OPTIONS = {
   enableHighAccuracy: false,
   maximumAge: 60000,
@@ -241,7 +241,7 @@ async function loadData() {
     const rows = await response.json();
     data = rows;
     render();
-    // 마이페이지 찜 목록이 index.html?cafe=<id> 로 연다.
+    // The mypage saved list opens index.html?cafe=<id>.
     const linked = new URLSearchParams(location.search).get("cafe");
     if (linked) openModal(linked);
   } catch {
@@ -252,22 +252,22 @@ async function loadData() {
   }
 }
 
-// 검색은 걸러내기가 아니라 순위 매기기다.
+// Search ranks, it does not filter.
 //
-// "서울"은 "서울역"의 앞부분이다. 단순 포함 검사로는 둘을 구분할 수 없고, 서울 카페의
-// 주소는 전부 "서울"로 시작하므로 "서울"을 치면 전체가 나오면서 서울역 카페가 그 사이에
-// 흩어진다. 주소에는 역 이름이 없으므로(패스로스터리는 "서울 중구 ...") 문자열만으로는
-// 어느 카페가 그 역 근처인지 알 방법이 없다. 그걸 아는 유일한 칸이 region 이다.
+// "서울" is the prefix of "서울역". A plain contains check cannot tell them apart, and every Seoul cafe's
+// address starts with "서울", so typing "서울" shows everything with the 서울역 cafes scattered
+// among them. Addresses have no station names (패스로스터리 is "서울 중구 ..."), so text alone
+// cannot tell which cafe is near that station. The only column that knows is region.
 //
-// 그래서 어디가 맞았는지에 따라 점수를 주고 높은 순으로 보여준다. "서울역"을 치면 region
-// 이 정확히 일치하는 카페가 맨 위에 모이고, "서울"을 치면 서울역 카페들이 나머지 서울
-// 카페보다 앞에 온다.
+// So score by where it matched and show highest first. Typing "서울역" gathers cafes whose region
+// matches exactly at the top, and typing "서울" puts the 서울역 cafes before the other Seoul
+// cafes.
 function matchScore(cafe, query) {
   const lower = (value) => value.toLowerCase();
   const region = lower(cafe.region);
   if (region && region === query) return 5; // 서울역 == 서울역
   if (lower(cafe.name).includes(query)) return 4;
-  if (region.includes(query)) return 3; // 서울 -> 서울역 지역의 카페
+  if (region.includes(query)) return 3; // 서울 -> cafes in the 서울역 region
   if (lower(cafe.address).includes(query)) return 2;
   if (lower(cafe.desc).includes(query)) return 1;
   return 0;
@@ -442,7 +442,7 @@ function requestUserPosition() {
 
 function geoErrorMessage(error) {
   if (error?.code === 1) return "위치 권한이 꺼져 있습니다.";
-  // 컴퓨터는 GPS 가 없어 OS 위치 서비스(와이파이)에 기댄다 — 꺼져 있으면 여기로 온다.
+  // Desktops have no GPS and rely on OS location services (Wi-Fi) — if they are off we land here.
   if (error?.code === 2)
     return "컴퓨터 위치 서비스가 꺼져 있습니다. (맥: 시스템 설정 > 개인정보 보호 및 보안 > 위치 서비스 / 윈도우: 설정 > 개인 정보 > 위치)";
   if (error?.code === 3) return "위치를 찾는 데 너무 오래 걸립니다.";
@@ -510,8 +510,8 @@ function exitNearbyMode() {
   setNearbyActive(false);
 }
 
-// 위치가 안 되면 이유를 말하고 검색으로 보낸다 — 동네 직접 입력은 컴퓨터에서 위치가 막혀 있던
-// 때(Permissions-Policy geolocation=())의 우회로였고, 원인을 지워 함께 지웠다.
+// If location fails, say why and send the user to search — typing a neighbourhood was the workaround from when location was blocked on
+// desktops (Permissions-Policy geolocation=()); the cause was removed, so it was removed too.
 async function handleNearbyClick() {
   if (nearbyMode) {
     exitNearbyMode();

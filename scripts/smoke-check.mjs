@@ -1,5 +1,5 @@
-// 배포 뒤 실제 사이트 확인: 페이지가 뜨고, 공개 목록은 공개 칸만 내보내고, 어드민 경로는 잠겨 있다.
-//   node scripts/smoke-check.mjs            (기본 https://kohee.pages.dev)
+// Post-deploy live-site check: pages load, the public list exposes only public columns, admin paths are locked.
+//   node scripts/smoke-check.mjs            (default https://kohee.pages.dev)
 //   SITE_URL=http://127.0.0.1:8788 node scripts/smoke-check.mjs
 import assert from "node:assert/strict";
 
@@ -23,7 +23,7 @@ const PUBLIC_KEYS = [
 ].sort();
 
 async function get(path) {
-  // 배포 직후엔 잠깐 옛 판이 보일 수 있어 몇 번 다시 묻는다.
+  // Right after a deploy the old version may show briefly, so ask a few times.
   let last;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     last = await fetch(new URL(path, SITE), { redirect: "follow" });

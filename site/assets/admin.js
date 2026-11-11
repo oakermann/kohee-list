@@ -1,7 +1,7 @@
-// 운영 콘솔: 첫 화면 = 운영(칸 고르기). 칸마다 할 일 한두 개, 카드를 누르면 고치기.
-//   새로 들어옴 = 후보(어드민 등록·CSV·사용자 제보)  [공개] [버리기]
-//   공개 중                                       [내리기]
-//   내린 것                                       [되살리기] [완전 삭제]
+// Ops console: home = ops (choose a column). One or two actions per column; tapping a card edits it.
+//   new = candidates (admin entries, CSV, user reports)  [publish] [discard]
+//   public                                               [unpublish]
+//   removed                                              [restore] [delete for good]
 import { $, api, formatDate, jsonApi, postJson } from "./common.js";
 
 const state = { view: "", cafes: [], errors: [], form: null };
@@ -29,7 +29,7 @@ const FORM_FIELDS = {
   memo: "cafe-memo",
 };
 
-// ---- 작은 도구 ----
+// ---- small tools ----
 
 function el(tag, className = "", text = "") {
   const node = document.createElement(tag);
@@ -72,7 +72,7 @@ function hasCoords(cafe) {
   return Boolean(Number(cafe.lat) && Number(cafe.lng));
 }
 
-// 이름은 표기가 갈려 같은 곳을 놓친다 — 주소(공백 제거)로 비교한다.
+// Names are spelled differently and miss the same place — compare by address (spaces removed).
 function sameAddressCafe(cafe) {
   const key = String(cafe.address || "").replace(/\s+/g, "");
   return (
@@ -85,7 +85,7 @@ function sameAddressCafe(cafe) {
   );
 }
 
-// ---- 분류 ----
+// ---- classification ----
 
 function viewCafes(view) {
   return state.cafes.filter((cafe) => {
@@ -109,7 +109,7 @@ function renderCounts() {
   });
 }
 
-// ---- 카드와 할 일 ----
+// ---- cards and actions ----
 
 function cafeActions(view, cafe) {
   if (view === "inbox")
@@ -179,7 +179,7 @@ async function reload() {
   renderErrors();
 }
 
-// ---- 처리 ----
+// ---- handling ----
 
 async function act(path, cafe, question, extra = {}) {
   if (question && !confirm(`'${cafe.name}' ${question}`)) return;
@@ -187,13 +187,13 @@ async function act(path, cafe, question, extra = {}) {
   await reload();
 }
 
-// 좌표가 없으면 공개해도 '내 주변'에 안 나온다(서버도 막는다) — 양식에서 채우고 공개.
+// Without coordinates a published cafe does not show in 'near me' (the server blocks it too) — fill in the form, then publish.
 async function publishCafe(cafe) {
   if (!hasCoords(cafe)) return openForm("publish", cafe);
   await act("/publish", cafe, "공개할까요?");
 }
 
-// 사유는 제보자의 '찜·내 제보'에 보인다. 같은 주소 카페가 있으면 그 이름을 기본 사유로.
+// The reason shows in the reporter's 'saved / my reports'. If a cafe with the same address exists, its name is the default reason.
 async function discardCafe(cafe) {
   if (!cafe.submitted) return act("/delete", cafe, "버릴까요?");
   const dup = sameAddressCafe(cafe);
@@ -211,7 +211,7 @@ async function purgeCafe(cafe) {
   await act("/purge", cafe, "");
 }
 
-// ---- 카페 양식: 신규·좌표 없는 후보는 저장 = 공개, 수정은 저장만 ----
+// ---- cafe form: new or coordinate-less candidates save = publish, edits just save ----
 
 function fillForm(cafe) {
   for (const [key, id] of Object.entries(FORM_FIELDS))
@@ -285,7 +285,7 @@ async function geocode() {
   }
 }
 
-// ---- 오류 제보·공지·CSV ----
+// ---- error reports, notices, CSV ----
 
 function errorCard(report) {
   const item = card(report.title, [
@@ -367,7 +367,7 @@ async function importCsv(dryRun) {
   await reload();
 }
 
-// ---- 화면 전환: 운영(첫 화면) ↔ 칸 ----
+// ---- view switch: ops (home) ↔ column ----
 
 function show(id, visible) {
   $(id).classList.toggle("hidden", !visible);

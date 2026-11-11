@@ -1,4 +1,4 @@
-/* design tokens live in base.css — 어드민은 오너만 쓴다: 흰 바탕 없이 var(--bg) */
+/* design tokens live in base.css — admin is owner-only: no white background, var(--bg) */
 body {
   background: var(--bg);
   min-height: 100vh;
@@ -50,7 +50,7 @@ h2 {
   display: none;
 }
 
-/* 버튼·입력 */
+/* buttons, inputs */
 .btns {
   display: flex;
   justify-content: center;
@@ -107,7 +107,7 @@ textarea {
   grid-template-columns: 1fr 1fr;
 }
 
-/* 운영 첫 화면: 칸 고르기 */
+/* ops home: choosing a column */
 .hub {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -162,7 +162,7 @@ button.warn {
   flex: 1;
 }
 
-/* 목록 카드 */
+/* list cards */
 .list {
   display: grid;
   gap: 6px;
@@ -203,7 +203,7 @@ button.warn {
   display: none;
 }
 
-/* 카페 양식 */
+/* cafe form */
 dialog {
   border: var(--thick) solid var(--line);
   background: var(--bg);

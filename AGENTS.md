@@ -1,10 +1,10 @@
-# KOHEE LIST — 작업 규칙
+# KOHEE LIST — working rules
 
-먼저 `docs/KOHEE_MASTER_CONTEXT.md` 를 읽는다.
+Read `docs/KOHEE_MASTER_CONTEXT.md` first.
 
-- 공개 조건(`approved AND deleted_at IS NULL`)과 공개 응답 칸을 바꾸지 않는다 — `scripts/test-api.mjs` 가 지킨다.
-- 회원·세션·IP·쿠키 추적을 다시 들이지 않는다. 이용자 식별은 브라우저 표(`client_id`)뿐.
-- DB 구조는 `migrations/` 로만, 운영 적용은 백업 뒤 손으로(`d1-migrate.yml`). 자동 적용 금지.
-- 백업·DB 덤프·비밀값을 커밋하지 않는다(`npm run check:repo-safety`).
-- 배포는 main 합침 = 자동(`deploy.yml`). 로컬에서 운영 배포는 오너가 시킬 때만.
-- 검증: `npm test`, `npm run format:check`, `git diff --check`. 화면을 바꿨으면 `wrangler pages dev` 로 띄워 눌러 본다.
+- Do not change the public condition (`approved AND deleted_at IS NULL`) or the public response columns — `scripts/test-api.mjs` guards them.
+- Do not bring back accounts, sessions, IPs or cookie tracking. The only user identifier is the browser token (`client_id`).
+- DB structure only via `migrations/`; production apply by hand after a backup (`d1-migrate.yml`). No automatic apply.
+- Never commit backups, DB dumps or secrets (`npm run check:repo-safety`).
+- Deploy = merge to main, automatic (`deploy.yml`). Production deploys from local only when the owner asks.
+- Verify: `npm test`, `npm run format:check`, `git diff --check`. If the screen changed, run `wrangler pages dev` and click through it.
