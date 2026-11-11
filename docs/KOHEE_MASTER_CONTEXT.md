@@ -6,11 +6,11 @@ No worker, accounts, sessions or IP collection (2026-10-21, migration 0011).
 
 ## Data
 
-| Table           | What                                                    |
-| --------------- | ------------------------------------------------------- |
-| `cafes`         | public cafes, candidates and user reports in one table  |
-| `error_reports` | error reports and operator answers (same row)           |
-| `settings`      | main notice                                             |
+| Table           | What                                                   |
+| --------------- | ------------------------------------------------------ |
+| `cafes`         | public cafes, candidates and user reports in one table |
+| `error_reports` | error reports and operator answers (same row)          |
+| `settings`      | main notice                                            |
 
 Cafe states:
 
