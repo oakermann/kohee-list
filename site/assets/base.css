@@ -7,8 +7,9 @@
   --border: #1a1a1a;
   --soft: #e3e3e3;
   --muted: #555555;
-  --faint: rgba(26, 26, 26, 0.45);
+  --faint: rgba(26, 26, 26, 0.62);
   --point: #ff5a00;
+  --tap: 44px; /* minimum touch target */
   --thick: 4px;
   --thin: 2px;
   --shadow: 4px 4px 0 var(--line);
@@ -44,6 +45,60 @@ input,
 textarea,
 select {
   color: inherit;
+}
+input:not([type="checkbox"], [type="radio"], [type="file"]) {
+  min-height: var(--tap);
+}
+/* label above a form field — the label stays visible while typing (placeholders vanish) */
+.field {
+  display: grid;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  font-weight: 900;
+  color: var(--muted);
+}
+/* small bordered link/button used by submit, mypage and privacy */
+.mini-btn,
+.mini-btn:visited {
+  border: var(--thin) solid var(--line);
+  background: var(--card);
+  min-height: var(--tap);
+  padding: 6px 12px;
+  font-size: var(--fs-xs);
+  font-weight: 900;
+  line-height: 1.14;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.01rem;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.05s ease,
+    box-shadow 0.05s ease;
+}
+.mini-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--line);
+}
+.mini-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+.mini-btn.primary {
+  background: var(--line);
+  color: white !important;
+}
+/* footer text links (privacy notice etc.): tall enough to tap */
+footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  justify-content: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 :focus-visible {
   outline: 3px solid var(--ink);

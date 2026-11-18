@@ -1,10 +1,27 @@
-// API 시험: 진짜 스키마(schema.sql)를 node:sqlite 에 띄우고 진짜 SQL 로 돌린다(D1 대역).
+// API tests: load the real schema (schema.sql) into node:sqlite and run the real SQL (D1 stand-in).
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { handle } from "../server/app.js";
 import { SUBMIT_DAILY_CAP } from "../server/cafes.js";
 import { parseCsv } from "../server/csv.js";
+
+// Geocoder stand-in: tests set the reply; the real network is never called. Default = no match.
+const NO_HIT = async () => new Response('{"documents":[]}');
+let geocoder = NO_HIT;
+globalThis.fetch = (url, init) => geocoder(url, init);
+const geocodeHit = (lat, lng, label) => async () =>
+  new Response(
+    JSON.stringify({
+      documents: [
+        {
+          y: String(lat),
+          x: String(lng),
+          road_address: { address_name: label },
+        },
+      ],
+    }),
+  );
 
 function fakeD1() {
   const db = new DatabaseSync(":memory:");
@@ -37,7 +54,11 @@ function fakeD1() {
   return { prepare, batch, raw: db };
 }
 
-const env = { DB: fakeD1(), ADMIN_PASSWORD: "test-admin-password-123" };
+const env = {
+  DB: fakeD1(),
+  ADMIN_PASSWORD: "test-admin-password-123",
+  KAKAO_REST_KEY: "test-kakao-key",
+};
 let adminCookie = "";
 
 async function call(method, path, body, { cookie = adminCookie, raw } = {}) {
@@ -77,7 +98,7 @@ const cafe = (over = {}) => ({
 const row = (id) =>
   env.DB.raw.prepare("SELECT * FROM cafes WHERE id = ?").get(id);
 
-// ---- 어드민 잠금 ----
+// ---- admin lock ----
 {
   assert.equal(
     (await call("GET", "/cafes", undefined, { cookie: "" })).status,
@@ -101,7 +122,7 @@ const row = (id) =>
   assert.match(setCookie, /HttpOnly; Secure; SameSite=Strict/);
   adminCookie = setCookie.split(";")[0];
   assert.equal((await call("GET", "/admin/me")).body.admin, true);
-  // 서명을 바꾸거나 기한이 지난 쿠키는 어드민이 아니다.
+  // A cookie with a changed signature or past its expiry is not admin.
   const [, value] = adminCookie.split("=");
   const [expiresAt, mac] = value.split(".");
   const tampered = `kohee_admin=${Number(expiresAt) + 1}.${mac}`;
@@ -117,7 +138,7 @@ const row = (id) =>
   );
 }
 
-// ---- 제보(로그인 없음) → 후보 → 공개 → 내리기 → 되살리기 → 완전 삭제 ----
+// ---- report (no login) → candidate → publish → unpublish → restore → delete for good ----
 {
   assert.equal(
     (await call("POST", "/submit", cafe())).status,
@@ -131,7 +152,7 @@ const row = (id) =>
   });
   assert.equal(submitted.status, 201);
   const id = submitted.body.id;
-  // 제보는 좌표를 받지 않는다(어드민이 채운다) — 사용자가 보낸 lat/lng 는 버려진다.
+  // Lat/lng sent by users are discarded; without a geocoder match the report stays coordinate-less.
   assert.equal(row(id).lat, 0);
   assert.equal(row(id).status, "candidate");
   assert.equal(row(id).client_id, CLIENT);
@@ -160,7 +181,7 @@ const row = (id) =>
   const data = await call("GET", "/data");
   assert.equal(data.body.length, 1);
   assert.match(data.headers.get("cache-control"), /max-age=60/);
-  // 공개 응답에 운영 메모·제보자 표·제보 사유가 새지 않는다.
+  // Public responses leak no ops memo, reporter token or report reason.
   for (const key of [
     "memo",
     "client_id",
@@ -171,7 +192,17 @@ const row = (id) =>
   ]) {
     assert.equal(key in data.body[0], false, `public leak: ${key}`);
   }
-  // 공개 중인 카페는 좌표를 지운 채 저장할 수 없다.
+  // Coordinates outside South Korea are refused (11/18: a cafe had lng = lat = 37.543).
+  for (const coords of [
+    { lat: 37.543, lng: 37.543 },
+    { lat: 127.05, lng: 37.54 },
+  ]) {
+    assert.equal(
+      (await call("POST", "/edit", { id, ...cafe(coords) })).body.code,
+      "COORDS_OUT_OF_RANGE",
+    );
+  }
+  // A published cafe cannot be saved with its coordinates cleared.
   assert.equal(
     (await call("POST", "/edit", { id, ...cafe({ lat: 0 }) })).body.code,
     "COORDS_REQUIRED",
@@ -202,7 +233,7 @@ const row = (id) =>
   assert.equal(row(id), undefined);
 }
 
-// ---- 하루 상한(로그인·IP 없이 도배 막기) ----
+// ---- daily cap (stops flooding without login or IP) ----
 {
   const since = new Date().toISOString();
   for (let i = 0; i < SUBMIT_DAILY_CAP; i += 1) {
@@ -217,7 +248,141 @@ const row = (id) =>
   env.DB.raw.exec("DELETE FROM cafes WHERE id LIKE 'cap-%'");
 }
 
-// ---- CSV: 새 카페만 후보로, 주소가 겹치면 건너뜀, 틀린 행이 있으면 아무것도 안 넣음 ----
+// ---- report intake: duplicate addresses refused, coordinates filled from the address when the district matches ----
+{
+  const submit = (over) =>
+    call(
+      "POST",
+      "/submit",
+      { ...cafe(over), client_id: CLIENT },
+      { cookie: "" },
+    );
+  const live = await call(
+    "POST",
+    "/add",
+    cafe({ address: "서울 성동구 성수이로 10 2층" }),
+  );
+  const dup = await submit({ address: " 서울 성동구  성수이로 10  2층" });
+  assert.deepEqual(
+    [dup.status, dup.body.error],
+    [409, "이미 등록된 카페입니다"],
+  );
+  await call("POST", "/delete", { id: live.body.id });
+  assert.equal(
+    (await submit({ address: "서울 성동구 성수이로 10 2층" })).status,
+    201,
+    "removed cafes do not block",
+  );
+
+  let asked;
+  geocoder = async (url, init) => {
+    asked = { url, auth: init.headers.Authorization };
+    return geocodeHit(37.5446, 127.0557, "서울 성동구 성수이로 22")();
+  };
+  const hit = row(
+    (await submit({ address: "서울 성동구 성수이로 22 (성수동) 3층" })).body.id,
+  );
+  assert.deepEqual(
+    [hit.lat, hit.lng, hit.status],
+    [37.5446, 127.0557, "candidate"],
+  );
+  assert.equal(hit.memo, "coords: kakao address, 서울 성동구 성수이로 22");
+  assert.equal(asked.auth, "KakaoAK test-kakao-key");
+  const sent = new URL(asked.url);
+  assert.equal(sent.pathname, "/v2/local/search/address.json");
+  assert.deepEqual(
+    [...sent.searchParams],
+    [["query", "서울 성동구 성수이로 22"]],
+  );
+
+  const noCoords = async (reply, address = "서울 성동구 성수이로 30") => {
+    geocoder = reply;
+    const res = await submit({ address });
+    assert.equal(res.status, 201);
+    return [row(res.body.id).lat, row(res.body.id).memo];
+  };
+  assert.deepEqual(await noCoords(NO_HIT), [0, ""], "miss");
+  assert.deepEqual(
+    await noCoords(
+      geocodeHit(35.1, 129.0, "부산 부산진구 성수로 31"),
+      "서울 성동구 성수이로 31",
+    ),
+    [0, ""],
+    "other district = ambiguous",
+  );
+  assert.deepEqual(
+    await noCoords(async () => {
+      throw new DOMException("timed out", "TimeoutError");
+    }, "서울 성동구 성수이로 32"),
+    [0, ""],
+    "timeout",
+  );
+  assert.deepEqual(
+    await noCoords(
+      async () => new Response("busy", { status: 429 }),
+      "서울 성동구 성수이로 33",
+    ),
+    [0, ""],
+    "geocoder refused",
+  );
+  delete env.KAKAO_REST_KEY;
+  assert.deepEqual(
+    await noCoords(async () => {
+      throw new Error("must not be called without a key");
+    }, "서울 성동구 성수이로 34"),
+    [0, ""],
+    "no key = no lookup",
+  );
+  env.KAKAO_REST_KEY = "test-kakao-key";
+  geocoder = NO_HIT;
+}
+
+// ---- bulk publish: every row through the single publish path, one failure does not stop the rest ----
+{
+  const ready = (
+    await call(
+      "POST",
+      "/add",
+      cafe({ name: "준비됨", address: "서울 중구 을지로 1" }),
+    )
+  ).body.id;
+  const bare = (
+    await call(
+      "POST",
+      "/add",
+      cafe({
+        name: "좌표 없음",
+        address: "서울 중구 을지로 2",
+        lat: 0,
+        lng: 0,
+      }),
+    )
+  ).body.id;
+  const res = await call("POST", "/publish-many", {
+    ids: [ready, bare, "missing"],
+  });
+  assert.equal(res.status, 200);
+  assert.deepEqual(
+    res.body.results.map((r) => [r.id, r.ok, r.error || ""]),
+    [
+      [ready, true, ""],
+      [bare, false, "Cafe coordinates (lat/lng) are required"],
+      ["missing", false, "Cafe not found"],
+    ],
+  );
+  assert.deepEqual(
+    [row(ready).status, row(bare).status],
+    ["approved", "candidate"],
+  );
+  assert.equal((await call("POST", "/publish-many", { ids: [] })).status, 400);
+  assert.equal(
+    (await call("POST", "/publish-many", { ids: [ready] }, { cookie: "" }))
+      .status,
+    401,
+  );
+}
+
+// ---- CSV: only new cafes as candidates, skip if the address overlaps, insert nothing if any row is invalid ----
 {
   assert.deepEqual(parseCsv('h1,h2\r\n"two\nlines","a ""q"""\n\n'), [
     ["h1", "h2"],
@@ -253,7 +418,7 @@ const row = (id) =>
   assert.equal(imported.desc, "여러\n줄");
 }
 
-// ---- 오류 제보: 로그인 없이, 답변은 같은 줄에 ----
+// ---- error reports: no login, answers on the same row ----
 {
   const sent = await call(
     "POST",
@@ -285,7 +450,7 @@ const row = (id) =>
   );
 }
 
-// ---- 공지·헤더·없는 경로·좌표 찾기 ----
+// ---- notices, headers, unknown paths, coordinate lookup ----
 {
   await call("POST", "/notice", undefined, { raw: "가을 공지" });
   assert.equal((await call("GET", "/notice")).body, "가을 공지");
@@ -303,17 +468,15 @@ const row = (id) =>
     401,
   );
 
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async () =>
-    new Response(
-      JSON.stringify([{ lat: "37.5", lon: "127.0", display_name: "성수동" }]),
-    );
+  geocoder = geocodeHit(37.5, 127.0, "성수동");
   const hit = await call("GET", "/geocode?q=성수동");
-  globalThis.fetch = realFetch;
   assert.deepEqual(
     [hit.body.lat, hit.body.lng, hit.body.label],
     [37.5, 127, "성수동"],
   );
+  delete env.KAKAO_REST_KEY;
+  assert.equal((await call("GET", "/geocode?q=성수동")).status, 503);
+  env.KAKAO_REST_KEY = "test-kakao-key";
 }
 
 console.log("[api] ok");

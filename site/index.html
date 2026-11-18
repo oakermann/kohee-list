@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>☕ 코히 리스트</title>
     <link
@@ -23,6 +23,9 @@
         <nav class="auth-menu">
           <a class="auth-link" href="submit.html">제보하기</a>
           <a class="auth-link" href="mypage.html">찜·내 제보</a>
+          <button id="guide-btn" class="auth-link" type="button">
+            표시 설명
+          </button>
         </nav>
       </div>
     </header>
@@ -34,6 +37,7 @@
             <input
               id="search"
               type="text"
+              aria-label="카페 검색"
               placeholder="카페명·주소·지하철역 검색"
               class="input"
             />
@@ -73,12 +77,11 @@
       </div>
       <div class="footer-legal">
         <a href="privacy.html">개인정보 처리방침</a>
-        · <a id="guide-btn" href="#">표시 설명</a>
       </div>
       <div class="copyright">© 2026 KOHEE LIST. ALL RIGHTS RESERVED.</div>
     </footer>
 
-    <div id="modal-bg" class="overlay">
+    <dialog id="cafe-sheet" class="sheet" aria-labelledby="m-name">
       <div class="modal">
         <div class="modal-meta">
           <div id="m-tags"></div>
@@ -96,19 +99,18 @@
         <div class="modal-actions">
           <button id="btn-map" class="modal-btn">📍 네이버 지도 보기</button>
           <button id="btn-share" class="modal-btn">🔗 공유하기</button>
-          <button id="btn-insta" class="modal-btn is-hidden">
+          <button id="btn-insta" class="modal-btn" hidden>
             📷 인스타 보기
           </button>
-          <button id="btn-bean" class="modal-btn is-hidden">
-            🫘 원두 구매
-          </button>
+          <button id="btn-bean" class="modal-btn" hidden>🫘 원두 구매</button>
+          <button type="button" class="modal-btn sheet-close">닫기</button>
         </div>
       </div>
-    </div>
+    </dialog>
 
-    <div id="guide-bg" class="overlay">
+    <dialog id="guide-sheet" class="sheet" aria-labelledby="guide-title">
       <div class="modal">
-        <h2 class="modal-title">표시 설명</h2>
+        <h2 id="guide-title" class="modal-title">표시 설명</h2>
         <div class="modal-copy">
           <div>
             <span class="tag-small tag-pick">오커맨픽</span> 오커맨이 직접
@@ -131,10 +133,10 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button id="guide-close" class="modal-btn">닫기</button>
+          <button type="button" class="modal-btn sheet-close">닫기</button>
         </div>
       </div>
-    </div>
+    </dialog>
 
     <script type="module" src="./assets/index.js"></script>
   </body>

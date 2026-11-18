@@ -1,9 +1,11 @@
-// 카페 한 표에 공개·후보·제보가 다 산다.
-//   공개 = status 'approved' AND deleted_at IS NULL  (사이트에 보이는 유일한 조건)
-//   후보 = status 'candidate' — 어드민 등록·CSV·사용자 제보(client_id 있음)
-//   내림 = deleted_at 있음 — 버린 제보·내린 카페. 되살리면 원래 상태로.
+// Public cafes, candidates and reports all live in one cafe table.
+//   public = status 'approved' AND deleted_at IS NULL  (the only condition for showing on the site)
+//   candidate = status 'candidate' — admin entries, CSV, user reports (with client_id)
+//   removed = deleted_at set — discarded reports, unpublished cafes. Restoring returns the original status.
+import { geocodeAddress, matchesDistrict } from "./geocode.js";
 import {
   HttpError,
+  addressKey,
   cleanClientId,
   cleanNumber,
   cleanText,
@@ -16,8 +18,12 @@ import {
 } from "./shared.js";
 
 export const CATEGORIES = ["espresso", "drip", "decaf", "instagram", "dessert"];
-// 로그인이 없으니 도배는 사이트 전체 하루 상한으로 막는다 — 제보는 어차피 어드민이 공개해야 보인다.
+// No login, so flooding is stopped by a site-wide daily cap — reports only show once the admin publishes them anyway.
 export const SUBMIT_DAILY_CAP = 30;
+// Every cafe is in South Korea. Outside this box = a typo or swapped/copied lat and lng (0 = no coordinates yet).
+const KOREA_BOUNDS = { lat: [33, 39], lng: [124, 132] };
+// One bulk publish is a reviewed handful of candidates, not the whole table.
+export const BULK_PUBLISH_MAX = 100;
 
 const PUBLIC_COLUMNS =
   "id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, category, oakerman_pick, updated_at";
@@ -63,7 +69,7 @@ export function parseCategories(value) {
   return categories;
 }
 
-// 좌표 0 인 카페는 '내 주변'에서 조용히 빠진다 — 공개 전에 막는다.
+// Cafes with coordinate 0 silently drop out of 'near me' — block it before publishing.
 export function hasValidCoords({ lat, lng }) {
   const la = Number(lat);
   const lo = Number(lng);
@@ -75,6 +81,17 @@ export function hasValidCoords({ lat, lng }) {
     Math.abs(la) <= 90 &&
     Math.abs(lo) <= 180
   );
+}
+
+// The lat and lng ranges do not overlap, so this also refuses lat = lng (11/18: a cafe had both = 37.543).
+export function outsideKorea({ lat, lng }) {
+  for (const [key, value] of Object.entries({ lat, lng })) {
+    const [min, max] = KOREA_BOUNDS[key];
+    if (value !== 0 && (value < min || value > max)) {
+      return `${key} ${value} is outside South Korea (${min} to ${max})`;
+    }
+  }
+  return "";
 }
 
 export function normalizeCafe(body) {
@@ -97,6 +114,8 @@ export function normalizeCafe(body) {
   if (!cafe.name || !cafe.address || !cafe.desc) {
     throw new HttpError(400, "name, address, desc required");
   }
+  const outside = outsideKorea(cafe);
+  if (outside) throw new HttpError(400, outside, "COORDS_OUT_OF_RANGE");
   return cafe;
 }
 
@@ -146,7 +165,7 @@ async function findCafe(env, id) {
   return cafe;
 }
 
-// ---- 공개 ----
+// ---- public ----
 
 export async function getData(_req, env) {
   const rows = await env.DB.prepare(
@@ -180,6 +199,35 @@ export async function assertUnderDailyCap(env, table) {
   }
 }
 
+// Same address (spaces ignored) as a cafe that is public or waiting — the report adds nothing.
+async function assertNewAddress(env, address) {
+  const rows = await env.DB.prepare(
+    "SELECT address FROM cafes WHERE deleted_at IS NULL",
+  ).all();
+  const key = addressKey(address);
+  if (rows.results.some((row) => addressKey(row.address) === key)) {
+    throw new HttpError(409, "이미 등록된 카페입니다", "DUPLICATE");
+  }
+}
+
+// Coordinates for a report, only when the hit names the address's district. Nothing is published by this;
+// the admin still checks and publishes. A failed lookup leaves the report as before (no coordinates).
+async function coordsFromAddress(address, key) {
+  if (!key) return {};
+  let hit;
+  try {
+    hit = await geocodeAddress(address, key);
+  } catch (error) {
+    console.error("report geocode failed", error.message);
+    return {};
+  }
+  if (!hit || !matchesDistrict(address, hit.label) || outsideKorea(hit)) {
+    return {};
+  }
+  const memo = cleanText(`coords: kakao address, ${hit.label}`, 500);
+  return { lat: hit.lat, lng: hit.lng, memo };
+}
+
 export async function submitCafe(req, env) {
   const body = await readJson(req);
   const clientId = cleanClientId(body.client_id);
@@ -190,6 +238,11 @@ export async function submitCafe(req, env) {
     category: body.category,
   });
   await assertUnderDailyCap(env, "cafes");
+  await assertNewAddress(env, cafe.address);
+  Object.assign(
+    cafe,
+    await coordsFromAddress(cafe.address, env.KAKAO_REST_KEY),
+  );
   const { id, statement } = insertCafeStatement(env, cafe, {
     client_id: clientId,
     reason: cleanText(body.reason, 1000),
@@ -223,7 +276,7 @@ export async function mySubmissions(req, env) {
   return json({ ok: true, items });
 }
 
-// ---- 어드민 ----
+// ---- admin ----
 
 export async function listCafes(_req, env) {
   const rows = await env.DB.prepare(
@@ -261,8 +314,9 @@ export async function editCafe(req, env) {
   return json({ ok: true });
 }
 
-export async function publishCafe(req, env) {
-  const cafe = await findCafe(env, (await readJson(req)).id);
+// The one publish path — single and bulk publishing both go through here.
+async function publishOne(env, id) {
+  const cafe = await findCafe(env, id);
   if (cafe.deleted_at)
     throw new HttpError(400, "Restore cafe before publishing");
   if (!hasValidCoords(cafe)) {
@@ -277,10 +331,39 @@ export async function publishCafe(req, env) {
   )
     .bind(nowIso(), cafe.id)
     .run();
+  return cafe;
+}
+
+export async function publishCafe(req, env) {
+  await publishOne(env, (await readJson(req)).id);
   return json({ ok: true });
 }
 
-// 버리기(제보)·내리기(공개 카페) 둘 다 여기. 사유는 제보자의 '내 제보'에 보인다.
+// Publish several in a row; each row reports its own result, one failure does not stop the rest.
+export async function publishCafes(req, env) {
+  const { ids } = await readJson(req);
+  if (!Array.isArray(ids) || !ids.length || ids.length > BULK_PUBLISH_MAX) {
+    throw new HttpError(400, `ids: 1 to ${BULK_PUBLISH_MAX} cafe ids`);
+  }
+  const results = [];
+  for (const id of ids) {
+    try {
+      const cafe = await publishOne(env, id);
+      results.push({ id: cafe.id, name: cafe.name, ok: true });
+    } catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+      results.push({
+        id: cleanText(id, 80),
+        ok: false,
+        code: error.code,
+        error: error.message,
+      });
+    }
+  }
+  return json({ ok: true, results });
+}
+
+// Both discarding (reports) and unpublishing (public cafes) happen here. The reason shows in the reporter's 'my reports'.
 export async function deleteCafe(req, env) {
   const body = await readJson(req);
   const cafe = await findCafe(env, body.id);
@@ -303,7 +386,7 @@ export async function restoreCafe(req, env) {
   return json({ ok: true });
 }
 
-// 영구 삭제는 내린 카페만 — 공개 중인 카페를 한 번에 지우는 길을 두지 않는다.
+// Permanent deletion only for unpublished cafes — there is no path that deletes a public cafe in one step.
 export async function purgeCafe(req, env) {
   const cafe = await findCafe(env, (await readJson(req)).id);
   if (!cafe.deleted_at)
@@ -321,20 +404,12 @@ export async function setNotice(req, env) {
   return json({ ok: true });
 }
 
-// 주소→좌표(Nominatim, 초당 1회 정책) — 어드민 좌표 채우기만 쓴다.
-export async function geocode(req) {
+// Address → coordinates for the admin form; the admin checks the label (district, neighbourhood) by eye.
+export async function geocode(req, env) {
+  if (!env.KAKAO_REST_KEY) throw new HttpError(503, "Geocoding not configured");
   const q = cleanText(new URL(req.url).searchParams.get("q"), 80);
   if (q.length < 2) throw new HttpError(400, "Query too short");
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&q=${encodeURIComponent(q)}`,
-    { headers: { "User-Agent": "kohee-list/1.0 (koheelist@gmail.com)" } },
-  );
-  const [hit] = res.ok ? await res.json() : [];
+  const hit = await geocodeAddress(q, env.KAKAO_REST_KEY);
   if (!hit) throw new HttpError(404, "Address not found");
-  return json({
-    ok: true,
-    lat: Number(hit.lat),
-    lng: Number(hit.lon),
-    label: hit.display_name,
-  });
+  return json({ ok: true, ...hit });
 }

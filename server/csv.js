@@ -1,11 +1,11 @@
-// CSV 가져오기 = 새 카페를 후보로 넣는 것뿐이다. 기존 카페는 절대 덮어쓰지 않는다
-// (옛 갱신 경로가 공개 카페를 후보로 내리고, CSV 에 없는 칸을 0·빈 값으로 덮었다).
-import { HttpError, json } from "./shared.js";
+// CSV import = only inserting new cafes as candidates. Existing cafes are never overwritten
+// (the old update path demoted public cafes to candidates and overwrote columns missing from the CSV with 0/empty).
+import { HttpError, addressKey, json } from "./shared.js";
 import { insertCafeStatement, normalizeCafe } from "./cafes.js";
 
 const REQUIRED_HEADERS = ["name", "address", "desc"];
 
-// RFC 4180: 따옴표 안의 쉼표·줄바꿈·"" 를 그대로 읽는다.
+// RFC 4180: commas, newlines and "" inside quotes are read as is.
 export function parseCsv(text) {
   const rows = [];
   let row = [];
@@ -35,13 +35,6 @@ export function parseCsv(text) {
   row.push(cell);
   rows.push(row);
   return rows.filter((cells) => cells.some((value) => value.trim()));
-}
-
-// 이름은 표기가 갈려 같은 곳을 놓친다 — 주소(공백 제거)로 비교한다.
-export function addressKey(address) {
-  return String(address || "")
-    .replace(/\s+/g, "")
-    .toLowerCase();
 }
 
 function rowPayload(headers, cells) {
@@ -112,7 +105,7 @@ async function analyzeCsv(raw, env) {
       known.set(key, payload.name);
       added.push(payload);
     } catch (err) {
-      // 행 검증 실패만 실패 행이다 — DB·코드 오류를 '잘못된 행' 으로 바꾸면 원인이 숨는다
+      // Only row validation failures are failed rows — turning DB/code errors into 'bad rows' hides the cause
       if (!(err instanceof HttpError)) throw err;
       failedRows.push({ row, error: err.message });
     }
@@ -120,7 +113,7 @@ async function analyzeCsv(raw, env) {
   return { total: body.length, added, skipped, failedRows };
 }
 
-// 넣는 행은 모두 후보(insertCafeStatement 기본값) — 공개는 어드민이 따로 한다.
+// Inserted rows are all candidates (insertCafeStatement default) — publishing is a separate admin step.
 export async function importCsv(req, env) {
   const dryRun = new URL(req.url).searchParams.get("dryRun") === "1";
   const { total, added, skipped, failedRows } = await analyzeCsv(
@@ -136,7 +129,7 @@ export async function importCsv(req, env) {
   };
   if (dryRun) return json({ ok: true, dryRun: true, ...result });
   if (failedRows.length) throw new HttpError(400, "CSV validation failed");
-  // 한 묶음(batch) = 전부 들어가거나 하나도 안 들어간다.
+  // One batch = all rows go in or none do.
   if (added.length) {
     await env.DB.batch(
       added.map((cafe) => insertCafeStatement(env, cafe).statement),

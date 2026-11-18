@@ -1,57 +1,83 @@
-# KOHEE LIST — 시스템 정본
+# KOHEE LIST — system source of truth
 
-카페 큐레이션 사이트. 주소 하나(https://kohee.pages.dev), Cloudflare Pages 프로젝트 하나(`kohee`)가
-화면(`site/`)과 API(`functions/api` → `server/`)를 함께 내고, D1(`kohee-list`)에 직접 묶인다.
-워커·회원·세션·IP 수집은 없다(2026-10-21, 마이그레이션 0011).
+Cafe curation site. One address (https://kohee.pages.dev); one Cloudflare Pages project (`kohee`) serves
+the screen (`site/`) and the API (`functions/api` → `server/`) together, bound directly to D1 (`kohee-list`).
+No worker, accounts, sessions or IP collection (2026-10-21, migration 0011).
 
-## 데이터
+## Data
 
-| 표              | 무엇                                      |
-| --------------- | ----------------------------------------- |
-| `cafes`         | 공개 카페·후보·사용자 제보가 한 표에 산다 |
-| `error_reports` | 오류 제보와 운영자 답변(같은 줄)          |
-| `settings`      | 메인 공지                                 |
+| Table           | What                                                   |
+| --------------- | ------------------------------------------------------ |
+| `cafes`         | public cafes, candidates and user reports in one table |
+| `error_reports` | error reports and operator answers (same row)          |
+| `settings`      | main notice                                            |
 
-카페 상태:
+Cafe states:
 
-- **공개** = `status = 'approved' AND deleted_at IS NULL` — 사이트(`/api/data`)에 보이는 유일한 조건
-- **후보** = `status = 'candidate'` — 어드민 등록·CSV·사용자 제보(`client_id` 있음)
-- **내림** = `deleted_at` 있음 — 버린 제보·내린 카페. 되살리면 원래 상태로, 완전 삭제는 내린 것만
-- 공개하려면 좌표(lat/lng)가 있어야 한다 — 좌표 0 은 '내 주변'에서 조용히 빠진다
+- **public** = `status = 'approved' AND deleted_at IS NULL` — the only condition for showing on the site (`/api/data`)
+- **candidate** = `status = 'candidate'` — admin entries, CSV, user reports (with `client_id`)
+- **removed** = `deleted_at` set — discarded reports, unpublished cafes. Restoring returns the original state; only removed ones can be deleted for good
+- Publishing needs coordinates (lat/lng) — coordinate 0 silently drops out of 'near me'
 
-공개 응답에는 운영 메모·제보자 표·제보 사유·상태 칸을 내보내지 않는다(`scripts/test-api.mjs` 가 지킨다).
+Public responses never expose the ops memo, reporter token, report reason or status columns (`scripts/test-api.mjs` guards this).
 
-## 사람
+## People
 
-- **이용자**: 로그인 없음. 찜은 브라우저(localStorage)에만. 제보·오류 제보는 브라우저가 만든 무작위
-  표(`client_id`)를 붙여 보내고, 같은 브라우저의 '찜·내 제보'에서 처리 결과·답변을 본다.
-  도배는 사이트 전체 하루 상한(`SUBMIT_DAILY_CAP`)으로 막는다 — 어차피 어드민이 공개해야 보인다.
-- **어드민**: 비밀번호 하나(Pages 비밀값 `ADMIN_PASSWORD`). 로그인하면 `만료.서명` 쿠키(HttpOnly·Secure·
-  SameSite=Strict, 서명 열쇠 = 비밀번호). 비밀번호를 바꾸면 모든 쿠키가 무효.
+- **Users**: no login. Saved cafes live only in the browser (localStorage). Reports and error reports carry a random
+  browser-made token (`client_id`); the same browser's 'saved / my reports' shows results and answers.
+  Flooding is stopped by a site-wide daily cap (`SUBMIT_DAILY_CAP`) — reports only show once the admin publishes them anyway.
+- **Admin**: one password (Pages secret `ADMIN_PASSWORD`). Login gives an `expiry.signature` cookie (HttpOnly, Secure,
+  SameSite=Strict, signing key = password). Changing the password invalidates every cookie.
   `wrangler pages secret put ADMIN_PASSWORD --project-name kohee`
 
-## 운영 콘솔(`/admin`)
+## Ops console (`/admin`)
 
-첫 화면 = 운영(칸 고르기): 새로 들어옴 [공개][버리기] · 공개 중 [내리기] · 내린 것 [되살리기][완전 삭제] ·
-오류 제보 · 공지 · CSV 가져오기 · 방문자(Cloudflare Web Analytics). 카드를 누르면 수정.
-좌표는 주소로 자동 채움(`/api/geocode`, Nominatim, 어드민 전용 — 초당 1회 정책).
+Home = ops (choose a column): new [publish][discard] · public [unpublish] · removed [restore][delete for good] ·
+error reports · notice · CSV import · visitors (Cloudflare Web Analytics). Tapping a card edits it.
+Coordinates are auto-filled from the address (`/api/geocode`, admin only). Coordinates outside South Korea (lat 33–39, lng 124–132) are refused on save.
+'new' also has [한꺼번에 공개]: the candidates that already have coordinates, ticked in an in-page dialog, published through the
+same path as one publish (`/api/publish-many`), with each row's result shown.
 
-CSV 가져오기 = 새 카페만 후보로. 주소(공백 무시)가 같은 카페는 건너뛰고, 틀린 행이 하나라도 있으면
-아무것도 넣지 않는다(batch). 기존 카페를 고치는 경로는 없다.
+Report intake (`/api/submit`): an address equal (spaces ignored) to a public or waiting cafe is refused (409 "이미 등록된 카페입니다").
+Otherwise the server looks the address up once on Kakao (address search only; the typed name is never sent); if the hit names the address's district (…시/군/구), lat/lng are stored and the
+admin memo says `coords: kakao address, <matched address>`. A miss, other district, timeout, error or unset key stores nothing.
+Reports stay candidates — nothing is published automatically.
 
-## 배포
+Geocoding = `server/geocode.js`, the one place the provider lives (Kakao Local). The key is the Pages secret `KAKAO_REST_KEY`
+(owner's Mac: `~/.config/secrets/kakao-rest-key`), sent only in the Authorization header. Without it intake skips the fill and
+`/api/geocode` answers 503.
 
-- PR·main: `.github/workflows/check.yml` — `npm test`, 포맷, 저장소 안전(백업·DB 파일 커밋 금지)
-- main 합침: `deploy.yml` — Pages 배포 + `npm run smoke:check`(실제 사이트)
-- DB 구조 변경(`migrations/`·`schema.sql`)이 섞인 push 는 배포하지 않는다: 백업
-  (`wrangler d1 export kohee-list --remote`) → `d1-migrate.yml`(apply) → Deploy 수동 실행
-- 화면 파일은 `Cache-Control: no-cache`(매번 확인, 안 바뀌면 304) — `?v=` 를 올리지 않는다
+## Admin watch (owner's Mac)
 
-## 로컬
+`scripts/admin-watch.mjs`, launchd `com.oakermann.kohee-watch` daily 09:10, log `~/Library/Logs/kohee-watch.log`,
+state `~/Library/Application Support/kohee-watch/` (outside the repo). Read-only: D1 SELECTs through wrangler and `/api/data`.
+
+- New candidates (with names), reports and open error reports since the last run → one push through the Ohamma hub
+  (`127.0.0.1:4096/notify`, as blueprint-check). User-typed text and `client_id` are never selected or pushed: reports and
+  error reports are counts only.
+- Health: every public cafe's range (lat = lng, outside South Korea, none); every cafe looked up on Kakao
+  (listed place by name near the address, else the address) — farther than 100 m is flagged (11/18 measured on all 128:
+  median 5 m, p95 24 m); not found on Kakao 2 runs in a row is flagged "closed?". Never unpublishes, only pushes.
+- A finding or error is pushed once. `node scripts/admin-watch.mjs --dry-run` prints the push without saving state.
+- Reinstall: `launchctl bootout gui/$(id -u)/com.oakermann.kohee-watch`, edit the plist, `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.oakermann.kohee-watch.plist`.
+  The job runs the script from this working copy, so the checked-out branch must contain it.
+
+CSV import = new cafes only, as candidates. Cafes with the same address (spaces ignored) are skipped, and if any row is invalid
+nothing is inserted (batch). There is no path that edits existing cafes.
+
+## Deploy
+
+- PR and main: `.github/workflows/check.yml` — `npm test`, formatting, repo safety (no backups or DB files committed)
+- Merge to main: `deploy.yml` — Pages deploy + `npm run smoke:check` (live site)
+- Pushes that include DB structure changes (`migrations/`, `schema.sql`) are not deployed: back up
+  (`wrangler d1 export kohee-list --remote`) → `d1-migrate.yml` (apply) → run Deploy manually
+- Screen files are `Cache-Control: no-cache` (revalidated every time, 304 if unchanged) — do not bump `?v=`
+
+## Local
 
 ```
-npx wrangler d1 execute kohee-list --local --file <백업.sql>   # 또는 --file schema.sql
+npx wrangler d1 execute kohee-list --local --file <backup.sql>   # or --file schema.sql
 npx wrangler d1 migrations apply kohee-list --local
-npx wrangler pages dev site --binding ADMIN_PASSWORD=<아무거나>   # http://127.0.0.1:8788
+npx wrangler pages dev site --binding ADMIN_PASSWORD=<anything>   # http://127.0.0.1:8788
 SITE_URL=http://127.0.0.1:8788 npm run smoke:check
 ```

@@ -4,7 +4,6 @@ body {
   min-height: -webkit-fill-available;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -58,7 +57,7 @@ h1 {
   margin-top: calc(var(--thick) * -1);
 }
 
-/* ==================== 갤럭시 완전 최적화 ==================== */
+/* ==================== Galaxy full optimisation ==================== */
 .search-row {
   display: flex;
   gap: 9px;
@@ -96,6 +95,8 @@ h1 {
 }
 .input-wrapper:focus-within {
   box-shadow: 6px 6px 0 var(--border);
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
 }
 #nearby-btn {
   width: 44px;
@@ -146,7 +147,7 @@ h1 {
   margin: 9px 0 12px;
 }
 .tab {
-  min-height: 36px;
+  min-height: var(--tap);
   padding: 5px 1px;
   border: var(--thin) solid var(--border);
   white-space: nowrap;
@@ -179,6 +180,10 @@ h1 {
   flex-direction: column;
 }
 .cafe-card {
+  display: block;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
   background: var(--card);
   padding: 16px;
   margin-bottom: 12px;
@@ -198,7 +203,8 @@ h1 {
   transform: translate(2px, 2px);
   box-shadow: none;
 }
-.cafe-card h4 {
+.cafe-name {
+  display: block;
   font-size: var(--fs-lg);
   font-weight: 900;
   margin: 5px 0 8px;
@@ -206,6 +212,7 @@ h1 {
   padding-bottom: 4px;
 }
 .cafe-desc {
+  display: block;
   font-size: 0.9rem;
   font-weight: 700;
   margin-bottom: 10px;
@@ -214,6 +221,7 @@ h1 {
   word-break: keep-all;
 }
 .address-full {
+  display: block;
   font-size: 0.7rem;
   color: var(--muted);
   font-weight: 500;
@@ -302,26 +310,24 @@ footer {
   line-height: 1.4;
   margin-top: 2px;
 }
-.footer-legal a {
-  color: inherit !important;
-  text-decoration: none;
-  border-bottom: 1px solid currentColor;
-}
 
-.overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
+/* <dialog> shell: no box of its own, so a click on the dialog itself is a click on the backdrop */
+.sheet {
+  margin: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  width: 88%;
+  max-width: 380px;
+  overflow: visible;
+}
+.sheet::backdrop {
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
 }
 .modal {
   background: var(--bg);
-  width: 88%;
-  max-width: 380px;
   max-height: 86vh;
   overflow-y: auto;
   padding: 20px;
@@ -389,9 +395,8 @@ footer {
 }
 .fav-btn {
   flex: 0 0 auto;
-  width: auto;
-  min-width: 0;
-  height: auto;
+  min-width: var(--tap);
+  min-height: var(--tap);
   border: none;
   background: transparent;
   font-size: 1.45rem;
@@ -401,7 +406,7 @@ footer {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 0 2px;
+  padding: 0;
   box-shadow: none;
 }
 .fav-btn.is-on {
@@ -413,13 +418,13 @@ footer {
   gap: 8px;
 }
 
-.modal-btn.is-hidden {
-  visibility: hidden;
-  pointer-events: none;
+.sheet-close {
+  grid-column: 1 / -1;
 }
 
 .modal-btn {
   width: 100%;
+  min-height: var(--tap);
   padding: 12px 10px;
   border: var(--thin) solid var(--border);
   background: var(--card);
@@ -465,6 +470,8 @@ footer {
   background: transparent;
 }
 .auth-link {
+  font-family: inherit; /* the guide entry is a <button>; links and buttons look the same */
+  color: var(--ink);
   border: var(--thin) solid var(--border);
   background: var(--card);
   padding: 6px 9px;
@@ -474,7 +481,7 @@ footer {
   cursor: pointer;
   line-height: 1.2;
   text-align: center;
-  min-height: 34px;
+  min-height: var(--tap);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -551,7 +558,7 @@ footer {
   margin-bottom: 15px;
 }
 
-/* 탭 / 내주변 버튼 호버·누름 (mono) */
+/* tab / near-me button hover and press (mono) */
 .tab {
   transition:
     background 0.05s ease,

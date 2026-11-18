@@ -1,4 +1,4 @@
-// 찜(이 브라우저)·내 제보·내 오류 제보(브라우저 표로 조회). 카페를 누르면 메인에서 연다.
+// Saved (this browser), my reports, my error reports (looked up by browser token). Tapping a cafe opens it on the main page.
 import { $, clientId, favoriteIds, formatDate, jsonApi } from "./common.js";
 
 const SUBMISSION_STATE = {

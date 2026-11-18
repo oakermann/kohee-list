@@ -11,6 +11,6 @@
 /
   Cache-Control: no-cache
 
-# 화면 파일은 매번 바뀌었는지 확인(바뀌지 않았으면 304) — 고칠 때마다 ?v= 를 올리던 의식이 필요 없다.
+# Screen files are revalidated every time (304 if unchanged) — no more ritual of bumping ?v= on every fix.
 /assets/*
   Cache-Control: no-cache

@@ -1,4 +1,4 @@
-// 모든 화면이 쓰는 것: API 호출, 브라우저 표·찜(로그인 없음), 날짜, 네이버 지도·공유.
+// Used by every screen: API calls, browser token and saved list (no login), dates, Naver Map, sharing.
 export const CAT_MAP = {
   espresso: "에스프레소",
   drip: "드립",
@@ -13,13 +13,15 @@ export function api(path, options = {}) {
   return fetch(`/api${path}`, { credentials: "same-origin", ...options });
 }
 
-const ERROR_MESSAGES = {
+export const ERROR_MESSAGES = {
   AUTH_REQUIRED: "어드민 로그인이 필요합니다.",
   INVALID_CREDENTIALS: "비밀번호가 맞지 않습니다.",
   VALIDATION_ERROR: "입력값을 다시 확인해 주세요.",
   NOT_FOUND: "요청한 항목을 찾을 수 없습니다.",
   RATE_LIMITED: "오늘 받을 수 있는 제보가 다 찼습니다. 내일 다시 보내 주세요.",
   COORDS_REQUIRED: "좌표(위도·경도)가 있어야 공개할 수 있습니다.",
+  COORDS_OUT_OF_RANGE:
+    "좌표가 한국 밖입니다. 위도·경도가 서로 바뀌었거나 같은 값인지 확인해 주세요.",
 };
 
 export async function jsonApi(path, options = {}) {
@@ -60,7 +62,7 @@ function storageSet(key, value) {
   }
 }
 
-// 이 브라우저의 무작위 표 — 로그인 대신 '내 제보·답변'을 찾는 열쇠. 지우면 내역 보기만 사라진다.
+// This browser's random token — the key for 'my reports and answers' instead of login. Clearing it only loses the history view.
 export function clientId() {
   let id = storageGet("kohee-client-id");
   if (!id) {
@@ -70,7 +72,7 @@ export function clientId() {
   return id;
 }
 
-// 찜은 이 브라우저에만 저장한다.
+// Saved cafes are stored only in this browser.
 export function favoriteIds() {
   try {
     return new Set(JSON.parse(storageGet("kohee-favorites") || "[]"));
@@ -202,8 +204,8 @@ export function openMobileNaverMap(primaryUrl, fallbackUrl) {
 }
 
 export function openNaverMapForCafe(cafe) {
-  // 저장된 place URL이 있으면 그것을 우선한다 -- 키워드 검색은 동명 지점(예: 대구
-  // 수평적관계 3곳)에서 엉뚱한 지점을 먼저 보여줄 수 있다. 없으면 기존 검색 폴백.
+  // A stored place URL takes priority -- keyword search can show the wrong branch first for same-named branches (e.g. Daegu
+  // 수평적관계, 3 branches). Falls back to the old search if none.
   const savedUrl = String(cafe.naver_url || "").trim();
   const city = getCity(cafe.address || "");
   const keyword = `${cafe.name} ${city}`;
@@ -213,7 +215,7 @@ export function openNaverMapForCafe(cafe) {
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   if (savedUrl) {
-    // place URL은 웹으로 바로 연다 (모바일에선 네이버가 자체적으로 앱 연결 처리).
+    // place URLs open on the web directly (on mobile Naver handles the app hand-off itself).
     if (isAndroid || isIOS) {
       window.location.href = targetWebUrl;
       return;
