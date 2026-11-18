@@ -34,7 +34,33 @@ Public responses never expose the ops memo, reporter token, report reason or sta
 
 Home = ops (choose a column): new [publish][discard] · public [unpublish] · removed [restore][delete for good] ·
 error reports · notice · CSV import · visitors (Cloudflare Web Analytics). Tapping a card edits it.
-Coordinates are auto-filled from the address (`/api/geocode`, Nominatim, admin only — 1 request/s policy). Coordinates outside South Korea (lat 33–39, lng 124–132) are refused on save.
+Coordinates are auto-filled from the address (`/api/geocode`, admin only). Coordinates outside South Korea (lat 33–39, lng 124–132) are refused on save.
+'new' also has [한꺼번에 공개]: the candidates that already have coordinates, ticked in an in-page dialog, published through the
+same path as one publish (`/api/publish-many`), with each row's result shown.
+
+Report intake (`/api/submit`): an address equal (spaces ignored) to a public or waiting cafe is refused (409 "이미 등록된 카페입니다").
+Otherwise the server looks the address up once; if the hit names the address's district (…시/군/구), lat/lng are stored and the
+admin memo says `coords: nominatim (road-level), <matched address>`. A miss, other district, timeout or error stores nothing.
+Reports stay candidates — nothing is published automatically.
+
+Geocoding = `server/geocode.js` `geocodeAddress`, the one place the provider lives (Nominatim now: identifying User-Agent,
+1 request/s, results cached by callers). The same address already went to Nominatim when the admin opened a report;
+intake only does it earlier. A Naver/Kakao key later = rewrite that one function (and `GEOCODE_SOURCE`).
+
+## Admin watch (owner's Mac)
+
+`scripts/admin-watch.mjs`, launchd `com.oakermann.kohee-watch` daily 09:10, log `~/Library/Logs/kohee-watch.log`,
+state `~/Library/Application Support/kohee-watch/` (outside the repo). Read-only: D1 SELECTs through wrangler and `/api/data`.
+
+- New candidates (with names), reports and open error reports since the last run → one push through the Ohamma hub
+  (`127.0.0.1:4096/notify`, as blueprint-check). User-typed text and `client_id` are never selected or pushed: reports and
+  error reports are counts only.
+- Health: every public cafe's range (lat = lng, outside South Korea, none); 20 cafes a run (all within a week) geocoded
+  and compared — farther than 3 km is flagged (11/18 measured on 109 matched cafes: median 0.07 km, p95 2.72 km;
+  Nominatim puts road addresses anywhere on the road, so 1–3 km is noise). Never unpublishes, only pushes.
+- A finding or error is pushed once. `node scripts/admin-watch.mjs --dry-run` prints the push without saving state.
+- Reinstall: `launchctl bootout gui/$(id -u)/com.oakermann.kohee-watch`, edit the plist, `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.oakermann.kohee-watch.plist`.
+  The job runs the script from this working copy, so the checked-out branch must contain it.
 
 CSV import = new cafes only, as candidates. Cafes with the same address (spaces ignored) are skipped, and if any row is invalid
 nothing is inserted (batch). There is no path that edits existing cafes.

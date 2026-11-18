@@ -5,6 +5,17 @@ import { DatabaseSync } from "node:sqlite";
 import { handle } from "../server/app.js";
 import { SUBMIT_DAILY_CAP } from "../server/cafes.js";
 import { parseCsv } from "../server/csv.js";
+import { GEOCODE_USER_AGENT } from "../server/geocode.js";
+
+// Geocoder stand-in: tests set the reply; the real network is never called. Default = no match.
+let geocoder = async () => new Response("[]");
+globalThis.fetch = (url, init) => geocoder(url, init);
+const geocodeHit = (lat, lng, label) => async () =>
+  new Response(
+    JSON.stringify([
+      { lat: String(lat), lon: String(lng), display_name: label },
+    ]),
+  );
 
 function fakeD1() {
   const db = new DatabaseSync(":memory:");
@@ -131,7 +142,7 @@ const row = (id) =>
   });
   assert.equal(submitted.status, 201);
   const id = submitted.body.id;
-  // Reports take no coordinates (the admin fills them) — lat/lng sent by users are discarded.
+  // Lat/lng sent by users are discarded; without a geocoder match the report stays coordinate-less.
   assert.equal(row(id).lat, 0);
   assert.equal(row(id).status, "candidate");
   assert.equal(row(id).client_id, CLIENT);
@@ -227,6 +238,133 @@ const row = (id) =>
   env.DB.raw.exec("DELETE FROM cafes WHERE id LIKE 'cap-%'");
 }
 
+// ---- report intake: duplicate addresses refused, coordinates filled from the address when the district matches ----
+{
+  const submit = (over) =>
+    call(
+      "POST",
+      "/submit",
+      { ...cafe(over), client_id: CLIENT },
+      { cookie: "" },
+    );
+  const live = await call(
+    "POST",
+    "/add",
+    cafe({ address: "서울 성동구 성수이로 10 2층" }),
+  );
+  const dup = await submit({ address: " 서울 성동구  성수이로 10  2층" });
+  assert.deepEqual(
+    [dup.status, dup.body.error],
+    [409, "이미 등록된 카페입니다"],
+  );
+  await call("POST", "/delete", { id: live.body.id });
+  assert.equal(
+    (await submit({ address: "서울 성동구 성수이로 10 2층" })).status,
+    201,
+    "removed cafes do not block",
+  );
+
+  let asked;
+  geocoder = async (url, init) => {
+    asked = { url, ua: init.headers["User-Agent"] };
+    return geocodeHit(37.5446, 127.0557, "성수이로, 성수동2가, 성동구, 서울")();
+  };
+  const hit = row(
+    (await submit({ address: "서울 성동구 성수이로 22 (성수동) 3층" })).body.id,
+  );
+  assert.deepEqual(
+    [hit.lat, hit.lng, hit.status],
+    [37.5446, 127.0557, "candidate"],
+  );
+  assert.equal(
+    hit.memo,
+    "coords: nominatim (road-level), 성수이로, 성수동2가, 성동구, 서울",
+  );
+  assert.equal(asked.ua, GEOCODE_USER_AGENT);
+  assert.match(decodeURIComponent(asked.url), /q=서울 성동구 성수이로 22$/);
+
+  const noCoords = async (reply, address = "서울 성동구 성수이로 30") => {
+    geocoder = reply;
+    const res = await submit({ address });
+    assert.equal(res.status, 201);
+    return [row(res.body.id).lat, row(res.body.id).memo];
+  };
+  assert.deepEqual(
+    await noCoords(async () => new Response("[]")),
+    [0, ""],
+    "miss",
+  );
+  assert.deepEqual(
+    await noCoords(
+      geocodeHit(35.1, 129.0, "성수로, 부산진구, 부산"),
+      "서울 성동구 성수이로 31",
+    ),
+    [0, ""],
+    "other district = ambiguous",
+  );
+  assert.deepEqual(
+    await noCoords(async () => {
+      throw new DOMException("timed out", "TimeoutError");
+    }, "서울 성동구 성수이로 32"),
+    [0, ""],
+    "timeout",
+  );
+  assert.deepEqual(
+    await noCoords(
+      async () => new Response("busy", { status: 429 }),
+      "서울 성동구 성수이로 33",
+    ),
+    [0, ""],
+    "geocoder refused",
+  );
+  geocoder = async () => new Response("[]");
+}
+
+// ---- bulk publish: every row through the single publish path, one failure does not stop the rest ----
+{
+  const ready = (
+    await call(
+      "POST",
+      "/add",
+      cafe({ name: "준비됨", address: "서울 중구 을지로 1" }),
+    )
+  ).body.id;
+  const bare = (
+    await call(
+      "POST",
+      "/add",
+      cafe({
+        name: "좌표 없음",
+        address: "서울 중구 을지로 2",
+        lat: 0,
+        lng: 0,
+      }),
+    )
+  ).body.id;
+  const res = await call("POST", "/publish-many", {
+    ids: [ready, bare, "missing"],
+  });
+  assert.equal(res.status, 200);
+  assert.deepEqual(
+    res.body.results.map((r) => [r.id, r.ok, r.error || ""]),
+    [
+      [ready, true, ""],
+      [bare, false, "Cafe coordinates (lat/lng) are required"],
+      ["missing", false, "Cafe not found"],
+    ],
+  );
+  assert.deepEqual(
+    [row(ready).status, row(bare).status],
+    ["approved", "candidate"],
+  );
+  assert.equal((await call("POST", "/publish-many", { ids: [] })).status, 400);
+  assert.equal(
+    (await call("POST", "/publish-many", { ids: [ready] }, { cookie: "" }))
+      .status,
+    401,
+  );
+}
+
 // ---- CSV: only new cafes as candidates, skip if the address overlaps, insert nothing if any row is invalid ----
 {
   assert.deepEqual(parseCsv('h1,h2\r\n"two\nlines","a ""q"""\n\n'), [
@@ -313,13 +451,8 @@ const row = (id) =>
     401,
   );
 
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async () =>
-    new Response(
-      JSON.stringify([{ lat: "37.5", lon: "127.0", display_name: "성수동" }]),
-    );
+  geocoder = geocodeHit(37.5, 127.0, "성수동");
   const hit = await call("GET", "/geocode?q=성수동");
-  globalThis.fetch = realFetch;
   assert.deepEqual(
     [hit.body.lat, hit.body.lng, hit.body.label],
     [37.5, 127, "성수동"],

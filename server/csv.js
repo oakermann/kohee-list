@@ -1,6 +1,6 @@
 // CSV import = only inserting new cafes as candidates. Existing cafes are never overwritten
 // (the old update path demoted public cafes to candidates and overwrote columns missing from the CSV with 0/empty).
-import { HttpError, json } from "./shared.js";
+import { HttpError, addressKey, json } from "./shared.js";
 import { insertCafeStatement, normalizeCafe } from "./cafes.js";
 
 const REQUIRED_HEADERS = ["name", "address", "desc"];
@@ -35,13 +35,6 @@ export function parseCsv(text) {
   row.push(cell);
   rows.push(row);
   return rows.filter((cells) => cells.some((value) => value.trim()));
-}
-
-// Names are spelled differently and miss the same place — compare by address (spaces removed).
-export function addressKey(address) {
-  return String(address || "")
-    .replace(/\s+/g, "")
-    .toLowerCase();
 }
 
 function rowPayload(headers, cells) {

@@ -13,7 +13,7 @@ export function api(path, options = {}) {
   return fetch(`/api${path}`, { credentials: "same-origin", ...options });
 }
 
-const ERROR_MESSAGES = {
+export const ERROR_MESSAGES = {
   AUTH_REQUIRED: "어드민 로그인이 필요합니다.",
   INVALID_CREDENTIALS: "비밀번호가 맞지 않습니다.",
   VALIDATION_ERROR: "입력값을 다시 확인해 주세요.",

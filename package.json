@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node scripts/test-api.mjs && node scripts/test-site.mjs && node scripts/test-cafe-candidates.mjs",
+    "test": "node scripts/test-api.mjs && node scripts/test-site.mjs && node scripts/test-cafe-candidates.mjs && node scripts/test-admin-watch.mjs",
     "format": "prettier --write \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"functions/**/*.js\" \"site/**/*.{html,js,css}\" \"scripts/**/*.mjs\" --end-of-line auto --ignore-unknown",
     "format:check": "prettier --check \"*.{html,json,md,toml}\" \"docs/**/*.md\" \".github/workflows/*.yml\" \"server/**/*.js\" \"functions/**/*.js\" \"site/**/*.{html,js,css}\" \"scripts/**/*.mjs\" --end-of-line auto --ignore-unknown",
     "check:repo-safety": "node scripts/check-repo-safety.mjs",

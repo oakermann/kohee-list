@@ -84,6 +84,7 @@
             <button id="new-cafe-btn" class="primary" type="button">
               신규 등록
             </button>
+            <button id="bulk-publish-btn" type="button">한꺼번에 공개</button>
           </div>
           <div id="list" class="list"></div>
         </div>
@@ -200,6 +201,18 @@
         <div class="form-actions">
           <button value="cancel" formnovalidate type="submit">닫기</button>
           <button id="form-save" class="primary" type="button">저장</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="bulk-dialog">
+      <form method="dialog">
+        <h2>한꺼번에 공개</h2>
+        <div id="bulk-note" class="meta"></div>
+        <div id="bulk-list" class="list"></div>
+        <div class="form-actions">
+          <button value="cancel" type="submit">닫기</button>
+          <button id="bulk-confirm" class="primary" type="button">공개</button>
         </div>
       </form>
     </dialog>

@@ -6,5 +6,7 @@ Read `docs/KOHEE_MASTER_CONTEXT.md` first.
 - Do not bring back accounts, sessions, IPs or cookie tracking. The only user identifier is the browser token (`client_id`).
 - DB structure only via `migrations/`; production apply by hand after a backup (`d1-migrate.yml`). No automatic apply.
 - Never commit backups, DB dumps or secrets (`npm run check:repo-safety`).
+- Address → coordinates only through `server/geocode.js` `geocodeAddress` (the one provider switch). Never send `client_id` or report/error text anywhere.
+- The daily admin watch (`scripts/admin-watch.mjs`) only reads; it never writes to the DB or the site.
 - Deploy = merge to main, automatic (`deploy.yml`). Production deploys from local only when the owner asks.
 - Verify: `npm test`, `npm run format:check`, `git diff --check`. If the screen changed, run `wrangler pages dev` and click through it.

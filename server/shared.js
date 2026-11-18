@@ -86,6 +86,13 @@ export function parseJsonArray(value) {
   }
 }
 
+// Names are spelled differently and miss the same place — compare by address (spaces removed).
+export function addressKey(address) {
+  return String(address || "")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+}
+
 // Random token made by the browser — the key for finding 'my reports' without login.
 export function cleanClientId(value) {
   const id = cleanText(value, 80);

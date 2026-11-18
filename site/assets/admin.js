@@ -1,8 +1,15 @@
 // Ops console: home = ops (choose a column). One or two actions per column; tapping a card edits it.
-//   new = candidates (admin entries, CSV, user reports)  [publish] [discard]
+//   new = candidates (admin entries, CSV, user reports)  [publish] [discard] · [publish together] for those with coordinates
 //   public                                               [unpublish]
 //   removed                                              [restore] [delete for good]
-import { $, api, formatDate, jsonApi, postJson } from "./common.js";
+import {
+  $,
+  ERROR_MESSAGES,
+  api,
+  formatDate,
+  jsonApi,
+  postJson,
+} from "./common.js";
 
 const state = { view: "", cafes: [], errors: [], form: null };
 
@@ -163,6 +170,9 @@ function cafeCard(view, cafe) {
 function renderList() {
   renderCounts();
   if (VIEWS[state.view]?.pane !== "pane-list") return;
+  const ready = publishable().length;
+  $("bulk-publish-btn").textContent = `한꺼번에 공개 (${ready})`;
+  $("bulk-publish-btn").disabled = !ready;
   const query = $("search").value.trim().toLowerCase();
   const cafes = viewCafes(state.view).filter((cafe) =>
     `${cafe.name} ${cafe.address}`.toLowerCase().includes(query),
@@ -215,6 +225,58 @@ async function purgeCafe(cafe) {
   if (!confirm(`'${cafe.name}' 을(를) 완전히 지웁니다. 되돌릴 수 없습니다.`))
     return;
   await act("/purge", cafe, "");
+}
+
+// ---- bulk publish: candidates that already pass the publish check, chosen and confirmed in the page ----
+
+function publishable() {
+  return viewCafes("inbox").filter(hasCoords);
+}
+
+function bulkRow(cafe) {
+  const label = el("label", "bulk-row");
+  const box = el("input");
+  box.type = "checkbox";
+  box.value = cafe.id;
+  box.checked = true;
+  label.append(
+    box,
+    `${cafe.submitted ? "제보 · " : ""}${cafe.name} · ${cafe.address}`,
+  );
+  return label;
+}
+
+function openBulk() {
+  const cafes = publishable();
+  $("bulk-note").textContent =
+    "좌표가 있는 후보만 나옵니다. 고른 카페가 바로 사이트에 공개됩니다.";
+  $("bulk-list").replaceChildren(...cafes.map(bulkRow));
+  show("bulk-confirm", true);
+  $("bulk-dialog").showModal();
+}
+
+async function bulkPublish() {
+  const ids = [...$("bulk-list").querySelectorAll("input:checked")].map(
+    (box) => box.value,
+  );
+  if (!ids.length) throw new Error("공개할 카페를 고르세요.");
+  $("bulk-note").textContent = `${ids.length}곳 공개 중...`;
+  const { results } = await postJson("/publish-many", { ids });
+  const done = results.filter((r) => r.ok).length;
+  $("bulk-note").textContent = `공개 ${done} · 실패 ${results.length - done}`;
+  $("bulk-list").replaceChildren(
+    ...results.map((r) =>
+      el(
+        "div",
+        "bulk-row",
+        r.ok
+          ? `공개됨 · ${r.name}`
+          : `실패 · ${state.cafes.find((c) => c.id === r.id)?.name || r.id} — ${ERROR_MESSAGES[r.code] || r.error}`,
+      ),
+    ),
+  );
+  show("bulk-confirm", false);
+  await reload();
 }
 
 // ---- cafe form: new or coordinate-less candidates save = publish, edits just save ----
@@ -404,6 +466,7 @@ function openView(view) {
     pane.classList.toggle("hidden", pane.id !== VIEWS[view].pane);
   }
   show("new-cafe-btn", view === "inbox");
+  show("bulk-publish-btn", view === "inbox");
   $("search").value = "";
   if (view === "notice") guarded(loadNotice)();
   renderList();
@@ -435,6 +498,8 @@ function bindEvents() {
   $("search").addEventListener("input", renderList);
   bind("new-cafe-btn", () => openForm("add"));
   bind("form-save", saveForm);
+  bind("bulk-publish-btn", openBulk);
+  bind("bulk-confirm", bulkPublish);
   bind("geocode-btn", geocode);
   bind("notice-save", saveNotice);
   bind("csv-dry-run", () => importCsv(true));
