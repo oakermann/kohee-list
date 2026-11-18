@@ -610,10 +610,7 @@ Object.entries(CAT_MAP).forEach(([key, label]) => {
 $("search").addEventListener("input", handleSearchInput);
 $("nearby-btn").addEventListener("click", handleNearbyClick);
 $("app-title").addEventListener("click", () => location.reload());
-$("guide-btn").addEventListener("click", (event) => {
-  event.preventDefault();
-  $("guide-sheet").showModal();
-});
+$("guide-btn").addEventListener("click", () => $("guide-sheet").showModal());
 // Escape closes a <dialog> natively; a tap on the backdrop (the dialog itself) or 닫기 closes it too.
 for (const sheet of document.querySelectorAll("dialog.sheet")) {
   sheet.addEventListener("click", (event) => {
