@@ -470,6 +470,8 @@ footer {
   background: transparent;
 }
 .auth-link {
+  font-family: inherit; /* the guide entry is a <button>; links and buttons look the same */
+  color: var(--ink);
   border: var(--thin) solid var(--border);
   background: var(--card);
   padding: 6px 9px;
