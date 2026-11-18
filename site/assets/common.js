@@ -20,6 +20,8 @@ const ERROR_MESSAGES = {
   NOT_FOUND: "요청한 항목을 찾을 수 없습니다.",
   RATE_LIMITED: "오늘 받을 수 있는 제보가 다 찼습니다. 내일 다시 보내 주세요.",
   COORDS_REQUIRED: "좌표(위도·경도)가 있어야 공개할 수 있습니다.",
+  COORDS_OUT_OF_RANGE:
+    "좌표가 한국 밖입니다. 위도·경도가 서로 바뀌었거나 같은 값인지 확인해 주세요.",
 };
 
 export async function jsonApi(path, options = {}) {

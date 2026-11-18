@@ -62,7 +62,7 @@ button,
   border: var(--thin) solid var(--line);
   background: var(--bg);
   padding: 7px 12px;
-  min-height: 34px;
+  min-height: var(--tap);
   font-weight: 900;
   font-size: var(--fs-xs);
   cursor: pointer;
@@ -174,16 +174,20 @@ button.warn {
   display: grid;
   gap: 3px;
 }
+.item h3,
+.item .mini {
+  word-break: keep-all;
+  /* long unbroken values (URLs) would widen the grid past the screen */
+  overflow-wrap: anywhere;
+}
 .item h3 {
   font-size: var(--fs-md);
   font-weight: 900;
-  word-break: keep-all;
 }
 .item .mini {
   font-size: var(--fs-xs);
   opacity: 0.82;
   line-height: 1.4;
-  word-break: keep-all;
 }
 .item .btns {
   justify-content: flex-start;
@@ -231,6 +235,7 @@ dialog form {
 .geo {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
+  align-items: end;
   gap: 5px;
 }
 .chips {
@@ -240,6 +245,7 @@ dialog form {
 }
 .chip {
   border: var(--thin) solid var(--line);
+  min-height: var(--tap);
   padding: 7px 4px;
   font-size: var(--fs-xs);
   font-weight: 900;

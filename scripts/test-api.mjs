@@ -171,6 +171,16 @@ const row = (id) =>
   ]) {
     assert.equal(key in data.body[0], false, `public leak: ${key}`);
   }
+  // Coordinates outside South Korea are refused (11/18: a cafe had lng = lat = 37.543).
+  for (const coords of [
+    { lat: 37.543, lng: 37.543 },
+    { lat: 127.05, lng: 37.54 },
+  ]) {
+    assert.equal(
+      (await call("POST", "/edit", { id, ...cafe(coords) })).body.code,
+      "COORDS_OUT_OF_RANGE",
+    );
+  }
   // A published cafe cannot be saved with its coordinates cleared.
   assert.equal(
     (await call("POST", "/edit", { id, ...cafe({ lat: 0 }) })).body.code,

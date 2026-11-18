@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>제보하기 | KOHEE LIST</title>
     <link
@@ -38,13 +38,18 @@
           <div class="pii-notice">
             타인의 이름·연락처 등 개인정보는 입력하지 마세요.
           </div>
-          <input id="name" placeholder="카페명 *" />
-          <input id="address" placeholder="주소 *" />
-          <textarea
-            id="desc"
-            placeholder="카페 설명 * (타인의 개인정보 입력 금지)"
-          ></textarea>
-          <textarea id="reason" placeholder="추천 이유"></textarea>
+          <label class="field"
+            ><span>카페명 *</span><input id="name" required
+          /></label>
+          <label class="field"
+            ><span>주소 *</span><input id="address" required
+          /></label>
+          <label class="field"
+            ><span>카페 설명 *</span><textarea id="desc" required></textarea>
+          </label>
+          <label class="field"
+            ><span>추천 이유</span><textarea id="reason"></textarea>
+          </label>
 
           <div class="cat-grid">
             <label class="chip"
@@ -92,12 +97,16 @@
           <div class="pii-notice">
             타인의 이름·연락처 등 개인정보는 입력하지 마세요.
           </div>
-          <input id="error-title" placeholder="오류 제목 *" />
-          <input id="error-page" placeholder="관련 카페명 또는 페이지 (선택)" />
-          <textarea
-            id="error-content"
-            placeholder="오류 내용 * (타인의 개인정보 입력 금지)"
-          ></textarea>
+          <label class="field"
+            ><span>오류 제목 *</span><input id="error-title" required
+          /></label>
+          <label class="field"
+            ><span>관련 카페명 또는 페이지 (선택)</span><input id="error-page"
+          /></label>
+          <label class="field"
+            ><span>오류 내용 *</span
+            ><textarea id="error-content" required></textarea>
+          </label>
           <button id="error-submit-btn" class="mini-btn primary" type="button">
             오류 제보 저장
           </button>

@@ -18,6 +18,8 @@ import {
 export const CATEGORIES = ["espresso", "drip", "decaf", "instagram", "dessert"];
 // No login, so flooding is stopped by a site-wide daily cap — reports only show once the admin publishes them anyway.
 export const SUBMIT_DAILY_CAP = 30;
+// Every cafe is in South Korea. Outside this box = a typo or swapped/copied lat and lng (0 = no coordinates yet).
+const KOREA_BOUNDS = { lat: [33, 39], lng: [124, 132] };
 
 const PUBLIC_COLUMNS =
   "id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, category, oakerman_pick, updated_at";
@@ -96,6 +98,16 @@ export function normalizeCafe(body) {
   };
   if (!cafe.name || !cafe.address || !cafe.desc) {
     throw new HttpError(400, "name, address, desc required");
+  }
+  for (const [key, [min, max]] of Object.entries(KOREA_BOUNDS)) {
+    const value = cafe[key];
+    if (value !== 0 && (value < min || value > max)) {
+      throw new HttpError(
+        400,
+        `${key} ${value} is outside South Korea (${min} to ${max})`,
+        "COORDS_OUT_OF_RANGE",
+      );
+    }
   }
   return cafe;
 }

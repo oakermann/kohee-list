@@ -37,6 +37,7 @@
           type="password"
           autocomplete="current-password"
           placeholder="어드민 비밀번호"
+          aria-label="어드민 비밀번호"
           required
         />
         <button class="primary" type="submit">들어가기</button>
@@ -75,7 +76,11 @@
 
         <div id="pane-list" class="pane">
           <div class="list-tools">
-            <input id="search" placeholder="카페명·주소 검색" />
+            <input
+              id="search"
+              aria-label="카페 검색"
+              placeholder="카페명·주소 검색"
+            />
             <button id="new-cafe-btn" class="primary" type="button">
               신규 등록
             </button>
@@ -90,6 +95,7 @@
         <div id="pane-notice" class="pane">
           <textarea
             id="notice-input"
+            aria-label="공지"
             placeholder="메인에 보여줄 공지 (비우면 공지 없음)"
           ></textarea>
           <button id="notice-save" class="primary" type="button">
@@ -123,30 +129,50 @@
       <form id="cafe-form" method="dialog">
         <h2 id="form-title">카페</h2>
         <div id="form-note" class="meta"></div>
-        <input id="cafe-name" placeholder="카페명 *" required />
-        <input id="cafe-address" placeholder="주소 *" required />
+        <label class="field"
+          ><span>카페명 *</span><input id="cafe-name" required
+        /></label>
+        <label class="field"
+          ><span>주소 *</span><input id="cafe-address" required
+        /></label>
         <div class="geo">
-          <input id="cafe-lat" placeholder="위도" inputmode="decimal" />
-          <input id="cafe-lng" placeholder="경도" inputmode="decimal" />
+          <label class="field"
+            ><span>위도</span><input id="cafe-lat" inputmode="decimal"
+          /></label>
+          <label class="field"
+            ><span>경도</span><input id="cafe-lng" inputmode="decimal"
+          /></label>
           <button id="geocode-btn" type="button">주소로 찾기</button>
         </div>
         <div id="geo-msg" class="meta"></div>
-        <textarea id="cafe-desc" placeholder="설명 *" required></textarea>
+        <label class="field"
+          ><span>설명 *</span><textarea id="cafe-desc" required></textarea>
+        </label>
         <div id="cafe-reason" class="meta"></div>
-        <input id="cafe-signature" placeholder="시그니처 (쉼표 구분)" />
-        <input id="cafe-instagram" placeholder="인스타 링크" />
-        <input id="cafe-naver" placeholder="네이버 지도 링크 (place URL)" />
-        <input id="cafe-bean" placeholder="원두 구매 링크" />
+        <label class="field"
+          ><span>시그니처 (쉼표 구분)</span><input id="cafe-signature"
+        /></label>
+        <label class="field"
+          ><span>인스타 링크</span><input id="cafe-instagram"
+        /></label>
+        <label class="field"
+          ><span>네이버 지도 링크 (place URL)</span><input id="cafe-naver"
+        /></label>
+        <label class="field"
+          ><span>원두 구매 링크</span><input id="cafe-bean"
+        /></label>
         <div class="row2">
-          <input id="cafe-region" placeholder="가까운 역 (카드에 안 보임)" />
-          <input
-            id="cafe-region-distance"
-            type="number"
-            min="0"
-            placeholder="역까지 m"
-          />
+          <label class="field"
+            ><span>가까운 역 (카드에 안 보임)</span><input id="cafe-region"
+          /></label>
+          <label class="field"
+            ><span>역까지 m</span
+            ><input id="cafe-region-distance" type="number" min="0"
+          /></label>
         </div>
-        <input id="cafe-memo" placeholder="운영 메모 (공개 안 됨)" />
+        <label class="field"
+          ><span>운영 메모 (공개 안 됨)</span><input id="cafe-memo"
+        /></label>
         <div class="chips">
           <label class="chip"
             ><input

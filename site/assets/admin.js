@@ -146,9 +146,15 @@ function cafeCard(view, cafe) {
     cafeActions(view, cafe),
   );
   if (view !== "down") {
-    item.classList.add("tappable");
+    // Holds its own buttons, so it cannot be a <button>: focusable, Enter/Space open the form like a tap.
+    item.tabIndex = 0;
     item.addEventListener("click", (event) => {
       if (!event.target.closest("button")) openForm("edit", cafe);
+    });
+    item.addEventListener("keydown", (event) => {
+      if (event.target !== item || !["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      openForm("edit", cafe);
     });
   }
   return item;
@@ -294,6 +300,7 @@ function errorCard(report) {
   ]);
   const input = el("textarea");
   input.placeholder = "답변 (제보한 사람의 '찜·내 제보'에 보임)";
+  input.ariaLabel = "답변";
   input.value = report.reply || "";
   item.append(
     input,

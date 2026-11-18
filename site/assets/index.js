@@ -140,20 +140,22 @@ function centerMessage(message, subMessage = "") {
 }
 
 function createCafeCard(cafe) {
-  const card = document.createElement("div");
+  // A button so keyboards and screen readers reach it; only phrasing elements (span) inside.
+  const card = document.createElement("button");
+  card.type = "button";
   card.className = "cafe-card";
   card.dataset.cafeId = cafe.id;
 
-  const meta = document.createElement("div");
+  const meta = document.createElement("span");
   meta.className = "meta-row";
 
-  const tagGroup = document.createElement("div");
+  const tagGroup = document.createElement("span");
   tagGroup.className = "tag-group";
   appendTags(tagGroup, cafe);
   if (cafe.oakerman_pick) tagGroup.prepend(makePickBadge());
   meta.appendChild(tagGroup);
 
-  const metaRight = document.createElement("div");
+  const metaRight = document.createElement("span");
   metaRight.className = "meta-right";
 
   if (cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM) {
@@ -168,10 +170,11 @@ function createCafeCard(cafe) {
 
   if (metaRight.childElementCount) meta.appendChild(metaRight);
 
-  const title = document.createElement("h4");
+  const title = document.createElement("span");
+  title.className = "cafe-name";
   title.textContent = cafe.name;
 
-  const desc = document.createElement("p");
+  const desc = document.createElement("span");
   desc.className = "cafe-desc";
   desc.textContent = cafe.desc;
   const signature = signatureText(cafe.signature);
@@ -183,7 +186,7 @@ function createCafeCard(cafe) {
     desc.appendChild(sig);
   }
 
-  const address = document.createElement("p");
+  const address = document.createElement("span");
   address.className = "address-full";
   address.textContent = cafe.address;
 
@@ -567,29 +570,18 @@ function openModal(cafeId) {
     }
   });
 
-  const beanShopUrl = safeHttpUrl(cafe.beanShop);
-  const beanButton = setButtonAction(
-    "btn-bean",
-    beanShopUrl ? () => window.open(beanShopUrl, "_blank", "noopener") : null,
-  );
-  if (beanShopUrl) {
-    beanButton.classList.remove("is-hidden");
-  } else {
-    beanButton.classList.add("is-hidden");
+  for (const [id, link] of [
+    ["btn-insta", cafe.instagram],
+    ["btn-bean", cafe.beanShop],
+  ]) {
+    const url = safeHttpUrl(link);
+    setButtonAction(
+      id,
+      url ? () => window.open(url, "_blank", "noopener") : null,
+    ).hidden = !url;
   }
 
-  const instagramUrl = safeHttpUrl(cafe.instagram);
-  const instagramButton = setButtonAction(
-    "btn-insta",
-    instagramUrl ? () => window.open(instagramUrl, "_blank", "noopener") : null,
-  );
-  if (instagramUrl) {
-    instagramButton.classList.remove("is-hidden");
-  } else {
-    instagramButton.classList.add("is-hidden");
-  }
-
-  $("modal-bg").style.display = "flex";
+  if (!$("cafe-sheet").open) $("cafe-sheet").showModal();
 }
 
 async function loadNotice() {
@@ -618,19 +610,17 @@ Object.entries(CAT_MAP).forEach(([key, label]) => {
 $("search").addEventListener("input", handleSearchInput);
 $("nearby-btn").addEventListener("click", handleNearbyClick);
 $("app-title").addEventListener("click", () => location.reload());
-$("modal-bg").addEventListener("click", (event) => {
-  if (event.target === $("modal-bg")) $("modal-bg").style.display = "none";
-});
 $("guide-btn").addEventListener("click", (event) => {
   event.preventDefault();
-  $("guide-bg").style.display = "flex";
+  $("guide-sheet").showModal();
 });
-$("guide-close").addEventListener("click", () => {
-  $("guide-bg").style.display = "none";
-});
-$("guide-bg").addEventListener("click", (event) => {
-  if (event.target === $("guide-bg")) $("guide-bg").style.display = "none";
-});
+// Escape closes a <dialog> natively; a tap on the backdrop (the dialog itself) or 닫기 closes it too.
+for (const sheet of document.querySelectorAll("dialog.sheet")) {
+  sheet.addEventListener("click", (event) => {
+    if (event.target === sheet || event.target.closest(".sheet-close"))
+      sheet.close();
+  });
+}
 $("list").addEventListener("click", (event) => {
   const card = event.target.closest(".cafe-card[data-cafe-id]");
   if (!card) return;

@@ -34,7 +34,7 @@ Public responses never expose the ops memo, reporter token, report reason or sta
 
 Home = ops (choose a column): new [publish][discard] · public [unpublish] · removed [restore][delete for good] ·
 error reports · notice · CSV import · visitors (Cloudflare Web Analytics). Tapping a card edits it.
-Coordinates are auto-filled from the address (`/api/geocode`, Nominatim, admin only — 1 request/s policy).
+Coordinates are auto-filled from the address (`/api/geocode`, Nominatim, admin only — 1 request/s policy). Coordinates outside South Korea (lat 33–39, lng 124–132) are refused on save.
 
 CSV import = new cafes only, as candidates. Cafes with the same address (spaces ignored) are skipped, and if any row is invalid
 nothing is inserted (batch). There is no path that edits existing cafes.
