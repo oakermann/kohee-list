@@ -39,13 +39,13 @@ Coordinates are auto-filled from the address (`/api/geocode`, admin only). Coord
 same path as one publish (`/api/publish-many`), with each row's result shown.
 
 Report intake (`/api/submit`): an address equal (spaces ignored) to a public or waiting cafe is refused (409 "이미 등록된 카페입니다").
-Otherwise the server looks the address up once; if the hit names the address's district (…시/군/구), lat/lng are stored and the
-admin memo says `coords: nominatim (road-level), <matched address>`. A miss, other district, timeout or error stores nothing.
+Otherwise the server looks the address up once on Kakao (address search only; the typed name is never sent); if the hit names the address's district (…시/군/구), lat/lng are stored and the
+admin memo says `coords: kakao address, <matched address>`. A miss, other district, timeout, error or unset key stores nothing.
 Reports stay candidates — nothing is published automatically.
 
-Geocoding = `server/geocode.js` `geocodeAddress`, the one place the provider lives (Nominatim now: identifying User-Agent,
-1 request/s, results cached by callers). The same address already went to Nominatim when the admin opened a report;
-intake only does it earlier. A Naver/Kakao key later = rewrite that one function (and `GEOCODE_SOURCE`).
+Geocoding = `server/geocode.js`, the one place the provider lives (Kakao Local). The key is the Pages secret `KAKAO_REST_KEY`
+(owner's Mac: `~/.config/secrets/kakao-rest-key`), sent only in the Authorization header. Without it intake skips the fill and
+`/api/geocode` answers 503.
 
 ## Admin watch (owner's Mac)
 
@@ -55,9 +55,9 @@ state `~/Library/Application Support/kohee-watch/` (outside the repo). Read-only
 - New candidates (with names), reports and open error reports since the last run → one push through the Ohamma hub
   (`127.0.0.1:4096/notify`, as blueprint-check). User-typed text and `client_id` are never selected or pushed: reports and
   error reports are counts only.
-- Health: every public cafe's range (lat = lng, outside South Korea, none); 20 cafes a run (all within a week) geocoded
-  and compared — farther than 3 km is flagged (11/18 measured on 109 matched cafes: median 0.07 km, p95 2.72 km;
-  Nominatim puts road addresses anywhere on the road, so 1–3 km is noise). Never unpublishes, only pushes.
+- Health: every public cafe's range (lat = lng, outside South Korea, none); every cafe looked up on Kakao
+  (listed place by name near the address, else the address) — farther than 100 m is flagged (11/18 measured on all 128:
+  median 5 m, p95 24 m); not found on Kakao 2 runs in a row is flagged "closed?". Never unpublishes, only pushes.
 - A finding or error is pushed once. `node scripts/admin-watch.mjs --dry-run` prints the push without saving state.
 - Reinstall: `launchctl bootout gui/$(id -u)/com.oakermann.kohee-watch`, edit the plist, `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.oakermann.kohee-watch.plist`.
   The job runs the script from this working copy, so the checked-out branch must contain it.

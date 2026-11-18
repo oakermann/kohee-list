@@ -1,19 +1,20 @@
 // Admin watch tests — the pure parts only (no wrangler, network, hub or state file).
 import assert from "node:assert/strict";
 import {
-  FAR_KM,
+  FAR_M,
+  MISSING_RUNS,
   PUSH_NAMES_MAX,
-  SWEEP_PER_RUN,
   buildMessage,
   distanceProblem,
+  findingsOf,
   freshFindings,
-  haversineKm,
+  haversineM,
   nameList,
+  nextMissing,
   prunePushed,
   queueLines,
   queueNews,
   rangeProblem,
-  rotate,
 } from "./admin-watch.mjs";
 
 const seoul = { lat: 37.5665, lng: 126.978 };
@@ -27,8 +28,8 @@ const cafe = (over = {}) => ({
 });
 
 // haversine: Seoul–Busan is about 325 km; a point to itself is 0.
-assert.ok(Math.abs(haversineKm(seoul, busan) - 325) < 3);
-assert.equal(haversineKm(seoul, seoul), 0);
+assert.ok(Math.abs(haversineM(seoul, busan) - 325000) < 3000);
+assert.equal(haversineM(seoul, seoul), 0);
 
 // range: lat = lng (11/18 브루잉세레모니), swapped, outside, missing.
 assert.equal(rangeProblem(cafe()), "");
@@ -41,43 +42,30 @@ assert.match(rangeProblem(cafe({ lat: 40.1, lng: 127 })), /^한국 밖/);
 assert.equal(rangeProblem(cafe({ lat: 0, lng: 127 })), "좌표 없음");
 assert.equal(rangeProblem(cafe({ lat: 0, lng: 0 })), "좌표 없음");
 
-// distance: flagged only past FAR_KM and only when the hit names the address's district.
-const near = {
-  lat: seoul.lat + 0.02,
-  lng: seoul.lng,
-  label: "연무장길, 성동구, 서울",
-}; // ~2.2 km
-const far = {
-  lat: seoul.lat + 0.05,
-  lng: seoul.lng,
-  label: "연무장길, 성동구, 서울",
-}; // ~5.6 km
-assert.ok(
-  haversineKm(seoul, near) < FAR_KM && haversineKm(seoul, far) > FAR_KM,
-);
+// distance: flagged only past FAR_M.
+const near = { lat: seoul.lat + 0.0005, lng: seoul.lng }; // ~56 m
+const far = { lat: seoul.lat + 0.002, lng: seoul.lng }; // ~222 m
+assert.ok(haversineM(seoul, near) < FAR_M && haversineM(seoul, far) > FAR_M);
 assert.equal(distanceProblem(cafe(), near), "");
-assert.equal(distanceProblem(cafe(), far), "주소와 5.6km");
-assert.equal(distanceProblem(cafe(), { ...far, label: "해운대구, 부산" }), "");
+assert.equal(distanceProblem(cafe(), far), "카카오 위치와 222m");
 assert.equal(distanceProblem(cafe(), null), "");
 
-// rotation: id order, wraps, every cafe once per ceil(n / size) runs.
-const many = Array.from({ length: 45 }, (_, i) =>
-  cafe({ id: `c${String(i).padStart(2, "0")}` }),
-);
-const seen = new Set();
-let cursor = 0;
-for (let run = 0; run < Math.ceil(45 / SWEEP_PER_RUN); run += 1) {
-  const { slice, next } = rotate(many.toReversed(), cursor);
-  slice.forEach((c) => seen.add(c.id));
-  cursor = next;
-}
-assert.equal(seen.size, 45);
-assert.equal(cursor, (3 * SWEEP_PER_RUN) % 45);
+// missing streaks: not found counts up, found drops out, a failed lookup keeps the old count.
+const [a, b, c] = ["a", "b", "c"].map((id) => cafe({ id }));
 assert.deepEqual(
-  rotate(many.slice(0, 3), 2).slice.map((c) => c.id),
-  ["c02", "c00", "c01"],
+  nextMissing({ a: 1, b: 1, c: 1 }, [
+    { cafe: a, place: null },
+    { cafe: b, place: near },
+    { cafe: c, failed: true },
+  ]),
+  { a: 2, c: 1 },
 );
-assert.deepEqual(rotate([], 7), { slice: [], next: 0 });
+assert.deepEqual(
+  findingsOf([{ cafe: a, place: null, point: far }], { a: MISSING_RUNS }).map(
+    (f) => f.key,
+  ),
+  [`far:a:${seoul.lat},${seoul.lng}`, "missing:a"],
+);
 
 // queue diff: only ids not seen last run; user reports and error reports are counts only.
 const queues = {

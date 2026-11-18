@@ -11,7 +11,7 @@ export async function handle(req, env) {
     if (!route) throw new HttpError(404, "Not found");
     return await route[2](req, env);
   } catch (error) {
-    if (error instanceof HttpError && error.status < 500) {
+    if (error instanceof HttpError) {
       return json(
         { ok: false, error: error.message, code: error.code },
         error.status,

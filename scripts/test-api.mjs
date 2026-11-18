@@ -5,16 +5,22 @@ import { DatabaseSync } from "node:sqlite";
 import { handle } from "../server/app.js";
 import { SUBMIT_DAILY_CAP } from "../server/cafes.js";
 import { parseCsv } from "../server/csv.js";
-import { GEOCODE_USER_AGENT } from "../server/geocode.js";
 
 // Geocoder stand-in: tests set the reply; the real network is never called. Default = no match.
-let geocoder = async () => new Response("[]");
+const NO_HIT = async () => new Response('{"documents":[]}');
+let geocoder = NO_HIT;
 globalThis.fetch = (url, init) => geocoder(url, init);
 const geocodeHit = (lat, lng, label) => async () =>
   new Response(
-    JSON.stringify([
-      { lat: String(lat), lon: String(lng), display_name: label },
-    ]),
+    JSON.stringify({
+      documents: [
+        {
+          y: String(lat),
+          x: String(lng),
+          road_address: { address_name: label },
+        },
+      ],
+    }),
   );
 
 function fakeD1() {
@@ -48,7 +54,11 @@ function fakeD1() {
   return { prepare, batch, raw: db };
 }
 
-const env = { DB: fakeD1(), ADMIN_PASSWORD: "test-admin-password-123" };
+const env = {
+  DB: fakeD1(),
+  ADMIN_PASSWORD: "test-admin-password-123",
+  KAKAO_REST_KEY: "test-kakao-key",
+};
 let adminCookie = "";
 
 async function call(method, path, body, { cookie = adminCookie, raw } = {}) {
@@ -266,8 +276,8 @@ const row = (id) =>
 
   let asked;
   geocoder = async (url, init) => {
-    asked = { url, ua: init.headers["User-Agent"] };
-    return geocodeHit(37.5446, 127.0557, "성수이로, 성수동2가, 성동구, 서울")();
+    asked = { url, auth: init.headers.Authorization };
+    return geocodeHit(37.5446, 127.0557, "서울 성동구 성수이로 22")();
   };
   const hit = row(
     (await submit({ address: "서울 성동구 성수이로 22 (성수동) 3층" })).body.id,
@@ -276,12 +286,14 @@ const row = (id) =>
     [hit.lat, hit.lng, hit.status],
     [37.5446, 127.0557, "candidate"],
   );
-  assert.equal(
-    hit.memo,
-    "coords: nominatim (road-level), 성수이로, 성수동2가, 성동구, 서울",
+  assert.equal(hit.memo, "coords: kakao address, 서울 성동구 성수이로 22");
+  assert.equal(asked.auth, "KakaoAK test-kakao-key");
+  const sent = new URL(asked.url);
+  assert.equal(sent.pathname, "/v2/local/search/address.json");
+  assert.deepEqual(
+    [...sent.searchParams],
+    [["query", "서울 성동구 성수이로 22"]],
   );
-  assert.equal(asked.ua, GEOCODE_USER_AGENT);
-  assert.match(decodeURIComponent(asked.url), /q=서울 성동구 성수이로 22$/);
 
   const noCoords = async (reply, address = "서울 성동구 성수이로 30") => {
     geocoder = reply;
@@ -289,14 +301,10 @@ const row = (id) =>
     assert.equal(res.status, 201);
     return [row(res.body.id).lat, row(res.body.id).memo];
   };
-  assert.deepEqual(
-    await noCoords(async () => new Response("[]")),
-    [0, ""],
-    "miss",
-  );
+  assert.deepEqual(await noCoords(NO_HIT), [0, ""], "miss");
   assert.deepEqual(
     await noCoords(
-      geocodeHit(35.1, 129.0, "성수로, 부산진구, 부산"),
+      geocodeHit(35.1, 129.0, "부산 부산진구 성수로 31"),
       "서울 성동구 성수이로 31",
     ),
     [0, ""],
@@ -317,7 +325,16 @@ const row = (id) =>
     [0, ""],
     "geocoder refused",
   );
-  geocoder = async () => new Response("[]");
+  delete env.KAKAO_REST_KEY;
+  assert.deepEqual(
+    await noCoords(async () => {
+      throw new Error("must not be called without a key");
+    }, "서울 성동구 성수이로 34"),
+    [0, ""],
+    "no key = no lookup",
+  );
+  env.KAKAO_REST_KEY = "test-kakao-key";
+  geocoder = NO_HIT;
 }
 
 // ---- bulk publish: every row through the single publish path, one failure does not stop the rest ----
@@ -457,6 +474,9 @@ const row = (id) =>
     [hit.body.lat, hit.body.lng, hit.body.label],
     [37.5, 127, "성수동"],
   );
+  delete env.KAKAO_REST_KEY;
+  assert.equal((await call("GET", "/geocode?q=성수동")).status, 503);
+  env.KAKAO_REST_KEY = "test-kakao-key";
 }
 
 console.log("[api] ok");

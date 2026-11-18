@@ -2,7 +2,7 @@
 //   public = status 'approved' AND deleted_at IS NULL  (the only condition for showing on the site)
 //   candidate = status 'candidate' — admin entries, CSV, user reports (with client_id)
 //   removed = deleted_at set — discarded reports, unpublished cafes. Restoring returns the original status.
-import { GEOCODE_SOURCE, geocodeAddress, matchesDistrict } from "./geocode.js";
+import { geocodeAddress, matchesDistrict } from "./geocode.js";
 import {
   HttpError,
   addressKey,
@@ -212,10 +212,11 @@ async function assertNewAddress(env, address) {
 
 // Coordinates for a report, only when the hit names the address's district. Nothing is published by this;
 // the admin still checks and publishes. A failed lookup leaves the report as before (no coordinates).
-async function coordsFromAddress(address) {
+async function coordsFromAddress(address, key) {
+  if (!key) return {};
   let hit;
   try {
-    hit = await geocodeAddress(address);
+    hit = await geocodeAddress(address, key);
   } catch (error) {
     console.error("report geocode failed", error.message);
     return {};
@@ -223,7 +224,7 @@ async function coordsFromAddress(address) {
   if (!hit || !matchesDistrict(address, hit.label) || outsideKorea(hit)) {
     return {};
   }
-  const memo = cleanText(`coords: ${GEOCODE_SOURCE}, ${hit.label}`, 500);
+  const memo = cleanText(`coords: kakao address, ${hit.label}`, 500);
   return { lat: hit.lat, lng: hit.lng, memo };
 }
 
@@ -238,7 +239,10 @@ export async function submitCafe(req, env) {
   });
   await assertUnderDailyCap(env, "cafes");
   await assertNewAddress(env, cafe.address);
-  Object.assign(cafe, await coordsFromAddress(cafe.address));
+  Object.assign(
+    cafe,
+    await coordsFromAddress(cafe.address, env.KAKAO_REST_KEY),
+  );
   const { id, statement } = insertCafeStatement(env, cafe, {
     client_id: clientId,
     reason: cleanText(body.reason, 1000),
@@ -401,10 +405,11 @@ export async function setNotice(req, env) {
 }
 
 // Address → coordinates for the admin form; the admin checks the label (district, neighbourhood) by eye.
-export async function geocode(req) {
+export async function geocode(req, env) {
+  if (!env.KAKAO_REST_KEY) throw new HttpError(503, "Geocoding not configured");
   const q = cleanText(new URL(req.url).searchParams.get("q"), 80);
   if (q.length < 2) throw new HttpError(400, "Query too short");
-  const hit = await geocodeAddress(q);
+  const hit = await geocodeAddress(q, env.KAKAO_REST_KEY);
   if (!hit) throw new HttpError(404, "Address not found");
   return json({ ok: true, ...hit });
 }
