@@ -354,6 +354,16 @@ footer {
   gap: 8px;
   word-break: keep-all;
 }
+/* Guide lines match the site's other copy (size/weight) instead of the 16px/400 default */
+.modal-copy > div {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.modal-copy .tag-small {
+  vertical-align: 0.1em;
+  margin-right: 4px;
+}
 .modal-copy-text {
   padding: 12px;
   border: 1px dashed var(--border);
