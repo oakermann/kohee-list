@@ -479,4 +479,44 @@ const row = (id) =>
   env.KAKAO_REST_KEY = "test-kakao-key";
 }
 
+// ---- cafe check: stored pin vs Kakao (address point, then the listing with the same name) ----
+{
+  const { id } = (await call("POST", "/add", cafe({ name: "핀카페" }))).body;
+  assert.equal(
+    (await call("GET", `/cafe-check?id=${id}`, undefined, { cookie: "" }))
+      .status,
+    401,
+  );
+  // Kakao answers address and keyword searches; the listing is 300 m east of the stored pin.
+  const kakao = (placeName) => async (url) => {
+    const keyword = String(url).includes("/keyword");
+    return new Response(
+      JSON.stringify({
+        documents: [
+          {
+            y: "37.54",
+            x: keyword ? "127.0534" : "127.05",
+            place_name: placeName,
+            road_address_name: "서울 성동구 연무장길 1",
+            place_url: "http://place.map.kakao.com/1",
+            road_address: { address_name: "서울 성동구 연무장길 1" },
+          },
+        ],
+      }),
+    );
+  };
+  geocoder = kakao("핀카페");
+  const far = (await call("GET", `/cafe-check?id=${id}`)).body;
+  assert.equal(far.problems.length, 1);
+  assert.match(far.problems[0], /^카카오 위치와 \d+m$/);
+  assert.equal(far.pinOff, true);
+  assert.equal(far.kakao.placeUrl, "http://place.map.kakao.com/1");
+  geocoder = kakao("다른가게");
+  assert.deepEqual((await call("GET", `/cafe-check?id=${id}`)).body.problems, [
+    "카카오에 같은 이름 없음 (폐업·이름 바뀜?)",
+  ]);
+  geocoder = NO_HIT;
+  assert.equal((await call("GET", "/cafe-check?id=nope")).status, 404);
+}
+
 console.log("[api] ok");

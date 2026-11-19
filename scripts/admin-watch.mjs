@@ -12,8 +12,12 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { hasValidCoords, outsideKorea } from "../server/cafes.js";
-import { findPlace, geocodeAddress } from "../server/geocode.js";
+import {
+  distanceProblem,
+  haversineM,
+  lookUpCafe,
+  rangeProblem,
+} from "../server/health.js";
 
 const SITE = "https://kohee.pages.dev";
 const ADMIN_URL = `${SITE}/admin`;
@@ -28,14 +32,10 @@ const STATE_DIR = path.join(
   "Library/Application Support/kohee-watch",
 );
 const STATE_FILE = path.join(STATE_DIR, "state.json");
-// Measured 11/18, stored vs Kakao (place, else address) for all 128: median 5 m, p95 24 m, then 149, 261, 588 m.
-// Kakao is building/place level, so anything past 100 m is a misplaced pin, not noise.
-export const FAR_M = 100;
 export const MISSING_RUNS = 2; // not found on Kakao this many runs in a row → "closed?"
 export const PUSH_NAMES_MAX = 5;
 const HUB_TIMEOUT_MS = 5000;
 const WRANGLER_TIMEOUT_MS = 60000;
-const EARTH_RADIUS_M = 6371000;
 const QUEUE_SQL = [
   "SELECT id, name FROM cafes WHERE status = 'candidate' AND deleted_at IS NULL AND client_id IS NULL",
   "SELECT id FROM cafes WHERE status = 'candidate' AND deleted_at IS NULL AND client_id IS NOT NULL",
@@ -44,32 +44,6 @@ const QUEUE_SQL = [
 const QUEUES = ["candidates", "submissions", "errorReports"];
 
 // ---- pure parts (scripts/test-admin-watch.mjs) ----
-
-export function haversineM(a, b) {
-  const rad = (deg) => (deg * Math.PI) / 180;
-  const h =
-    Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
-    Math.cos(rad(a.lat)) *
-      Math.cos(rad(b.lat)) *
-      Math.sin(rad(b.lng - a.lng) / 2) ** 2;
-  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
-}
-
-// What is wrong with a public cafe's coordinates on their own, or "" when nothing.
-export function rangeProblem(cafe) {
-  if (outsideKorea(cafe)) {
-    return cafe.lat === cafe.lng
-      ? `위도=경도 ${Number(cafe.lat).toFixed(4)}`
-      : `한국 밖 ${cafe.lat}, ${cafe.lng}`;
-  }
-  return hasValidCoords(cafe) ? "" : "좌표 없음";
-}
-
-export function distanceProblem(cafe, reference) {
-  if (!reference) return "";
-  const m = haversineM(cafe, reference);
-  return m > FAR_M ? `카카오 위치와 ${Math.round(m)}m` : "";
-}
 
 // Runs in a row each cafe was not found on Kakao. Found cafes drop out; a failed lookup keeps the old count.
 export function nextMissing(previous, results) {
@@ -183,13 +157,9 @@ async function fetchPublicCafes() {
   return res.json();
 }
 
-// The address point, then the listing near it (or near the stored pin when the address does not resolve).
 async function lookUp(cafe, key) {
   try {
-    const point = await geocodeAddress(cafe.address, key);
-    const near = point || (rangeProblem(cafe) ? null : cafe);
-    const place = near ? await findPlace(cafe.name, near, key) : null;
-    return { cafe, point, place, failed: false };
+    return { cafe, ...(await lookUpCafe(cafe, key)), failed: false };
   } catch (error) {
     return { cafe, failed: true, error: error.message };
   }

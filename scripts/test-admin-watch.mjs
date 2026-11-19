@@ -2,19 +2,21 @@
 import assert from "node:assert/strict";
 import {
   FAR_M,
+  distanceProblem,
+  haversineM,
+  rangeProblem,
+} from "../server/health.js";
+import {
   MISSING_RUNS,
   PUSH_NAMES_MAX,
   buildMessage,
-  distanceProblem,
   findingsOf,
   freshFindings,
-  haversineM,
   nameList,
   nextMissing,
   prunePushed,
   queueLines,
   queueNews,
-  rangeProblem,
 } from "./admin-watch.mjs";
 
 const seoul = { lat: 37.5665, lng: 126.978 };
