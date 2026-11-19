@@ -2,7 +2,11 @@
 //   public = status 'approved' AND deleted_at IS NULL  (the only condition for showing on the site)
 //   candidate = status 'candidate' — admin entries, CSV, user reports (with client_id)
 //   removed = deleted_at set — discarded reports, unpublished cafes. Restoring returns the original status.
-import { geocodeAddress, matchesDistrict } from "./geocode.js";
+import {
+  GEOCODE_QUERY_MAX,
+  geocodeAddress,
+  matchesDistrict,
+} from "./geocode.js";
 import {
   HttpError,
   addressKey,
@@ -17,13 +21,13 @@ import {
   text,
 } from "./shared.js";
 
-export const CATEGORIES = ["espresso", "drip", "decaf", "instagram", "dessert"];
+const CATEGORIES = ["espresso", "drip", "decaf", "instagram", "dessert"];
 // No login, so flooding is stopped by a site-wide daily cap — reports only show once the admin publishes them anyway.
 export const SUBMIT_DAILY_CAP = 30;
 // Every cafe is in South Korea. Outside this box = a typo or swapped/copied lat and lng (0 = no coordinates yet).
 const KOREA_BOUNDS = { lat: [33, 39], lng: [124, 132] };
 // One bulk publish is a reviewed handful of candidates, not the whole table.
-export const BULK_PUBLISH_MAX = 100;
+const BULK_PUBLISH_MAX = 100;
 
 const PUBLIC_COLUMNS =
   "id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, category, oakerman_pick, updated_at";
@@ -61,7 +65,7 @@ function toAdminCafe(row) {
   };
 }
 
-export function parseCategories(value) {
+function parseCategories(value) {
   const categories = parseJsonArray(value);
   if (categories.some((category) => !CATEGORIES.includes(category))) {
     throw new HttpError(400, "Invalid category value");
@@ -92,6 +96,16 @@ export function outsideKorea({ lat, lng }) {
     }
   }
   return "";
+}
+
+function assertCoords(cafe) {
+  if (!hasValidCoords(cafe)) {
+    throw new HttpError(
+      400,
+      "Cafe coordinates (lat/lng) are required",
+      "COORDS_REQUIRED",
+    );
+  }
 }
 
 export function normalizeCafe(body) {
@@ -298,13 +312,7 @@ export async function editCafe(req, env) {
   const body = await readJson(req);
   const existing = await findCafe(env, body.id);
   const cafe = normalizeCafe(body);
-  if (existing.status === "approved" && !hasValidCoords(cafe)) {
-    throw new HttpError(
-      400,
-      "Cafe coordinates (lat/lng) are required",
-      "COORDS_REQUIRED",
-    );
-  }
+  if (existing.status === "approved") assertCoords(cafe);
   await env.DB.prepare(
     `UPDATE cafes SET ${CAFE_FIELDS.map((f) => `${f} = ?`).join(", ")}, updated_at = ?
      WHERE id = ?`,
@@ -319,13 +327,7 @@ async function publishOne(env, id) {
   const cafe = await findCafe(env, id);
   if (cafe.deleted_at)
     throw new HttpError(400, "Restore cafe before publishing");
-  if (!hasValidCoords(cafe)) {
-    throw new HttpError(
-      400,
-      "Cafe coordinates (lat/lng) are required",
-      "COORDS_REQUIRED",
-    );
-  }
+  assertCoords(cafe);
   await env.DB.prepare(
     "UPDATE cafes SET status = 'approved', updated_at = ? WHERE id = ?",
   )
@@ -407,7 +409,10 @@ export async function setNotice(req, env) {
 // Address → coordinates for the admin form; the admin checks the label (district, neighbourhood) by eye.
 export async function geocode(req, env) {
   if (!env.KAKAO_REST_KEY) throw new HttpError(503, "Geocoding not configured");
-  const q = cleanText(new URL(req.url).searchParams.get("q"), 80);
+  const q = cleanText(
+    new URL(req.url).searchParams.get("q"),
+    GEOCODE_QUERY_MAX,
+  );
   if (q.length < 2) throw new HttpError(400, "Query too short");
   const hit = await geocodeAddress(q, env.KAKAO_REST_KEY);
   if (!hit) throw new HttpError(404, "Address not found");
