@@ -23,6 +23,7 @@ import {
   resolveErrorReport,
   submitErrorReport,
 } from "./errorReports.js";
+import { checkCafe } from "./health.js";
 
 const PUBLIC_ROUTES = [
   ["GET", "/data", getData],
@@ -48,6 +49,7 @@ const ADMIN_ROUTES = [
   ["POST", "/notice", setNotice],
   ["POST", "/import-csv", importCsv],
   ["GET", "/geocode", geocode],
+  ["GET", "/cafe-check", checkCafe],
   ["GET", "/error-reports", listErrorReports],
   ["POST", "/reply-error-report", replyErrorReport],
   ["POST", "/resolve-error-report", resolveErrorReport],

@@ -171,7 +171,7 @@ export function insertCafeStatement(env, cafe, extra = {}) {
   };
 }
 
-async function findCafe(env, id) {
+export async function findCafe(env, id) {
   const cafe = await env.DB.prepare("SELECT * FROM cafes WHERE id = ?")
     .bind(cleanText(id, 80))
     .first();
