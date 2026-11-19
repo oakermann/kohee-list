@@ -1,4 +1,4 @@
-// Error reports — taken without login; the reporter sees answers through the browser token (client_id).
+﻿// 오류 제보 — 로그인 없이 받고, 제보자는 브라우저 표(client_id)로 답변을 본다.
 import {
   HttpError,
   cleanClientId,

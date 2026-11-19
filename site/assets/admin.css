@@ -93,12 +93,6 @@ select {
   border-radius: 0;
   outline: none;
 }
-/* focus ring inside the field, so it does not touch the heading rule above */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline-offset: -1px;
-}
 input::placeholder,
 textarea::placeholder {
   color: var(--faint);
