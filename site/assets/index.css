@@ -238,7 +238,6 @@ h1 {
   border: 1px solid var(--border);
   padding: 2px 6px;
   font-weight: 900;
-  margin-right: 0;
   background: var(--card);
   line-height: 1.2;
   white-space: nowrap;
@@ -353,6 +352,12 @@ footer {
   display: grid;
   gap: 8px;
   word-break: keep-all;
+}
+/* display guide: badge, then its meaning — the gap leaves room for the pick badge's shadow */
+.guide-list > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .modal-copy-text {
   padding: 12px;
