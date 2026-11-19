@@ -33,7 +33,7 @@ body {
 .hero-title {
   padding: 18px 14px 8px;
   font-size: clamp(1.5rem, 6.5vw, 2.15rem);
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.04rem;
 }
@@ -41,7 +41,7 @@ body {
 .account-line {
   padding: 0 16px 14px;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.55;
   opacity: 0.82;
   word-break: keep-all;
@@ -66,7 +66,7 @@ body {
   padding: 11px 12px 9px;
   text-align: center;
   font-size: 0.94rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.25;
   word-break: keep-all;
 }
@@ -130,7 +130,7 @@ body {
   justify-content: center;
   gap: 10px;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .copyright {
