@@ -31,7 +31,7 @@ export function parseCsv(text) {
       cell = "";
     } else cell += ch;
   }
-  if (quoted) throw new HttpError(400, "Malformed CSV", "VALIDATION_ERROR");
+  if (quoted) throw new HttpError(400, "Malformed CSV");
   row.push(cell);
   rows.push(row);
   return rows.filter((cells) => cells.some((value) => value.trim()));
@@ -72,11 +72,9 @@ async function analyzeCsv(raw, env) {
     throw new HttpError(
       400,
       `Missing required CSV headers: ${missing.join(", ")}`,
-      "VALIDATION_ERROR",
     );
   }
-  if (!body.length)
-    throw new HttpError(400, "CSV is empty", "VALIDATION_ERROR");
+  if (!body.length) throw new HttpError(400, "CSV is empty");
 
   const existing = await env.DB.prepare(
     "SELECT name, address FROM cafes",

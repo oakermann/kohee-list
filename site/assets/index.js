@@ -2,9 +2,8 @@ import {
   $,
   CAT_MAP,
   api,
-  buildNaverMapUrls,
   favoriteIds,
-  getCity,
+  fetchNotice,
   openNaverMapForCafe,
   safeHttpUrl,
   shareCafe,
@@ -14,7 +13,6 @@ import {
 let data = [];
 let selectedCategory = null;
 let nearbyMode = false;
-let openModalCafeId = "";
 
 // Ask only once: precise GPS is slow indoors and on PCs, and a location less than 1 minute old is reused.
 const GEO_OPTIONS = {
@@ -24,119 +22,58 @@ const GEO_OPTIONS = {
 };
 const GEO_APPROX_THRESHOLD_M = 1200;
 const GEO_UNRELIABLE_ACCURACY_M = 5000;
-// Sentinel distance for cafes without usable coordinates (kept out of results).
-const GEO_DISTANCE_LIMIT_KM = 9999;
 // Actual "near me" radius. Cafes farther than this are not shown in nearby mode.
 // Tune this single value to widen/narrow the nearby search.
 const GEO_NEARBY_RADIUS_KM = 20;
+const NEARBY_MAX = 20; // closest cafes shown in 'near me'
+const RESULTS_MAX = 50; // best search/category matches shown
 
 let lastPositionAccuracyM = null;
-
-async function shareCafeMap(cafe) {
-  const text = `[코히 리스트] ${cafe.name}\n주소: ${cafe.address}`;
-  const keyword = cafe.name
-    ? `${cafe.name} ${getCity(cafe.address || "")}`
-    : "";
-  const mapUrl = keyword ? buildNaverMapUrls(keyword).webUrl : "";
-
-  if (mapUrl) {
-    return shareCafe(cafe, mapUrl);
-  }
-
-  if (navigator.share) {
-    await navigator.share({
-      title: "코히 리스트 공유",
-      text,
-    });
-    return "shared";
-  }
-
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return "copied";
-  }
-
-  throw new Error(text);
-}
 
 function cafeCategories(cafe) {
   return cafe.category.filter((tag) => CAT_MAP[tag]);
 }
 
-function cafeTags(cafe) {
-  return cafeCategories(cafe).map((tag) => CAT_MAP[tag]);
+function tagSpan(className, text) {
+  const item = document.createElement("span");
+  item.className = className;
+  item.textContent = text;
+  return item;
 }
 
-function makePickBadge() {
-  const badge = document.createElement("span");
-  badge.className = "tag-small tag-pick";
-  badge.textContent = "오커맨픽";
-  return badge;
-}
-
-function appendLines(node, lines) {
-  lines.forEach((line, index) => {
-    if (index > 0) node.appendChild(document.createElement("br"));
-    node.appendChild(document.createTextNode(line));
-  });
+// '오커맨픽' first, then the category tags.
+function fillTags(container, cafe) {
+  const tags = cafeCategories(cafe).map((key) =>
+    tagSpan("tag-small", CAT_MAP[key]),
+  );
+  if (cafe.oakerman_pick)
+    tags.unshift(tagSpan("tag-small tag-pick", "오커맨픽"));
+  container.replaceChildren(...tags);
 }
 
 function renderCenterMessage(lines) {
   const message = document.createElement("div");
   message.className = "center-msg";
-  appendLines(message, Array.isArray(lines) ? lines : [lines]);
+  [lines].flat().forEach((line, index) => {
+    if (index) message.append(document.createElement("br"));
+    message.append(line);
+  });
   $("list").replaceChildren(message);
 }
 
-function setButtonAction(id, handler) {
-  const current = $(id);
-  const next = current.cloneNode(true);
-  current.replaceWith(next);
-  if (handler) next.addEventListener("click", handler);
-  return next;
-}
-
-function appendTags(container, cafe) {
-  container.replaceChildren();
-  cafeTags(cafe).forEach((tag) => {
-    const item = document.createElement("span");
-    item.className = "tag-small";
-    item.textContent = tag;
-    container.appendChild(item);
-  });
-}
-
-function signatureText(values) {
-  return values.join(", ");
-}
-
-function updateFavoriteButton(cafeId = openModalCafeId) {
+function updateFavoriteButton(cafeId) {
   const btn = $("btn-favorite");
-  if (!btn) return;
   const favored = favoriteIds().has(cafeId);
-  btn.style.display = cafeId ? "inline-flex" : "none";
   btn.textContent = favored ? "★" : "☆";
   btn.classList.toggle("is-on", favored);
 }
 
 function formatDistance(distanceKm) {
-  if (!Number.isFinite(distanceKm) || distanceKm >= GEO_DISTANCE_LIMIT_KM)
-    return "";
+  if (!Number.isFinite(distanceKm)) return "";
   const label = `${distanceKm.toFixed(1)}km`;
   return lastPositionAccuracyM && lastPositionAccuracyM > GEO_APPROX_THRESHOLD_M
     ? `약 ${label}`
     : label;
-}
-
-function centerMessage(message, subMessage = "") {
-  const box = document.createElement("div");
-  box.className = "center-msg";
-  box.textContent = message;
-  if (subMessage) {
-    box.appendChild(document.createElement("br"));
-    box.append(subMessage);
-  }
-  return box;
 }
 
 function createCafeCard(cafe) {
@@ -151,24 +88,19 @@ function createCafeCard(cafe) {
 
   const tagGroup = document.createElement("span");
   tagGroup.className = "tag-group";
-  appendTags(tagGroup, cafe);
-  if (cafe.oakerman_pick) tagGroup.prepend(makePickBadge());
+  fillTags(tagGroup, cafe);
   meta.appendChild(tagGroup);
 
-  const metaRight = document.createElement("span");
-  metaRight.className = "meta-right";
-
-  if (cafe.dis !== undefined && cafe.dis < GEO_DISTANCE_LIMIT_KM) {
-    const distance = formatDistance(cafe.dis);
-    if (distance) {
-      const badge = document.createElement("span");
-      badge.className = "distance-badge";
-      badge.textContent = distance;
-      metaRight.appendChild(badge);
-    }
+  const distance = formatDistance(cafe.dis);
+  if (distance) {
+    const metaRight = document.createElement("span");
+    metaRight.className = "meta-right";
+    const badge = document.createElement("span");
+    badge.className = "distance-badge";
+    badge.textContent = distance;
+    metaRight.appendChild(badge);
+    meta.appendChild(metaRight);
   }
-
-  if (metaRight.childElementCount) meta.appendChild(metaRight);
 
   const title = document.createElement("span");
   title.className = "cafe-name";
@@ -177,7 +109,7 @@ function createCafeCard(cafe) {
   const desc = document.createElement("span");
   desc.className = "cafe-desc";
   desc.textContent = cafe.desc;
-  const signature = signatureText(cafe.signature);
+  const signature = cafe.signature.join(", ");
   if (signature) {
     desc.append(" ");
     const sig = document.createElement("span");
@@ -202,13 +134,12 @@ function renderModalDescription(desc, signature) {
   const wrap = $("m-desc");
   wrap.replaceChildren();
 
-  const copy = desc;
-  const signatureValue = signatureText(signature);
+  const signatureValue = signature.join(", ");
 
-  if (copy) {
+  if (desc) {
     const copyEl = document.createElement("div");
     copyEl.className = "modal-copy-text";
-    copyEl.textContent = copy;
+    copyEl.textContent = desc;
     wrap.appendChild(copyEl);
   }
 
@@ -218,7 +149,7 @@ function renderModalDescription(desc, signature) {
 
     const label = document.createElement("div");
     label.className = "modal-signature-label";
-    label.textContent = "\uB300\uD45C\uBA54\uB274";
+    label.textContent = "대표메뉴";
 
     const value = document.createElement("div");
     value.className = "modal-signature-value";
@@ -228,11 +159,10 @@ function renderModalDescription(desc, signature) {
     wrap.appendChild(box);
   }
 
-  if (!copy && !signatureValue) {
+  if (!desc && !signatureValue) {
     const empty = document.createElement("div");
     empty.className = "modal-copy-empty";
-    empty.textContent =
-      "\uC18C\uAC1C\uAC00 \uC544\uC9C1 \uC5C6\uC2B5\uB2C8\uB2E4.";
+    empty.textContent = "소개가 아직 없습니다.";
     wrap.appendChild(empty);
   }
 }
@@ -240,19 +170,20 @@ function renderModalDescription(desc, signature) {
 async function loadData() {
   try {
     const response = await api("/data");
-    if (!response.ok) throw new Error();
-    const rows = await response.json();
-    data = rows;
-    render();
-    // The mypage saved list opens index.html?cafe=<id>.
-    const linked = new URLSearchParams(location.search).get("cafe");
-    if (linked) openModal(linked);
-  } catch {
+    if (!response.ok) throw new Error(`/data HTTP ${response.status}`);
+    data = await response.json();
+  } catch (error) {
+    console.error("cafe data load failed", error);
     renderCenterMessage([
       "데이터를 불러오지 못했습니다.",
       "잠시 후 다시 시도해 주세요.",
     ]);
+    return;
   }
+  render();
+  // The mypage saved list opens index.html?cafe=<id>.
+  const linked = new URLSearchParams(location.search).get("cafe");
+  if (linked) openModal(linked);
 }
 
 // Search ranks, it does not filter.
@@ -282,9 +213,7 @@ function render() {
   if (nearbyMode) {
     // Composition rule: when nearbyMode is on AND selectedCategory is set,
     // first filter cafes by that category then apply the distance sort and radius cap.
-    let located = data.filter(
-      (cafe) => Number.isFinite(cafe.dis) && cafe.dis < GEO_DISTANCE_LIMIT_KM,
-    );
+    let located = data.filter((cafe) => Number.isFinite(cafe.dis));
 
     if (selectedCategory) {
       located = located.filter((cafe) =>
@@ -294,37 +223,25 @@ function render() {
 
     // No cafe has usable coordinates -> the cause is missing cafe data, not GPS.
     if (!located.length) {
-      if (selectedCategory) {
-        renderCenterMessage([
-          "해당 카테고리의 주변 카페 위치 정보가 부족합니다.",
-          "카페명 또는 주소로 검색해 주세요.",
-        ]);
-      } else {
-        renderCenterMessage([
-          "주변 카페의 위치 정보가 아직 부족합니다.",
-          "카페명 또는 주소로 검색해 주세요.",
-        ]);
-      }
+      renderCenterMessage([
+        selectedCategory
+          ? "해당 카테고리의 주변 카페 위치 정보가 부족합니다."
+          : "주변 카페의 위치 정보가 아직 부족합니다.",
+        "카페명 또는 주소로 검색해 주세요.",
+      ]);
       return;
     }
 
     const nearbyCafes = located
       .filter((cafe) => cafe.dis <= GEO_NEARBY_RADIUS_KM)
       .sort((a, b) => a.dis - b.dis)
-      .slice(0, 20);
+      .slice(0, NEARBY_MAX);
 
     if (!nearbyCafes.length) {
-      if (selectedCategory) {
-        renderCenterMessage([
-          `${GEO_NEARBY_RADIUS_KM}km 이내에 해당 카테고리로 등록된 카페가 없습니다.`,
-          "카페명 또는 주소로 검색해 보세요.",
-        ]);
-      } else {
-        renderCenterMessage([
-          `${GEO_NEARBY_RADIUS_KM}km 이내에 등록된 카페가 없습니다.`,
-          "카페명 또는 주소로 검색해 보세요.",
-        ]);
-      }
+      renderCenterMessage([
+        `${GEO_NEARBY_RADIUS_KM}km 이내에 ${selectedCategory ? "해당 카테고리로 " : ""}등록된 카페가 없습니다.`,
+        "카페명 또는 주소로 검색해 보세요.",
+      ]);
       return;
     }
 
@@ -348,7 +265,7 @@ function render() {
         (!selectedCategory || cafeCategories(cafe).includes(selectedCategory)),
     )
     .sort((left, right) => matchScore(right, query) - matchScore(left, query))
-    .slice(0, 50);
+    .slice(0, RESULTS_MAX);
 
   if (!filtered.length) {
     renderCenterMessage("조건에 맞는 결과가 없습니다.");
@@ -358,29 +275,22 @@ function render() {
   renderCafeCards(filtered);
 }
 
-function clearCategorySelection() {
-  selectedCategory = null;
-  document
-    .querySelectorAll(".tab")
-    .forEach((tab) => tab.classList.remove("active"));
+function selectCategory(categoryKey) {
+  selectedCategory = categoryKey;
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.id === `tab-${categoryKey}`);
+  });
 }
 
 function toggleFilter(categoryKey) {
   if (selectedCategory !== categoryKey) $("search").value = "";
-  selectedCategory = selectedCategory === categoryKey ? null : categoryKey;
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.classList.remove("active");
-    if (selectedCategory && tab.id === `tab-${selectedCategory}`)
-      tab.classList.add("active");
-  });
+  selectCategory(selectedCategory === categoryKey ? null : categoryKey);
   render();
 }
 
 function handleSearchInput() {
   if (nearbyMode) exitNearbyMode();
-  if ($("search").value.trim().length > 0) {
-    clearCategorySelection();
-  }
+  if ($("search").value.trim()) selectCategory(null);
   render();
 }
 
@@ -397,34 +307,19 @@ function getDist(lat1, lon1, lat2, lon2) {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function isValidCafeCoord(cafe) {
-  const lat = Number(cafe.lat);
-  const lng = Number(cafe.lng);
+// 0,0 = no coordinates stored.
+function isValidCoord(lat, lng) {
   return (
     Number.isFinite(lat) &&
     Number.isFinite(lng) &&
-    lat >= -90 &&
-    lat <= 90 &&
-    lng >= -180 &&
-    lng <= 180 &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180 &&
     !(lat === 0 && lng === 0)
-  );
-}
-
-function isValidUserCoord(lat, lng) {
-  return (
-    Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    lat >= -90 &&
-    lat <= 90 &&
-    lng >= -180 &&
-    lng <= 180
   );
 }
 
 function setDistanceNote(text) {
   const note = $("distance-note");
-  if (!note) return;
   note.textContent = text || "";
   note.style.display = text ? "block" : "none";
 }
@@ -456,7 +351,7 @@ function applyUserPosition(pos) {
   const userLat = Number(pos?.coords?.latitude);
   const userLng = Number(pos?.coords?.longitude);
 
-  if (!isValidUserCoord(userLat, userLng)) {
+  if (!isValidCoord(userLat, userLng)) {
     throw new Error("잘못된 위치 정보입니다.");
   }
 
@@ -477,9 +372,10 @@ function applyUserPosition(pos) {
   );
 
   data.forEach((cafe) => {
-    cafe.dis = isValidCafeCoord(cafe)
-      ? getDist(userLat, userLng, Number(cafe.lat), Number(cafe.lng))
-      : GEO_DISTANCE_LIMIT_KM;
+    const [lat, lng] = [Number(cafe.lat), Number(cafe.lng)];
+    cafe.dis = isValidCoord(lat, lng)
+      ? getDist(userLat, userLng, lat, lng)
+      : Infinity; // no coordinates: kept out of 'near me'
   });
 }
 
@@ -493,14 +389,12 @@ function activateNearbyMode() {
 
 function setNearbyLoading(isLoading) {
   const btn = $("nearby-btn");
-  if (!btn) return;
   btn.disabled = isLoading;
   btn.classList.toggle("is-loading", isLoading);
 }
 
 function setNearbyActive(active) {
   const btn = $("nearby-btn");
-  if (!btn) return;
   btn.classList.toggle("is-on", active);
   btn.setAttribute("aria-pressed", active ? "true" : "false");
 }
@@ -544,41 +438,38 @@ function openModal(cafeId) {
   const cafe = data.find((item) => String(item.id) === String(cafeId));
   if (!cafe) return;
 
-  openModalCafeId = String(cafe.id);
-  appendTags($("m-tags"), cafe);
-  if (cafe.oakerman_pick) $("m-tags").prepend(makePickBadge());
+  fillTags($("m-tags"), cafe);
   updateFavoriteButton(cafe.id);
-  setButtonAction("btn-favorite", () => {
+  // onclick (not addEventListener) so each opened cafe replaces the last one's handlers.
+  $("btn-favorite").onclick = () => {
     try {
       toggleFavorite(cafe.id);
       updateFavoriteButton(cafe.id);
     } catch (error) {
       alert(error.message);
     }
-  });
+  };
 
   $("m-name").textContent = cafe.name;
   renderModalDescription(cafe.desc, cafe.signature);
 
-  setButtonAction("btn-map", () => openNaverMapForCafe(cafe));
-  setButtonAction("btn-share", async () => {
+  $("btn-map").onclick = () => openNaverMapForCafe(cafe);
+  $("btn-share").onclick = async () => {
     try {
-      const mode = await shareCafeMap(cafe);
-      if (mode === "copied") alert("클립보드에 복사되었습니다.");
+      if ((await shareCafe(cafe)) === "copied")
+        alert("클립보드에 복사되었습니다.");
     } catch (error) {
       alert(error.message);
     }
-  });
+  };
 
   for (const [id, link] of [
     ["btn-insta", cafe.instagram],
     ["btn-bean", cafe.beanShop],
   ]) {
     const url = safeHttpUrl(link);
-    setButtonAction(
-      id,
-      url ? () => window.open(url, "_blank", "noopener") : null,
-    ).hidden = !url;
+    $(id).hidden = !url;
+    $(id).onclick = url ? () => window.open(url, "_blank", "noopener") : null;
   }
 
   if (!$("cafe-sheet").open) $("cafe-sheet").showModal();
@@ -586,14 +477,13 @@ function openModal(cafeId) {
 
 async function loadNotice() {
   try {
-    const res = await api("/notice");
-    const text = await res.text();
-    if (text && text.trim()) {
+    const text = (await fetchNotice()).trim();
+    if (text) {
       $("notice").innerText = text;
       $("notice").style.display = "block";
     }
-  } catch {
-    console.error("공지 로드 실패");
+  } catch (error) {
+    console.error("notice load failed", error);
   }
 }
 

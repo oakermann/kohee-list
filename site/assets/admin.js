@@ -5,7 +5,7 @@
 import {
   $,
   ERROR_MESSAGES,
-  api,
+  fetchNotice,
   formatDate,
   jsonApi,
   postJson,
@@ -79,16 +79,18 @@ function hasCoords(cafe) {
   return Boolean(Number(cafe.lat) && Number(cafe.lng));
 }
 
-// Names are spelled differently and miss the same place — compare by address (spaces removed).
+// Names are spelled differently and miss the same place — compare by address (spaces removed, as the server does).
+const addressKey = (cafe) =>
+  String(cafe.address || "")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+
 function sameAddressCafe(cafe) {
-  const key = String(cafe.address || "").replace(/\s+/g, "");
-  return (
-    state.cafes.find(
-      (other) =>
-        other.id !== cafe.id &&
-        !other.deleted_at &&
-        String(other.address || "").replace(/\s+/g, "") === key,
-    ) || null
+  return state.cafes.find(
+    (other) =>
+      other.id !== cafe.id &&
+      !other.deleted_at &&
+      addressKey(other) === addressKey(cafe),
   );
 }
 
@@ -338,7 +340,7 @@ async function saveForm() {
 }
 
 async function geocode() {
-  const address = $("cafe-address").value.trim().slice(0, 80);
+  const address = $("cafe-address").value.trim();
   if (address.length < 2) return;
   $("geo-msg").textContent = "좌표 찾는 중...";
   try {
@@ -400,7 +402,7 @@ async function resolveError(report) {
 }
 
 async function loadNotice() {
-  $("notice-input").value = await (await api("/notice")).text();
+  $("notice-input").value = await fetchNotice();
 }
 
 async function saveNotice() {
