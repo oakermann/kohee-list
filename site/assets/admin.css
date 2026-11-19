@@ -26,12 +26,12 @@ body {
 }
 h1 {
   font-size: var(--fs-xl);
-  font-weight: 700;
+  font-weight: 900;
   text-align: center;
 }
 h2 {
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 900;
   padding-bottom: 6px;
   border-bottom: var(--thin) solid var(--line);
   text-align: center;
@@ -41,7 +41,7 @@ h2 {
 }
 .meta {
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 800;
   opacity: 0.78;
   line-height: 1.4;
   word-break: keep-all;
@@ -63,7 +63,7 @@ button,
   background: var(--bg);
   padding: 7px 12px;
   min-height: var(--tap);
-  font-weight: 700;
+  font-weight: 900;
   font-size: var(--fs-xs);
   cursor: pointer;
   text-decoration: none;
@@ -87,17 +87,11 @@ select {
   width: 100%;
   border: var(--thin) solid var(--line);
   padding: 8px 9px;
-  font-weight: 600;
+  font-weight: 800;
   font-size: var(--fs-sm);
   background: var(--bg);
-  border-radius: var(--radius);
+  border-radius: 0;
   outline: none;
-}
-/* focus ring inside the field, so it does not touch the heading rule above */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline-offset: -1px;
 }
 input::placeholder,
 textarea::placeholder {
@@ -130,7 +124,7 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 900;
   text-decoration: none;
   cursor: pointer;
 }
@@ -188,7 +182,7 @@ button.warn {
 }
 .item h3 {
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 900;
 }
 .item .mini {
   font-size: var(--fs-xs);
@@ -202,7 +196,7 @@ button.warn {
 .empty-state {
   text-align: center;
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 900;
   padding: 14px;
 }
 
@@ -239,7 +233,7 @@ dialog form {
   align-items: center;
   gap: 8px;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 800;
   overflow-wrap: anywhere;
 }
 .bulk-row input {
@@ -269,7 +263,7 @@ dialog form {
   min-height: var(--tap);
   padding: 7px 4px;
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -288,6 +282,6 @@ dialog form {
 .page-legal-footer {
   margin-top: 16px;
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 800;
   opacity: 0.72;
 }

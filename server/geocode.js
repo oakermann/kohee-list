@@ -2,13 +2,13 @@
 // (Pages secret KAKAO_REST_KEY on the server, ~/.config/secrets/kakao-rest-key on the owner's Mac).
 // Shared by the Pages functions (admin fill, report intake) and scripts/admin-watch.mjs.
 const KAKAO_LOCAL = "https://dapi.kakao.com/v2/local/search";
-const GEOCODE_TIMEOUT_MS = 4000;
+export const GEOCODE_TIMEOUT_MS = 4000;
 export const GEOCODE_QUERY_MAX = 80;
-const PLACE_RADIUS_M = 300; // a listed place this close to the address point is the cafe
-const NAME_OVERLAP_MIN = 0.5; // bigram overlap (Dice) for two spellings of one name
+export const PLACE_RADIUS_M = 300; // a listed place this close to the address point is the cafe
+export const NAME_OVERLAP_MIN = 0.5; // bigram overlap (Dice) for two spellings of one name
 
 // Keep the part an address search understands: drop "(…)" notes and floor/room tails after the road + number.
-function searchQuery(address) {
+export function searchQuery(address) {
   const plain = String(address || "")
     .replace(/\([^)]*\)/g, " ")
     .replace(/\s+/g, " ")
@@ -20,7 +20,7 @@ function searchQuery(address) {
 }
 
 // District words (…시/군/구) of an address — a hit is trusted only when it names one of them.
-function districts(address) {
+export function districts(address) {
   return String(address || "")
     .split(/[\s,()]+/)
     .filter((word) => /^\S+[시군구]$/.test(word) && word.length >= 2);
@@ -32,7 +32,7 @@ export function matchesDistrict(address, label) {
 }
 
 // Same cafe name? Spaces/punctuation ignored; containment (branch suffixes) or bigram overlap ("공지 카페" = "카페공지").
-function sameName(a, b) {
+export function sameName(a, b) {
   const tidy = (name) =>
     String(name || "")
       .toLowerCase()

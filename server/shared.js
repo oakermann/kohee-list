@@ -102,16 +102,14 @@ export function cleanClientId(value) {
   return id;
 }
 
-export function toHex(buffer) {
-  return [...new Uint8Array(buffer)]
+export async function sha256Hex(input) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(input),
+  );
+  return [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-}
-
-export async function sha256Hex(input) {
-  return toHex(
-    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input)),
-  );
 }
 
 export function safeEqual(a, b) {
