@@ -29,7 +29,7 @@ body {
 .hero-title {
   padding: 18px 14px 8px;
   font-size: clamp(1.6rem, 7vw, 2.35rem);
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1.2;
   letter-spacing: -0.04rem;
 }
@@ -37,7 +37,7 @@ body {
 .account-line {
   padding: 0 14px 14px;
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1.45;
   color: var(--muted);
   word-break: keep-all;
@@ -63,7 +63,7 @@ body {
   padding: 11px 12px 9px;
   text-align: center;
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1.2;
 }
 
@@ -83,7 +83,7 @@ body {
   padding: 12px 10px;
   text-align: center;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 800;
   line-height: 1.5;
   color: var(--muted);
   word-break: keep-all;
@@ -94,10 +94,10 @@ textarea {
   width: 100%;
   border: var(--thin) solid var(--line);
   background: var(--card);
-  border-radius: var(--radius);
+  border-radius: 0;
   padding: 9px 10px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 800;
   line-height: 1.35;
   letter-spacing: -0.01rem;
   box-shadow: var(--shadow-sm);
@@ -107,12 +107,12 @@ textarea {
 input::placeholder,
 textarea::placeholder {
   color: var(--faint);
-  font-weight: 600;
+  font-weight: 800;
 }
 
 input:focus,
 textarea:focus {
-  box-shadow: var(--shadow);
+  box-shadow: 4px 4px 0 var(--line);
 }
 
 textarea {
@@ -129,7 +129,7 @@ textarea {
 .chip {
   border: 1px solid var(--line);
   background: var(--card);
-  min-height: var(--tap);
+  min-height: 44px;
   padding: 6px 4px;
   display: flex;
   flex-direction: column;
@@ -138,7 +138,7 @@ textarea {
   gap: 4px;
   text-align: center;
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1.15;
   letter-spacing: -0.02rem;
   cursor: pointer;
@@ -165,7 +165,7 @@ textarea {
 .msg {
   min-height: 18px;
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1.45;
   text-align: center;
   color: var(--muted);
@@ -202,7 +202,7 @@ textarea {
   margin: 16px auto 0;
   text-align: center;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 800;
   opacity: 0.72;
 }
 
@@ -211,7 +211,7 @@ textarea {
   padding: 8px 10px;
   text-align: center;
   font-size: 0.74rem;
-  font-weight: 600;
+  font-weight: 800;
   line-height: 1.45;
   color: var(--point) !important;
   word-break: keep-all;
