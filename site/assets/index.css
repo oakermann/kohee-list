@@ -293,6 +293,7 @@ footer {
   letter-spacing: -0.01rem;
 }
 .admin-link {
+  display: inline; /* plain text in the sentence: the footer a tap-size box does not apply */
   text-decoration: none;
   cursor: default;
   color: inherit;
