@@ -108,150 +108,113 @@ export function formatDate(value, includeTime = false) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-
-  if (includeTime) {
-    return date.toLocaleString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  return date.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const day = { year: "numeric", month: "2-digit", day: "2-digit" };
+  return includeTime
+    ? date.toLocaleString("ko-KR", {
+        ...day,
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : date.toLocaleDateString("ko-KR", day);
 }
 
-export function getCity(address) {
+const CITIES = [
+  "서울",
+  "부산",
+  "대구",
+  "인천",
+  "광주",
+  "대전",
+  "울산",
+  "세종",
+  "경기",
+  "강원",
+  "충북",
+  "충남",
+  "전북",
+  "전남",
+  "경북",
+  "경남",
+  "제주",
+];
+// How long the Naver Map app gets to take over before the web map opens instead.
+const NAVER_APP_WAIT_MS = 1800;
+
+function getCity(address) {
   const first = String(address || "").split(" ")[0];
-  if (first.includes("서울")) return "서울";
-  if (first.includes("부산")) return "부산";
-  if (first.includes("대구")) return "대구";
-  if (first.includes("인천")) return "인천";
-  if (first.includes("광주")) return "광주";
-  if (first.includes("대전")) return "대전";
-  if (first.includes("울산")) return "울산";
-  if (first.includes("세종")) return "세종";
-  if (first.includes("경기")) return "경기";
-  if (first.includes("강원")) return "강원";
-  if (first.includes("충북")) return "충북";
-  if (first.includes("충남")) return "충남";
-  if (first.includes("전북")) return "전북";
-  if (first.includes("전남")) return "전남";
-  if (first.includes("경북")) return "경북";
-  if (first.includes("경남")) return "경남";
-  if (first.includes("제주")) return "제주";
-  return first;
+  return CITIES.find((city) => first.includes(city)) || first;
 }
 
-export function buildNaverMapUrls(keyword) {
-  const encodedQuery = encodeURIComponent(keyword);
-  const appName = encodeURIComponent(
-    (location.href || "").split("#")[0] || "https://kohee.pages.dev",
-  );
+// Name + city: keyword search for cafes without a stored place URL.
+function naverSearchUrls(cafe) {
+  const query = encodeURIComponent(`${cafe.name} ${getCity(cafe.address)}`);
+  const appName = encodeURIComponent(location.href.split("#")[0]);
   return {
-    webUrl: `https://map.naver.com/p/search/${encodedQuery}`,
-    appUrl: `nmap://search?query=${encodedQuery}&appname=${appName}`,
-    intentUrl: `intent://search?query=${encodedQuery}&appname=${appName}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.nhn.android.nmap;end`,
+    webUrl: `https://map.naver.com/p/search/${query}`,
+    appUrl: `nmap://search?query=${query}&appname=${appName}`,
+    intentUrl: `intent://search?query=${query}&appname=${appName}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.nhn.android.nmap;end`,
   };
 }
 
-export function openMobileNaverMap(primaryUrl, fallbackUrl) {
-  let settled = false;
-  let timer = null;
-
-  const cleanup = () => {
-    window.removeEventListener("pagehide", handleHide);
-    window.removeEventListener("blur", handleHide);
-    document.removeEventListener("visibilitychange", handleVisibility);
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
+// The app opening hides or blurs this page; if neither happens in time, open the web map instead.
+function openMobileNaverMap(appUrl, webUrl) {
+  const stop = () => {
+    clearTimeout(timer);
+    window.removeEventListener("pagehide", stop);
+    window.removeEventListener("blur", stop);
+    document.removeEventListener("visibilitychange", onVisibility);
   };
-
-  const finish = () => {
-    if (settled) return;
-    settled = true;
-    cleanup();
+  const onVisibility = () => {
+    if (document.hidden) stop();
   };
-
-  const handleHide = () => finish();
-  const handleVisibility = () => {
-    if (document.hidden) finish();
-  };
-
-  window.addEventListener("pagehide", handleHide, { once: true });
-  window.addEventListener("blur", handleHide, { once: true });
-  document.addEventListener("visibilitychange", handleVisibility, {
-    once: true,
-  });
-
-  timer = setTimeout(() => {
-    if (settled || document.hidden) {
-      finish();
-      return;
-    }
-    finish();
-    window.location.replace(fallbackUrl);
-  }, 1800);
-
-  window.location.href = primaryUrl;
+  const timer = setTimeout(() => {
+    stop();
+    if (!document.hidden) window.location.replace(webUrl);
+  }, NAVER_APP_WAIT_MS);
+  window.addEventListener("pagehide", stop);
+  window.addEventListener("blur", stop);
+  document.addEventListener("visibilitychange", onVisibility);
+  window.location.href = appUrl;
 }
 
 export function openNaverMapForCafe(cafe) {
-  // A stored place URL takes priority -- keyword search can show the wrong branch first for same-named branches (e.g. Daegu
-  // 수평적관계, 3 branches). Falls back to the old search if none.
-  const savedUrl = String(cafe.naver_url || "").trim();
-  const city = getCity(cafe.address || "");
-  const keyword = `${cafe.name} ${city}`;
-  const { webUrl, appUrl, intentUrl } = buildNaverMapUrls(keyword);
-  const targetWebUrl = savedUrl || webUrl;
   const isAndroid = /Android/i.test(navigator.userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
+  // A stored place URL wins — keyword search can show the wrong branch first for same-named branches (e.g. Daegu
+  // 수평적관계, 3 branches). On phones Naver hands a place URL to the app itself.
+  const savedUrl = String(cafe.naver_url || "").trim();
   if (savedUrl) {
-    // place URLs open on the web directly (on mobile Naver handles the app hand-off itself).
-    if (isAndroid || isIOS) {
-      window.location.href = targetWebUrl;
-      return;
-    }
-    window.open(targetWebUrl, "_blank", "noopener");
+    if (isAndroid || isIOS) window.location.href = savedUrl;
+    else window.open(savedUrl, "_blank", "noopener");
     return;
   }
-
-  if (isAndroid) {
-    openMobileNaverMap(intentUrl, webUrl);
-    return;
-  }
-
-  if (isIOS) {
-    openMobileNaverMap(appUrl, webUrl);
-    return;
-  }
-
-  window.open(webUrl, "_blank", "noopener");
+  const { webUrl, appUrl, intentUrl } = naverSearchUrls(cafe);
+  if (isAndroid) openMobileNaverMap(intentUrl, webUrl);
+  else if (isIOS) openMobileNaverMap(appUrl, webUrl);
+  else window.open(webUrl, "_blank", "noopener");
 }
 
-export async function shareCafe(cafe, fallbackUrl = location.href) {
+// Web Share with the cafe's Naver Map search link, else copy the text.
+export async function shareCafe(cafe) {
   const text = `[코히 리스트] ${cafe.name}\n주소: ${cafe.address}`;
   if (navigator.share) {
     await navigator.share({
       title: "코히 리스트 공유",
       text,
-      url: fallbackUrl,
+      url: naverSearchUrls(cafe).webUrl,
     });
     return "shared";
   }
-
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
     return "copied";
   }
-
   throw new Error(text);
+}
+
+// The notice is plain text; an error reply (JSON) must never show as the notice.
+export async function fetchNotice() {
+  const res = await api("/notice");
+  if (!res.ok) throw new Error(`notice HTTP ${res.status}`);
+  return res.text();
 }

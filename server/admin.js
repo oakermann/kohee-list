@@ -8,6 +8,7 @@ import {
   readJson,
   safeEqual,
   sha256Hex,
+  toHex,
 } from "./shared.js";
 
 const COOKIE = "kohee_admin";
@@ -26,16 +27,14 @@ async function sign(env, expiresAt) {
     key,
     new TextEncoder().encode(String(expiresAt)),
   );
-  return [...new Uint8Array(mac)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return toHex(mac);
 }
 
 function cookieHeader(value, maxAge) {
   return `${COOKIE}=${value}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
 }
 
-export async function isAdmin(req, env) {
+async function isAdmin(req, env) {
   if (!env.ADMIN_PASSWORD) return false;
   const [expiresAt, mac] = getCookie(req, COOKIE).split(".");
   if (!mac || Number(expiresAt) < Date.now() / 1000) return false;
