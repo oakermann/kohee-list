@@ -29,7 +29,7 @@ const KOREA_BOUNDS = { lat: [33, 39], lng: [124, 132] };
 // One bulk publish is a reviewed handful of candidates, not the whole table.
 const BULK_PUBLISH_MAX = 100;
 
-const PUBLIC_COLUMNS =
+export const PUBLIC_COLUMNS =
   "id, name, address, desc, lat, lng, signature, beanShop, instagram, naver_url, region, region_distance_m, category, oakerman_pick, updated_at";
 
 function toPublicCafe(row) {

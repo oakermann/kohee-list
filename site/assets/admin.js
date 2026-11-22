@@ -4,6 +4,7 @@
 //   공개 중 [내리기] · 내린 것 [되살리기] [완전 삭제] · 오류 제보 · 공지 · CSV
 import {
   $,
+  CAT_MAP,
   ERROR_MESSAGES,
   fetchNotice,
   formatDate,
@@ -30,14 +31,6 @@ const TABS = [
   { id: "notice", label: "공지", pane: "pane-notice" },
   { id: "csv", label: "CSV", pane: "pane-csv" },
 ];
-
-const CATEGORY_NAMES = {
-  espresso: "에스프레소",
-  drip: "드립",
-  decaf: "디카페인",
-  instagram: "인스타",
-  dessert: "디저트",
-};
 
 const FORM_FIELDS = {
   name: "cafe-name",
@@ -147,7 +140,7 @@ function badges(tab, cafe) {
     cafe.oakerman_pick && ["오커맨픽", ""],
     !hasCoords(cafe) && ["좌표 없음", "tag-warn"],
     dup && [`같은 주소: ${dup.name}`, "tag-warn"],
-    ...(cafe.category || []).map((c) => [CATEGORY_NAMES[c] || c, "tag-soft"]),
+    ...(cafe.category || []).map((c) => [CAT_MAP[c] || c, "tag-soft"]),
   ].filter(Boolean);
 }
 

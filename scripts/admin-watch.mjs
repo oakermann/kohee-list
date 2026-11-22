@@ -18,10 +18,9 @@ import {
   lookUpCafe,
   rangeProblem,
 } from "../server/health.js";
+import { HUB_NOTIFY, SITE } from "./config.mjs";
 
-const SITE = "https://kohee.pages.dev";
 const ADMIN_URL = `${SITE}/admin`;
-const HUB_NOTIFY = "http://127.0.0.1:4096/notify";
 const REPO_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const KAKAO_KEY_FILE = path.join(
   os.homedir(),

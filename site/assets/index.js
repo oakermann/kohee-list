@@ -207,72 +207,55 @@ function matchScore(cafe, query) {
   return 0;
 }
 
-function render() {
-  const query = $("search").value.toLowerCase().trim();
+const inSelectedCategory = (cafe) =>
+  !selectedCategory || cafeCategories(cafe).includes(selectedCategory);
 
-  if (nearbyMode) {
-    // Composition rule: when nearbyMode is on AND selectedCategory is set,
-    // first filter cafes by that category then apply the distance sort and radius cap.
-    let located = data.filter((cafe) => Number.isFinite(cafe.dis));
-
-    if (selectedCategory) {
-      located = located.filter((cafe) =>
-        cafeCategories(cafe).includes(selectedCategory),
-      );
-    }
-
-    // No cafe has usable coordinates -> the cause is missing cafe data, not GPS.
-    if (!located.length) {
-      renderCenterMessage([
-        selectedCategory
-          ? "해당 카테고리의 주변 카페 위치 정보가 부족합니다."
-          : "주변 카페의 위치 정보가 아직 부족합니다.",
-        "카페명 또는 주소로 검색해 주세요.",
-      ]);
-      return;
-    }
-
-    const nearbyCafes = located
-      .filter((cafe) => cafe.dis <= GEO_NEARBY_RADIUS_KM)
-      .sort((a, b) => a.dis - b.dis)
-      .slice(0, NEARBY_MAX);
-
-    if (!nearbyCafes.length) {
-      renderCenterMessage([
-        `${GEO_NEARBY_RADIUS_KM}km 이내에 ${selectedCategory ? "해당 카테고리로 " : ""}등록된 카페가 없습니다.`,
-        "카페명 또는 주소로 검색해 보세요.",
-      ]);
-      return;
-    }
-
-    renderCafeCards(nearbyCafes);
-    return;
+function renderNearby() {
+  const located = data.filter(
+    (cafe) => Number.isFinite(cafe.dis) && inSelectedCategory(cafe),
+  );
+  // No cafe has usable coordinates -> the cause is missing cafe data, not GPS.
+  if (!located.length) {
+    return renderCenterMessage([
+      selectedCategory
+        ? "해당 카테고리의 주변 카페 위치 정보가 부족합니다."
+        : "주변 카페의 위치 정보가 아직 부족합니다.",
+      "카페명 또는 주소로 검색해 주세요.",
+    ]);
   }
+  const nearbyCafes = located
+    .filter((cafe) => cafe.dis <= GEO_NEARBY_RADIUS_KM)
+    .sort((a, b) => a.dis - b.dis)
+    .slice(0, NEARBY_MAX);
+  if (!nearbyCafes.length) {
+    return renderCenterMessage([
+      `${GEO_NEARBY_RADIUS_KM}km 이내에 ${selectedCategory ? "해당 카테고리로 " : ""}등록된 카페가 없습니다.`,
+      "카페명 또는 주소로 검색해 보세요.",
+    ]);
+  }
+  renderCafeCards(nearbyCafes);
+}
 
-  const hasFilter = query.length > 0 || selectedCategory !== null;
-  if (!hasFilter) {
-    renderCenterMessage([
+function renderSearch(query) {
+  if (!query && selectedCategory === null) {
+    return renderCenterMessage([
       "카테고리를 선택하거나",
       "카페명 또는 주소를 검색해 보세요.",
     ]);
-    return;
   }
-
   const filtered = data
-    .filter(
-      (cafe) =>
-        matchScore(cafe, query) > 0 &&
-        (!selectedCategory || cafeCategories(cafe).includes(selectedCategory)),
-    )
+    .filter((cafe) => matchScore(cafe, query) > 0 && inSelectedCategory(cafe))
     .sort((left, right) => matchScore(right, query) - matchScore(left, query))
     .slice(0, RESULTS_MAX);
-
   if (!filtered.length) {
-    renderCenterMessage("조건에 맞는 결과가 없습니다.");
-    return;
+    return renderCenterMessage("조건에 맞는 결과가 없습니다.");
   }
-
   renderCafeCards(filtered);
+}
+
+function render() {
+  if (nearbyMode) renderNearby();
+  else renderSearch($("search").value.toLowerCase().trim());
 }
 
 function selectCategory(categoryKey) {
@@ -407,8 +390,7 @@ function exitNearbyMode() {
   setNearbyActive(false);
 }
 
-// If location fails, say why and send the user to search — typing a neighbourhood was the workaround from when location was blocked on
-// desktops (Permissions-Policy geolocation=()); the cause was removed, so it was removed too.
+// If location fails, say why and send the user to search.
 async function handleNearbyClick() {
   if (nearbyMode) {
     exitNearbyMode();
