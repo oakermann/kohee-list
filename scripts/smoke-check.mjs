@@ -2,25 +2,10 @@
 //   node scripts/smoke-check.mjs            (default https://kohee.pages.dev)
 //   SITE_URL=http://127.0.0.1:8788 node scripts/smoke-check.mjs
 import assert from "node:assert/strict";
+import { PUBLIC_COLUMNS } from "../server/cafes.js";
+import { SITE } from "./config.mjs";
 
-const SITE = process.env.SITE_URL || "https://kohee.pages.dev";
-const PUBLIC_KEYS = [
-  "id",
-  "name",
-  "address",
-  "desc",
-  "lat",
-  "lng",
-  "signature",
-  "beanShop",
-  "instagram",
-  "naver_url",
-  "region",
-  "region_distance_m",
-  "category",
-  "oakerman_pick",
-  "updated_at",
-].sort();
+const PUBLIC_KEYS = PUBLIC_COLUMNS.split(", ").sort();
 
 async function get(path) {
   // Right after a deploy the old version may show briefly, so ask a few times.

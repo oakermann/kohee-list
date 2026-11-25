@@ -24,12 +24,6 @@ body {
   gap: 12px;
 }
 
-.hero {
-  border: var(--thick) solid var(--line);
-  background: var(--bg);
-  text-align: center;
-}
-
 .hero-title {
   padding: 18px 14px 8px;
   font-size: clamp(1.5rem, 6.5vw, 2.15rem);
@@ -47,21 +41,6 @@ body {
   word-break: keep-all;
 }
 
-.action-strip {
-  border-top: var(--thin) solid var(--line);
-  padding: 9px 10px;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 5px;
-  background: var(--bg);
-}
-
-.section {
-  border: var(--thick) solid var(--line);
-  background: var(--bg);
-}
-
 .section-head {
   padding: 11px 12px 9px;
   text-align: center;
@@ -69,10 +48,6 @@ body {
   font-weight: 900;
   line-height: 1.25;
   word-break: keep-all;
-}
-
-.section-rule {
-  border-top: var(--thin) solid var(--line);
 }
 
 .section-body {

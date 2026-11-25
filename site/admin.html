@@ -3,26 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>운영 콘솔 | KOHEE LIST</title>
+    <title>운영 | KOHEE LIST</title>
     <link
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
     />
     <link rel="stylesheet" href="./assets/base.css" />
     <link rel="stylesheet" href="./assets/admin.css" />
   </head>
   <body>
-    <main class="wrap">
-      <header class="panel top">
-        <h1>운영 콘솔</h1>
-        <div class="btns">
-          <a class="btn" href="index.html">메인</a>
-          <button id="logout-btn" class="hidden" type="button">로그아웃</button>
-        </div>
-      </header>
+    <header class="bar">
+      <h1>코히 운영</h1>
+      <a
+        class="bar-link"
+        href="https://dash.cloudflare.com/af7aa3c563288f9665d219a6f8dd23dc/web-analytics"
+        target="_blank"
+        rel="noopener"
+        >방문자</a
+      >
+      <a class="bar-link" href="index.html">메인</a>
+      <button id="logout-btn" class="bar-link hidden" type="button">
+        로그아웃
+      </button>
+    </header>
 
+    <main class="wrap">
       <!-- One password. A real form + autocomplete so the browser can save it. -->
-      <form id="login-pane" class="panel hidden">
+      <form id="login-pane" class="login hidden">
         <h2>들어가기</h2>
         <input
           type="text"
@@ -40,129 +47,147 @@
           aria-label="어드민 비밀번호"
           required
         />
-        <button class="primary" type="submit">들어가기</button>
-        <div id="login-msg" class="meta"></div>
+        <button class="btn primary" type="submit">들어가기</button>
+        <div id="login-msg" class="note"></div>
       </form>
 
-      <section id="hub" class="hub hidden">
-        <button type="button" class="tile" data-go="inbox">
-          새로 들어옴 <b data-count="inbox"></b>
-        </button>
-        <button type="button" class="tile" data-go="public">
-          공개 중 <b data-count="public"></b>
-        </button>
-        <button type="button" class="tile" data-go="down">
-          내린 것 <b data-count="down"></b>
-        </button>
-        <button type="button" class="tile" data-go="errors">
-          오류 제보 <b data-count="errors"></b>
-        </button>
-        <button type="button" class="tile" data-go="notice">공지</button>
-        <button type="button" class="tile" data-go="csv">CSV 가져오기</button>
-        <a
-          class="tile"
-          href="https://dash.cloudflare.com/af7aa3c563288f9665d219a6f8dd23dc/web-analytics"
-          target="_blank"
-          rel="noopener"
-          >방문자 <small>Cloudflare</small></a
-        >
-      </section>
+      <div id="console" class="hidden">
+        <nav id="tabs" class="tabs" aria-label="운영 메뉴"></nav>
 
-      <section id="view" class="panel hidden">
-        <div class="view-head">
-          <button id="back-btn" type="button">← 운영</button>
-          <h2 id="view-title"></h2>
-        </div>
-
-        <div id="pane-list" class="pane">
-          <div class="list-tools">
+        <section id="pane-list" class="pane">
+          <div class="tools">
             <input
               id="search"
+              type="search"
               aria-label="카페 검색"
               placeholder="카페명·주소 검색"
             />
-            <button id="new-cafe-btn" class="primary" type="button">
+            <button id="new-cafe-btn" class="btn" type="button">
               신규 등록
             </button>
-            <button id="bulk-publish-btn" type="button">한꺼번에 공개</button>
+            <button id="bulk-publish-btn" class="btn primary" type="button">
+              한꺼번에 공개
+            </button>
+            <button id="recheck-btn" class="btn" type="button">
+              다시 검사
+            </button>
           </div>
-          <div id="list" class="list"></div>
-        </div>
+          <div id="list-note" class="note"></div>
+          <div id="list" class="rows"></div>
+        </section>
 
-        <div id="pane-errors" class="pane">
-          <div id="error-list" class="list"></div>
-        </div>
+        <section id="pane-errors" class="pane">
+          <div id="error-list" class="rows"></div>
+        </section>
 
-        <div id="pane-notice" class="pane">
+        <section id="pane-notice" class="pane stack">
           <textarea
             id="notice-input"
             aria-label="공지"
             placeholder="메인에 보여줄 공지 (비우면 공지 없음)"
           ></textarea>
-          <button id="notice-save" class="primary" type="button">
-            공지 저장
-          </button>
-        </div>
+          <div class="actions">
+            <button id="notice-save" class="btn primary" type="button">
+              공지 저장
+            </button>
+            <span id="notice-msg" class="note"></span>
+          </div>
+        </section>
 
-        <div id="pane-csv" class="pane">
-          <div class="meta">
+        <section id="pane-csv" class="pane stack">
+          <p class="note">
             새 카페만 후보로 들어갑니다(주소가 같은 카페는 건너뜀). 공개는 새로
             들어옴에서 합니다.
-          </div>
+          </p>
           <label class="btn file-pick"
             ><input id="csv-file" type="file" accept=".csv,text/csv" /><span
               id="csv-file-name"
               >CSV 파일 고르기</span
             ></label
           >
-          <div class="row2">
-            <button id="csv-dry-run" type="button">검증</button>
-            <button id="csv-upload" class="primary" type="button">
+          <div class="actions">
+            <button id="csv-dry-run" class="btn" type="button">검증</button>
+            <button id="csv-upload" class="btn primary" type="button">
               올리기
             </button>
           </div>
-          <div id="csv-msg" class="meta"></div>
-        </div>
-      </section>
+          <div id="csv-msg" class="note"></div>
+        </section>
+      </div>
     </main>
 
     <dialog id="cafe-dialog">
       <form id="cafe-form" method="dialog">
-        <h2 id="form-title">카페</h2>
-        <div id="form-note" class="meta"></div>
-        <label class="field"
-          ><span>카페명 *</span><input id="cafe-name" required
-        /></label>
-        <label class="field"
-          ><span>주소 *</span><input id="cafe-address" required
-        /></label>
-        <div class="geo">
-          <label class="field"
+        <div class="dialog-head">
+          <h2 id="form-title">카페</h2>
+          <span id="form-note" class="note"></span>
+        </div>
+        <div class="form-body">
+          <label class="field wide"
+            ><span>카페명 *</span><input id="cafe-name" required
+          /></label>
+          <label class="field wide"
+            ><span>주소 *</span><input id="cafe-address" required
+          /></label>
+          <label class="field half"
             ><span>위도</span><input id="cafe-lat" inputmode="decimal"
           /></label>
-          <label class="field"
+          <label class="field half"
             ><span>경도</span><input id="cafe-lng" inputmode="decimal"
           /></label>
-          <button id="geocode-btn" type="button">주소로 찾기</button>
-        </div>
-        <div id="geo-msg" class="meta"></div>
-        <label class="field"
-          ><span>설명 *</span><textarea id="cafe-desc" required></textarea>
-        </label>
-        <div id="cafe-reason" class="meta"></div>
-        <label class="field"
-          ><span>시그니처 (쉼표 구분)</span><input id="cafe-signature"
-        /></label>
-        <label class="field"
-          ><span>인스타 링크</span><input id="cafe-instagram"
-        /></label>
-        <label class="field"
-          ><span>네이버 지도 링크 (place URL)</span><input id="cafe-naver"
-        /></label>
-        <label class="field"
-          ><span>원두 구매 링크</span><input id="cafe-bean"
-        /></label>
-        <div class="row2">
+          <div class="field wide geo">
+            <button id="geocode-btn" class="btn" type="button">
+              주소로 좌표 찾기
+            </button>
+            <span id="geo-msg" class="note"></span>
+          </div>
+          <label class="field wide"
+            ><span>설명 *</span><textarea id="cafe-desc" required></textarea>
+          </label>
+          <p id="cafe-reason" class="reason wide"></p>
+          <div class="chips wide">
+            <label class="chip"
+              ><input
+                type="checkbox"
+                name="cat"
+                value="espresso"
+              />에스프레소</label
+            >
+            <label class="chip"
+              ><input type="checkbox" name="cat" value="drip" />드립</label
+            >
+            <label class="chip"
+              ><input type="checkbox" name="cat" value="decaf" />디카페인</label
+            >
+            <label class="chip"
+              ><input
+                type="checkbox"
+                name="cat"
+                value="instagram"
+              />인스타</label
+            >
+            <label class="chip"
+              ><input type="checkbox" name="cat" value="dessert" />디저트</label
+            >
+            <label class="chip pick"
+              ><input type="checkbox" id="oakerman-pick" />오커맨픽</label
+            >
+          </div>
+          <label class="field wide"
+            ><span>시그니처 (쉼표 구분)</span><input id="cafe-signature"
+          /></label>
+          <label class="field"
+            ><span>인스타 링크</span><input id="cafe-instagram"
+          /></label>
+          <label class="field"
+            ><span>네이버 지도 링크</span><input id="cafe-naver"
+          /></label>
+          <label class="field"
+            ><span>원두 구매 링크</span><input id="cafe-bean"
+          /></label>
+          <label class="field"
+            ><span>운영 메모 (공개 안 됨)</span><input id="cafe-memo"
+          /></label>
           <label class="field"
             ><span>가까운 역 (카드에 안 보임)</span><input id="cafe-region"
           /></label>
@@ -171,48 +196,27 @@
             ><input id="cafe-region-distance" type="number" min="0"
           /></label>
         </div>
-        <label class="field"
-          ><span>운영 메모 (공개 안 됨)</span><input id="cafe-memo"
-        /></label>
-        <div class="chips">
-          <label class="chip"
-            ><input
-              type="checkbox"
-              name="cat"
-              value="espresso"
-            />에스프레소</label
-          >
-          <label class="chip"
-            ><input type="checkbox" name="cat" value="drip" />드립</label
-          >
-          <label class="chip"
-            ><input type="checkbox" name="cat" value="decaf" />디카페인</label
-          >
-          <label class="chip"
-            ><input type="checkbox" name="cat" value="instagram" />인스타</label
-          >
-          <label class="chip"
-            ><input type="checkbox" name="cat" value="dessert" />디저트</label
-          >
-          <label class="chip"
-            ><input type="checkbox" id="oakerman-pick" />오커맨픽</label
-          >
-        </div>
-        <div class="form-actions">
-          <button value="cancel" formnovalidate type="submit">닫기</button>
-          <button id="form-save" class="primary" type="button">저장</button>
+        <div class="dialog-foot">
+          <button class="btn" value="cancel" formnovalidate type="submit">
+            닫기
+          </button>
+          <button id="form-save" class="btn primary" type="button">저장</button>
         </div>
       </form>
     </dialog>
 
     <dialog id="bulk-dialog">
       <form method="dialog">
-        <h2>한꺼번에 공개</h2>
-        <div id="bulk-note" class="meta"></div>
-        <div id="bulk-list" class="list"></div>
-        <div class="form-actions">
-          <button value="cancel" type="submit">닫기</button>
-          <button id="bulk-confirm" class="primary" type="button">공개</button>
+        <div class="dialog-head">
+          <h2>한꺼번에 공개</h2>
+          <span id="bulk-note" class="note"></span>
+        </div>
+        <div id="bulk-list" class="form-body bulk"></div>
+        <div class="dialog-foot">
+          <button class="btn" value="cancel" type="submit">닫기</button>
+          <button id="bulk-confirm" class="btn primary" type="button">
+            공개
+          </button>
         </div>
       </form>
     </dialog>

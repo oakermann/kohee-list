@@ -104,6 +104,47 @@ footer a {
   outline: 3px solid var(--ink);
   outline-offset: 2px;
 }
+.page {
+  width: 92%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hero {
+  border: var(--thick) solid var(--line);
+  background: var(--bg);
+  text-align: center;
+}
+
+.action-strip {
+  border-top: var(--thin) solid var(--line);
+  padding: 9px 10px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  background: var(--bg);
+}
+
+.section-head {
+  padding: 11px 12px 9px;
+  text-align: center;
+  font-size: var(--fs-md);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.section-rule {
+  border-top: var(--thin) solid var(--line);
+}
+
+.section {
+  border: var(--thick) solid var(--line);
+  background: var(--bg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

@@ -12,20 +12,6 @@ body {
   padding: 32px 0 56px;
 }
 
-.page {
-  width: 92%;
-  max-width: 500px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.hero {
-  border: var(--thick) solid var(--line);
-  background: var(--bg);
-  text-align: center;
-}
-
 .hero-title {
   padding: 18px 14px 8px;
   font-size: clamp(1.6rem, 7vw, 2.35rem);
@@ -40,33 +26,6 @@ body {
   font-weight: 900;
   line-height: 1.45;
   color: var(--muted);
-}
-
-.action-strip {
-  border-top: var(--thin) solid var(--line);
-  padding: 9px 10px;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 5px;
-  background: var(--bg);
-}
-
-.section {
-  border: var(--thick) solid var(--line);
-  background: var(--bg);
-}
-
-.section-head {
-  padding: 11px 12px 9px;
-  text-align: center;
-  font-size: var(--fs-md);
-  font-weight: 900;
-  line-height: 1.2;
-}
-
-.section-rule {
-  border-top: var(--thin) solid var(--line);
 }
 
 .section-body {
@@ -103,10 +62,12 @@ body {
     transform 0.05s ease,
     box-shadow 0.05s ease;
 }
+
 .fav-card:hover {
   transform: translate(-1px, -1px);
   box-shadow: 6px 6px 0 var(--line);
 }
+
 .fav-card:active {
   transform: translate(2px, 2px);
   box-shadow: none;
@@ -143,15 +104,19 @@ body {
 .status.pending {
   color: var(--point) !important;
 }
+
 .status.approved {
   color: #126b2f !important;
 }
+
 .status.rejected {
   color: #b00020 !important;
 }
+
 .status.open {
   color: var(--point) !important;
 }
+
 .status.resolved {
   color: #126b2f !important;
 }

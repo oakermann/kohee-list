@@ -10,3 +10,4 @@ wrangler.worker.backup.toml
 *.bak
 Thumbs.db
 .DS_Store
+.dev.vars

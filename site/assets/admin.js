@@ -1,9 +1,10 @@
-// Ops console: home = ops (choose a column). One or two actions per column; tapping a card edits it.
-//   new = candidates (admin entries, CSV, user reports)  [publish] [discard] · [publish together] for those with coordinates
-//   public                                               [unpublish]
-//   removed                                              [restore] [delete for good]
+// Ops console: one row of tabs, each a list of compact rows. Tapping a cafe row edits it.
+//   새로 들어옴 = candidates (admin entries, CSV, user reports)  [공개] [버리기] · [한꺼번에 공개] for those with coordinates
+//   확인 필요   = public cafes whose pin does not match Kakao (checked live, /cafe-check per cafe)  [카카오 좌표로]
+//   공개 중 [내리기] · 내린 것 [되살리기] [완전 삭제] · 오류 제보 · 공지 · CSV
 import {
   $,
+  CAT_MAP,
   ERROR_MESSAGES,
   fetchNotice,
   formatDate,
@@ -11,16 +12,25 @@ import {
   postJson,
 } from "./common.js";
 
-const state = { view: "", cafes: [], errors: [], form: null };
+const CHECK_PARALLEL = 3; // Kakao lookups at once; the daily watch does them one by one
 
-const VIEWS = {
-  inbox: { title: "새로 들어옴", pane: "pane-list" },
-  public: { title: "공개 중", pane: "pane-list" },
-  down: { title: "내린 것", pane: "pane-list" },
-  errors: { title: "오류 제보", pane: "pane-errors" },
-  notice: { title: "공지", pane: "pane-notice" },
-  csv: { title: "CSV 가져오기", pane: "pane-csv" },
+const state = {
+  tab: "inbox",
+  cafes: [],
+  errors: [],
+  form: null,
+  check: { results: new Map(), running: false, done: 0, total: 0, at: null },
 };
+
+const TABS = [
+  { id: "inbox", label: "새로 들어옴", pane: "pane-list" },
+  { id: "check", label: "확인 필요", pane: "pane-list" },
+  { id: "public", label: "공개 중", pane: "pane-list" },
+  { id: "down", label: "내린 것", pane: "pane-list" },
+  { id: "errors", label: "오류 제보", pane: "pane-errors" },
+  { id: "notice", label: "공지", pane: "pane-notice" },
+  { id: "csv", label: "CSV", pane: "pane-csv" },
+];
 
 const FORM_FIELDS = {
   name: "cafe-name",
@@ -46,33 +56,24 @@ function el(tag, className = "", text = "") {
 }
 
 function guarded(fn) {
-  return () =>
+  return (...args) =>
     Promise.resolve()
-      .then(fn)
+      .then(() => fn(...args))
       .catch((error) => {
         if (error.code === "AUTH_REQUIRED") showLogin();
         else alert(error.message);
       });
 }
 
-function buttonRow(actions) {
-  const row = el("div", "btns");
-  for (const [label, onClick, className] of actions) {
-    const node = el("button", className, label);
-    node.type = "button";
-    node.addEventListener("click", guarded(onClick));
-    row.append(node);
-  }
-  return row;
+function show(id, visible) {
+  $(id).classList.toggle("hidden", !visible);
 }
 
-function card(title, lines, actions = []) {
-  const item = el("div", "item");
-  item.append(el("h3", "", title || ""));
-  for (const line of lines.filter(Boolean))
-    item.append(el("div", "mini", line));
-  if (actions.length) item.append(buttonRow(actions));
-  return item;
+function button(label, onClick, className = "btn") {
+  const node = el("button", className, label);
+  node.type = "button";
+  node.addEventListener("click", guarded(onClick));
+  return node;
 }
 
 function hasCoords(cafe) {
@@ -94,95 +95,141 @@ function sameAddressCafe(cafe) {
   );
 }
 
-// ---- classification ----
+// ---- which cafes each tab shows ----
 
-function viewCafes(view) {
+function tabCafes(tab) {
   return state.cafes.filter((cafe) => {
-    if (view === "down") return cafe.deleted_at;
+    if (tab === "down") return cafe.deleted_at;
     if (cafe.deleted_at) return false;
-    return view === "inbox"
-      ? cafe.status === "candidate"
-      : cafe.status === "approved";
+    if (tab === "inbox") return cafe.status === "candidate";
+    if (tab === "check") return cafe.status === "approved" && flagged(cafe);
+    return cafe.status === "approved";
   });
 }
 
-function renderCounts() {
-  const counts = {
-    inbox: viewCafes("inbox").length,
-    public: viewCafes("public").length,
-    down: viewCafes("down").length,
-    errors: state.errors.length,
-  };
-  document.querySelectorAll("[data-count]").forEach((node) => {
-    node.textContent = String(counts[node.dataset.count]);
-  });
+function flagged(cafe) {
+  const result = state.check.results.get(cafe.id);
+  return Boolean(result && (result.failed || result.problems.length));
 }
 
-// ---- cards and actions ----
+function tabCount(tab) {
+  if (tab === "errors") return state.errors.length;
+  if (tab === "check" && !state.check.at && !state.check.running) return null;
+  if (TABS.find((t) => t.id === tab).pane !== "pane-list") return null;
+  return tabCafes(tab).length;
+}
 
-function cafeActions(view, cafe) {
-  if (view === "inbox")
-    return [
-      ["공개", () => publishCafe(cafe), "primary"],
-      ["버리기", () => discardCafe(cafe)],
-    ];
-  if (view === "public")
-    return [["내리기", () => act("/delete", cafe, "내릴까요?")]];
+function renderTabs() {
+  $("tabs").replaceChildren(
+    ...TABS.map(({ id, label }) => {
+      const tab = button(label, () => openTab(id), "tab");
+      tab.setAttribute("aria-current", String(id === state.tab));
+      const count = tabCount(id);
+      if (count !== null) tab.append(el("b", "", String(count)));
+      return tab;
+    }),
+  );
+}
+
+// ---- cafe rows ----
+
+function badges(tab, cafe) {
+  const dup = sameAddressCafe(cafe);
   return [
-    ["되살리기", () => act("/restore", cafe, "되살릴까요?")],
-    ["완전 삭제", () => purgeCafe(cafe), "warn"],
+    cafe.submitted && ["제보", "tag-point"],
+    cafe.oakerman_pick && ["오커맨픽", ""],
+    !hasCoords(cafe) && ["좌표 없음", "tag-warn"],
+    dup && [`같은 주소: ${dup.name}`, "tag-warn"],
+    ...(cafe.category || []).map((c) => [CAT_MAP[c] || c, "tag-soft"]),
+  ].filter(Boolean);
+}
+
+function detailLines(tab, cafe) {
+  const result = state.check.results.get(cafe.id);
+  return [
+    tab === "check" &&
+      (result.failed
+        ? `검사 실패: ${result.error}`
+        : result.problems.join(" · ")),
+    tab === "check" && result.pinOff && `카카오 위치: ${result.kakao.label}`,
+    cafe.submitted && `제보 ${formatDate(cafe.created_at)}`,
+    tab === "inbox" && cafe.reason && `추천 이유: ${cafe.reason}`,
+    tab === "down" &&
+      `내림 ${formatDate(cafe.deleted_at)}${cafe.reject_reason ? ` · ${cafe.reject_reason}` : ""}`,
+  ].filter(Boolean);
+}
+
+function cafeActions(tab, cafe) {
+  if (tab === "inbox")
+    return [
+      button("공개", () => publishCafe(cafe), "btn primary"),
+      button("버리기", () => discardCafe(cafe)),
+    ];
+  if (tab === "check") return checkActions(cafe);
+  if (tab === "public")
+    return [button("내리기", () => act("/delete", cafe, "내릴까요?"))];
+  return [
+    button("되살리기", () => act("/restore", cafe, "되살릴까요?")),
+    button("완전 삭제", () => purgeCafe(cafe), "btn warn"),
   ];
 }
 
-function cafeCard(view, cafe) {
-  const dup = sameAddressCafe(cafe);
-  const item = card(
-    cafe.name,
-    [
-      view === "inbox"
-        ? cafe.submitted
-          ? `제보 · ${formatDate(cafe.created_at)}`
-          : "후보"
-        : cafe.oakerman_pick && "오커맨픽",
-      cafe.address,
-      cafe.reason && `추천 이유: ${cafe.reason}`,
-      !hasCoords(cafe) && "좌표 없음 — 눌러서 채워야 공개됨",
-      dup &&
-        `같은 주소: ${dup.name} (${dup.status === "approved" ? "공개 중" : "후보"})`,
-      view === "down" &&
-        `내림 ${formatDate(cafe.deleted_at)}${cafe.reject_reason ? ` · ${cafe.reject_reason}` : ""}`,
-    ],
-    cafeActions(view, cafe),
-  );
-  if (view !== "down") {
+function cafeRow(tab, cafe) {
+  const row = el("article", "row");
+  const main = el("div", "row-main");
+  const title = el("div", "row-title");
+  title.append(el("strong", "", cafe.name));
+  for (const [text, kind] of badges(tab, cafe))
+    title.append(el("span", `tag ${kind}`.trim(), text));
+  main.append(title, el("div", "row-sub", cafe.address));
+  for (const line of detailLines(tab, cafe))
+    main.append(el("div", "row-line", line));
+  const actions = el("div", "row-actions");
+  actions.append(...cafeActions(tab, cafe));
+  row.append(main, actions);
+  if (tab !== "down") {
     // Holds its own buttons, so it cannot be a <button>: focusable, Enter/Space open the form like a tap.
-    item.tabIndex = 0;
-    item.addEventListener("click", (event) => {
-      if (!event.target.closest("button")) openForm("edit", cafe);
+    row.tabIndex = 0;
+    row.classList.add("tappable");
+    row.addEventListener("click", (event) => {
+      if (!event.target.closest("button, a")) openForm("edit", cafe);
     });
-    item.addEventListener("keydown", (event) => {
-      if (event.target !== item || !["Enter", " "].includes(event.key)) return;
+    row.addEventListener("keydown", (event) => {
+      if (event.target !== row || !["Enter", " "].includes(event.key)) return;
       event.preventDefault();
       openForm("edit", cafe);
     });
   }
-  return item;
+  return row;
+}
+
+function listNote() {
+  if (state.tab === "inbox")
+    return "공개하면 바로 사이트에 나옵니다. 줄을 누르면 고칠 수 있습니다.";
+  if (state.tab !== "check") return "";
+  const { running, done, total, at } = state.check;
+  if (running) return `카카오와 대조 중… ${done}/${total}`;
+  if (!at) return "";
+  return `공개 ${total}곳을 카카오와 대조 (${formatDate(at, true)}) · 핀이 카카오 위치와 떨어졌거나 주소·이름이 카카오에 없는 곳만`;
 }
 
 function renderList() {
-  renderCounts();
-  if (VIEWS[state.view]?.pane !== "pane-list") return;
+  renderTabs();
+  if (TABS.find((t) => t.id === state.tab).pane !== "pane-list") return;
+  const query = $("search").value.trim().toLowerCase();
+  const cafes = tabCafes(state.tab).filter((cafe) =>
+    `${cafe.name} ${cafe.address}`.toLowerCase().includes(query),
+  );
   const ready = publishable().length;
   $("bulk-publish-btn").textContent = `한꺼번에 공개 (${ready})`;
   $("bulk-publish-btn").disabled = !ready;
-  const query = $("search").value.trim().toLowerCase();
-  const cafes = viewCafes(state.view).filter((cafe) =>
-    `${cafe.name} ${cafe.address}`.toLowerCase().includes(query),
-  );
+  $("recheck-btn").disabled = state.check.running;
+  $("list-note").textContent = listNote();
+  const empty = state.check.running ? "검사 중…" : "없습니다.";
   $("list").replaceChildren(
     ...(cafes.length
-      ? cafes.map((cafe) => cafeCard(state.view, cafe))
-      : [el("div", "item empty-state", "없습니다.")]),
+      ? cafes.map((cafe) => cafeRow(state.tab, cafe))
+      : [el("div", "empty", empty)]),
   );
 }
 
@@ -197,7 +244,7 @@ async function reload() {
   renderErrors();
 }
 
-// ---- handling ----
+// ---- cafe actions ----
 
 async function act(path, cafe, question, extra = {}) {
   if (question && !confirm(`'${cafe.name}' ${question}`)) return;
@@ -229,10 +276,82 @@ async function purgeCafe(cafe) {
   await act("/purge", cafe, "");
 }
 
+// ---- 확인 필요: every public cafe against Kakao, a few at a time ----
+
+async function checkOne(cafe) {
+  try {
+    const { problems, kakao, pinOff } = await jsonApi(
+      `/cafe-check?id=${encodeURIComponent(cafe.id)}`,
+    );
+    state.check.results.set(cafe.id, { problems, kakao, pinOff });
+  } catch (error) {
+    if (error.code === "AUTH_REQUIRED") throw error;
+    state.check.results.set(cafe.id, { failed: true, error: error.message });
+  }
+}
+
+async function runCheck() {
+  if (state.check.running) return;
+  const cafes = tabCafes("public");
+  Object.assign(state.check, {
+    results: new Map(),
+    running: true,
+    done: 0,
+    total: cafes.length,
+  });
+  renderList();
+  const queue = [...cafes];
+  const worker = async () => {
+    for (let cafe = queue.shift(); cafe; cafe = queue.shift()) {
+      await checkOne(cafe);
+      state.check.done += 1;
+      renderList();
+    }
+  };
+  try {
+    await Promise.all(Array.from({ length: CHECK_PARALLEL }, worker));
+  } finally {
+    state.check.running = false;
+    state.check.at = new Date().toISOString();
+    renderList();
+  }
+}
+
+function checkActions(cafe) {
+  const { kakao, pinOff } = state.check.results.get(cafe.id);
+  const actions = [];
+  if (kakao?.placeUrl) {
+    const link = el("a", "btn", "카카오맵");
+    link.href = kakao.placeUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    actions.push(link);
+  }
+  if (kakao && pinOff)
+    actions.push(
+      button("카카오 좌표로", () => moveToKakao(cafe, kakao), "btn primary"),
+    );
+  return actions;
+}
+
+// Same fields as the form sends, only the pin moved.
+async function moveToKakao(cafe, kakao) {
+  const where = kakao.name ? `${kakao.name} (${kakao.label})` : kakao.label;
+  if (!confirm(`'${cafe.name}' 핀을 카카오 위치로 옮길까요?\n${where}`)) return;
+  await postJson("/edit", {
+    ...cafe,
+    lat: kakao.lat.toFixed(6),
+    lng: kakao.lng.toFixed(6),
+  });
+  await reload();
+  await checkOne(state.cafes.find((c) => c.id === cafe.id));
+  renderList();
+}
+
 // ---- bulk publish: candidates that already pass the publish check, chosen and confirmed in the page ----
 
 function publishable() {
-  return viewCafes("inbox").filter(hasCoords);
+  return tabCafes("inbox").filter(hasCoords);
 }
 
 function bulkRow(cafe) {
@@ -241,18 +360,13 @@ function bulkRow(cafe) {
   box.type = "checkbox";
   box.value = cafe.id;
   box.checked = true;
-  label.append(
-    box,
-    `${cafe.submitted ? "제보 · " : ""}${cafe.name} · ${cafe.address}`,
-  );
+  label.append(box, el("strong", "", cafe.name), el("span", "", cafe.address));
   return label;
 }
 
 function openBulk() {
-  const cafes = publishable();
-  $("bulk-note").textContent =
-    "좌표가 있는 후보만 나옵니다. 고른 카페가 바로 사이트에 공개됩니다.";
-  $("bulk-list").replaceChildren(...cafes.map(bulkRow));
+  $("bulk-note").textContent = "좌표 있는 후보만 · 고른 곳이 바로 공개됩니다";
+  $("bulk-list").replaceChildren(...publishable().map(bulkRow));
   show("bulk-confirm", true);
   $("bulk-dialog").showModal();
 }
@@ -262,7 +376,7 @@ async function bulkPublish() {
     (box) => box.value,
   );
   if (!ids.length) throw new Error("공개할 카페를 고르세요.");
-  $("bulk-note").textContent = `${ids.length}곳 공개 중...`;
+  $("bulk-note").textContent = `${ids.length}곳 공개 중…`;
   const { results } = await postJson("/publish-many", { ids });
   const done = results.filter((r) => r.ok).length;
   $("bulk-note").textContent = `공개 ${done} · 실패 ${results.length - done}`;
@@ -303,8 +417,10 @@ function openForm(mode, cafe = {}) {
   $("form-title").textContent = mode === "add" ? "신규 등록" : cafe.name;
   $("form-note").textContent =
     mode === "edit"
-      ? `지금: ${cafe.status === "approved" ? "공개 중" : "후보"}`
-      : "저장하면 바로 사이트에 공개됩니다. 좌표가 맞는지 확인하세요.";
+      ? cafe.status === "approved"
+        ? "공개 중"
+        : "후보"
+      : "저장하면 바로 공개";
   $("form-save").textContent = mode === "edit" ? "저장" : "공개";
   $("cafe-dialog").showModal();
   if (!hasCoords(cafe) && cafe.address) guarded(geocode)();
@@ -337,55 +453,67 @@ async function saveForm() {
   if (mode !== "edit") await postJson("/publish", { id });
   $("cafe-dialog").close();
   await reload();
+  // A fixed pin leaves 확인 필요 right away.
+  if (state.check.results.has(id)) {
+    await checkOne(state.cafes.find((c) => c.id === id));
+    renderList();
+  }
 }
 
 async function geocode() {
   const address = $("cafe-address").value.trim();
   if (address.length < 2) return;
-  $("geo-msg").textContent = "좌표 찾는 중...";
+  $("geo-msg").textContent = "찾는 중…";
   try {
     const hit = await jsonApi(`/geocode?q=${encodeURIComponent(address)}`);
     $("cafe-lat").value = hit.lat.toFixed(6);
     $("cafe-lng").value = hit.lng.toFixed(6);
-    $("geo-msg").textContent = `찾은 곳: ${hit.label} — 구·동이 맞는지 확인`;
+    $("geo-msg").textContent = `찾은 곳: ${hit.label} — 구·동 확인`;
   } catch (error) {
     if (error.code === "AUTH_REQUIRED") throw error;
-    $("geo-msg").textContent =
-      "주소로 좌표를 못 찾았습니다. 주소를 줄이거나 지도에서 직접 넣어 주세요.";
+    $("geo-msg").textContent = "못 찾음 — 주소를 줄이거나 직접 넣어 주세요";
   }
 }
 
-// ---- error reports, notices, CSV ----
+// ---- error reports, notice, CSV ----
 
-function errorCard(report) {
-  const item = card(report.title, [
-    `${report.page || "-"} · ${formatDate(report.created_at, true)}`,
-    report.content,
-  ]);
+function errorRow(report) {
+  const row = el("article", "row stack");
+  const main = el("div", "row-main");
+  const title = el("div", "row-title");
+  title.append(el("strong", "", report.title));
+  main.append(
+    title,
+    el(
+      "div",
+      "row-sub",
+      `${report.page || "-"} · ${formatDate(report.created_at, true)}`,
+    ),
+    el("div", "row-line", report.content),
+  );
   const input = el("textarea");
   input.placeholder = "답변 (제보한 사람의 '찜·내 제보'에 보임)";
   input.ariaLabel = "답변";
   input.value = report.reply || "";
-  item.append(
-    input,
-    buttonRow([
-      [
-        report.reply ? "답변 고치기" : "답변 저장",
-        () => replyError(report, input.value),
-        "primary",
-      ],
-      ["처리 완료", () => resolveError(report)],
-    ]),
+  const actions = el("div", "row-actions");
+  actions.append(
+    button(
+      report.reply ? "답변 고치기" : "답변 저장",
+      () => replyError(report, input.value),
+      "btn primary",
+    ),
+    button("처리 완료", () => resolveError(report)),
   );
-  return item;
+  row.append(main, input, actions);
+  return row;
 }
 
 function renderErrors() {
-  renderCounts();
+  renderTabs();
   $("error-list").replaceChildren(
     ...(state.errors.length
-      ? state.errors.map(errorCard)
-      : [el("div", "item empty-state", "없습니다.")]),
+      ? state.errors.map(errorRow)
+      : [el("div", "empty", "없습니다.")]),
   );
 }
 
@@ -403,6 +531,7 @@ async function resolveError(report) {
 
 async function loadNotice() {
   $("notice-input").value = await fetchNotice();
+  $("notice-msg").textContent = "";
 }
 
 async function saveNotice() {
@@ -411,13 +540,13 @@ async function saveNotice() {
     headers: { "content-type": "text/plain; charset=utf-8" },
     body: $("notice-input").value.trim(),
   });
-  alert("공지 저장 완료");
+  $("notice-msg").textContent = "저장했습니다.";
 }
 
 async function importCsv(dryRun) {
   const file = $("csv-file").files[0];
   if (!file) throw new Error("CSV 파일을 먼저 고르세요.");
-  $("csv-msg").textContent = dryRun ? "검증 중..." : "올리는 중...";
+  $("csv-msg").textContent = dryRun ? "검증 중…" : "올리는 중…";
   const r = await jsonApi(`/import-csv${dryRun ? "?dryRun=1" : ""}`, {
     method: "POST",
     headers: { "content-type": "text/plain; charset=utf-8" },
@@ -438,40 +567,34 @@ async function importCsv(dryRun) {
   await reload();
 }
 
-// ---- view switch: ops (home) ↔ column ----
+// ---- tabs, login ----
 
-function show(id, visible) {
-  $(id).classList.toggle("hidden", !visible);
+function openTab(tab) {
+  state.tab = tab;
+  const { pane } = TABS.find((t) => t.id === tab);
+  for (const node of document.querySelectorAll(".pane"))
+    node.classList.toggle("hidden", node.id !== pane);
+  show("new-cafe-btn", tab === "inbox");
+  show("bulk-publish-btn", tab === "inbox");
+  show("recheck-btn", tab === "check");
+  $("search").value = "";
+  if (tab === "notice") guarded(loadNotice)();
+  if (tab === "check" && !state.check.at) guarded(runCheck)();
+  renderList();
 }
 
 function showLogin() {
-  for (const id of ["hub", "view", "logout-btn"]) show(id, false);
+  show("console", false);
+  show("logout-btn", false);
   show("login-pane", true);
   $("password").focus();
 }
 
-function showHub() {
-  state.view = "";
+function showConsole() {
   show("login-pane", false);
-  show("view", false);
-  show("hub", true);
+  show("console", true);
   show("logout-btn", true);
-  renderCounts();
-}
-
-function openView(view) {
-  state.view = view;
-  show("hub", false);
-  show("view", true);
-  $("view-title").textContent = VIEWS[view].title;
-  for (const pane of document.querySelectorAll(".pane")) {
-    pane.classList.toggle("hidden", pane.id !== VIEWS[view].pane);
-  }
-  show("new-cafe-btn", view === "inbox");
-  show("bulk-publish-btn", view === "inbox");
-  $("search").value = "";
-  if (view === "notice") guarded(loadNotice)();
-  renderList();
+  openTab(state.tab);
 }
 
 async function login(event) {
@@ -480,7 +603,7 @@ async function login(event) {
     await postJson("/admin/login", { password: $("password").value });
     $("password").value = "";
     $("login-msg").textContent = "";
-    showHub();
+    showConsole();
     await reload();
   } catch (error) {
     $("login-msg").textContent = error.message;
@@ -493,15 +616,12 @@ function bind(id, fn) {
 
 function bindEvents() {
   $("login-pane").addEventListener("submit", login);
-  document.querySelectorAll("[data-go]").forEach((tile) => {
-    tile.addEventListener("click", () => openView(tile.dataset.go));
-  });
-  bind("back-btn", showHub);
   $("search").addEventListener("input", renderList);
   bind("new-cafe-btn", () => openForm("add"));
   bind("form-save", saveForm);
   bind("bulk-publish-btn", openBulk);
   bind("bulk-confirm", bulkPublish);
+  bind("recheck-btn", runCheck);
   bind("geocode-btn", geocode);
   bind("notice-save", saveNotice);
   bind("csv-dry-run", () => importCsv(true));
@@ -520,8 +640,8 @@ async function init() {
   bindEvents();
   const { admin } = await jsonApi("/admin/me");
   if (!admin) return showLogin();
-  showHub();
   await reload();
+  showConsole();
 }
 
 guarded(init)();

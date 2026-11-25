@@ -14,6 +14,8 @@ function clear(ids) {
 }
 
 async function send(msgId, path, payload, doneText, fieldIds) {
+  // Buttons are type=button, so the fields' `required` only works through this (else the server gets empty reports).
+  if (!fieldIds.every((id) => $(id).reportValidity())) return false;
   $(msgId).textContent = "보내는 중...";
   try {
     await postJson(path, { ...payload, client_id: clientId() });
