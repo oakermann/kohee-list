@@ -543,34 +543,39 @@ async function saveNotice() {
   $("notice-msg").textContent = "저장했습니다.";
 }
 
-async function importCsv(dryRun) {
+async function sendCsv(dryRun) {
   const msg = $("csv-msg");
   try {
     const file = $("csv-file").files[0];
     if (!file) throw new Error("CSV 파일을 먼저 고르세요.");
     msg.textContent = dryRun ? "검증 중…" : "올리는 중…";
-    const r = await jsonApi(`/import-csv${dryRun ? "?dryRun=1" : ""}`, {
+    return await jsonApi(`/import-csv${dryRun ? "?dryRun=1" : ""}`, {
       method: "POST",
       headers: { "content-type": "text/plain; charset=utf-8" },
       body: await file.text(),
     });
-    msg.textContent = [
-      `${dryRun ? "넣을 것" : "넣음"} ${r.added}곳 (후보)`,
-      r.skipped.length &&
-        `이미 있어 건너뜀 ${r.skipped.length}: ${r.skipped.map((s) => `${s.row}행 ${s.name}`).join(", ")}`,
-      r.failed &&
-        `틀린 행 ${r.failed}: ${r.failedRows.map((f) => `${f.row}행 ${f.error}`).join(", ")}`,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-    if (dryRun) return;
-    $("csv-file").value = "";
-    $("csv-file-name").textContent = "CSV 파일 고르기";
-    await reload();
   } catch (error) {
     msg.textContent = `실패: ${error.message}`;
     throw error;
   }
+}
+
+// A failed reload after a committed import must not turn the result line into 실패 (guarded alerts it instead).
+async function importCsv(dryRun) {
+  const r = await sendCsv(dryRun);
+  $("csv-msg").textContent = [
+    `${dryRun ? "넣을 것" : "넣음"} ${r.added}곳 (후보)`,
+    r.skipped.length &&
+      `이미 있어 건너뜀 ${r.skipped.length}: ${r.skipped.map((s) => `${s.row}행 ${s.name}`).join(", ")}`,
+    r.failed &&
+      `틀린 행 ${r.failed}: ${r.failedRows.map((f) => `${f.row}행 ${f.error}`).join(", ")}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  if (dryRun) return;
+  $("csv-file").value = "";
+  $("csv-file-name").textContent = "CSV 파일 고르기";
+  await reload();
 }
 
 // ---- tabs, login ----
