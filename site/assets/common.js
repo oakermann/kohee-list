@@ -9,8 +9,15 @@ export const CAT_MAP = {
 
 export const $ = (id) => document.getElementById(id);
 
+// fetch rejects only when offline or the network fails; its message is English ("Failed to fetch").
 export function api(path, options = {}) {
-  return fetch(`/api${path}`, { credentials: "same-origin", ...options });
+  return fetch(`/api${path}`, { credentials: "same-origin", ...options }).catch(
+    () => {
+      throw new Error(
+        "네트워크에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+      );
+    },
+  );
 }
 
 export const ERROR_MESSAGES = {
@@ -25,12 +32,7 @@ export const ERROR_MESSAGES = {
 };
 
 export async function jsonApi(path, options = {}) {
-  // fetch rejects only when offline or the network fails; its message is English ("Failed to fetch").
-  const res = await api(path, options).catch(() => {
-    throw new Error(
-      "네트워크에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
-    );
-  });
+  const res = await api(path, options);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.ok === false) {
     const error = new Error(

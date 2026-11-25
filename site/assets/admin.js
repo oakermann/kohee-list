@@ -543,15 +543,26 @@ async function saveNotice() {
   $("notice-msg").textContent = "저장했습니다.";
 }
 
+async function sendCsv(dryRun) {
+  const msg = $("csv-msg");
+  try {
+    const file = $("csv-file").files[0];
+    if (!file) throw new Error("CSV 파일을 먼저 고르세요.");
+    msg.textContent = dryRun ? "검증 중…" : "올리는 중…";
+    return await jsonApi(`/import-csv${dryRun ? "?dryRun=1" : ""}`, {
+      method: "POST",
+      headers: { "content-type": "text/plain; charset=utf-8" },
+      body: await file.text(),
+    });
+  } catch (error) {
+    msg.textContent = `실패: ${error.message}`;
+    throw error;
+  }
+}
+
+// A failed reload after a committed import must not turn the result line into 실패 (guarded alerts it instead).
 async function importCsv(dryRun) {
-  const file = $("csv-file").files[0];
-  if (!file) throw new Error("CSV 파일을 먼저 고르세요.");
-  $("csv-msg").textContent = dryRun ? "검증 중…" : "올리는 중…";
-  const r = await jsonApi(`/import-csv${dryRun ? "?dryRun=1" : ""}`, {
-    method: "POST",
-    headers: { "content-type": "text/plain; charset=utf-8" },
-    body: await file.text(),
-  });
+  const r = await sendCsv(dryRun);
   $("csv-msg").textContent = [
     `${dryRun ? "넣을 것" : "넣음"} ${r.added}곳 (후보)`,
     r.skipped.length &&
