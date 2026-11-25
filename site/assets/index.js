@@ -25,8 +25,6 @@ const GEO_UNRELIABLE_ACCURACY_M = 5000;
 // Actual "near me" radius. Cafes farther than this are not shown in nearby mode.
 // Tune this single value to widen/narrow the nearby search.
 const GEO_NEARBY_RADIUS_KM = 20;
-const NEARBY_MAX = 20; // closest cafes shown in 'near me'
-const RESULTS_MAX = 50; // best search/category matches shown
 
 let lastPositionAccuracyM = null;
 
@@ -225,8 +223,7 @@ function renderNearby() {
   }
   const nearbyCafes = located
     .filter((cafe) => cafe.dis <= GEO_NEARBY_RADIUS_KM)
-    .sort((a, b) => a.dis - b.dis)
-    .slice(0, NEARBY_MAX);
+    .sort((a, b) => a.dis - b.dis);
   if (!nearbyCafes.length) {
     return renderCenterMessage([
       `${GEO_NEARBY_RADIUS_KM}km 이내에 ${selectedCategory ? "해당 카테고리로 " : ""}등록된 카페가 없습니다.`,
@@ -245,8 +242,7 @@ function renderSearch(query) {
   }
   const filtered = data
     .filter((cafe) => matchScore(cafe, query) > 0 && inSelectedCategory(cafe))
-    .sort((left, right) => matchScore(right, query) - matchScore(left, query))
-    .slice(0, RESULTS_MAX);
+    .sort((left, right) => matchScore(right, query) - matchScore(left, query));
   if (!filtered.length) {
     return renderCenterMessage("조건에 맞는 결과가 없습니다.");
   }
